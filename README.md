@@ -35,22 +35,25 @@ DSLs provided to a user are high level DSLs embedded into Haskell - a modern sta
 Example
 -------
 
-Below is an example of how one would express a "qmulus" that would automatically copy the content of any new file uploaded into s3 bucket named "bucket1" into an s3 object in "bucket2":
+Below is an example of how one would express a "qmulus" that would automatically copy the content of any new file uploaded into `incoming` bucket into an s3 object in `outgoing` bucket:
 
 ```haskell
 config :: ConfigProgram ()
 config = do
-  input <- createS3Bucket "bucket1"
-  output <- createS3Bucket "bucket2"
-  createS3BucketLambda "mylambda" input (copyContentsLambda output)
+  incoming <- createS3Bucket "incoming"
+  outgoing <- createS3Bucket "outgoing"
+  void $ createS3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing)
 
-copyContentsLambda :: S3BucketIdentifier -> S3Event -> LambdaProgram ()
-copyContentsLambda outputBucket S3Event{s3Object} = do
+copyContentsLambda
+  :: S3BucketIdentifier
+  -> S3Event
+  -> LambdaProgram ()
+copyContentsLambda sinkBucket S3Event{s3Object} = do
   content <- getS3ObjectContent s3Object
   putS3ObjectContent outputS3Object content
 
   where
-    outputS3Object = S3Object outputBucket (S3Key "out")
+    outputS3Object = S3Object sinkBucket (S3Key "out")
 ```
 
 DSL

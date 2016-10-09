@@ -1,0 +1,46 @@
+name: qmuli
+version: "0.0.1"
+synopsis: EDSL for building infrastructure on AWS
+description: EDSL for building infrastructure on AWS
+category: AWS, Cloud
+maintainer: Alex Babkin
+stability: experimental
+license: MIT
+license-file: LICENSE.md
+
+github: qmuli/qmuli
+
+extra-source-files:
+  - CHANGELOG.md
+  - README.md
+  - stack.yaml
+
+dependencies:
+  - base >= 4.8 && < 5
+  - aeson >= 0.11.2.1
+  - data-default
+  - text
+  - transformers >= 0.4.2.0
+  - mtl >= 2.2.1
+  - operational
+  - bytestring
+  - hashable
+  - unordered-containers
+  - lens
+  - stratosphere
+
+library:
+  source-dirs:
+    - src
+  ghc-options: -Wall
+
+executables:
+  qmuli:
+    main: Main.hs
+    source-dirs: app
+    dependencies:
+      - base >= 4.8 && < 5
+      - qmuli
+    ghc-options: -Wall
+
+
