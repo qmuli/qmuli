@@ -8,7 +8,6 @@ module Qi.Program.Config.Interpreters.Build where
 import           Control.Lens
 import           Control.Monad.Operational
 import           Control.Monad.State.Strict  (State, get, put)
-import           Control.Monad.Trans.Class   (lift)
 import           Data.Default                (def)
 import           Data.Hashable               (hash)
 import qualified Data.HashMap.Strict         as SHM
@@ -20,10 +19,11 @@ import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
 import           Qi.Program.Config.Interface (ConfigInstruction (CreateS3Bucket, CreateS3BucketLambda),
                                               ConfigProgram)
-import           Qi.Program.Lambda.Interface
 
 
-interpret :: ConfigProgram () -> State Config ()
+interpret
+  :: ConfigProgram ()
+  -> State Config ()
 interpret config =  do
   i <- viewT config
   case i of
@@ -33,7 +33,7 @@ interpret config =  do
     (CreateS3BucketLambda name bucketId lbdProgramFunc) :>>= is -> do
       interpret . is =<< createS3BucketLambda name bucketId lbdProgramFunc
 
-    Return a ->
+    Return _ ->
       return def
 
 

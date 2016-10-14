@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -12,7 +11,7 @@ import qualified Data.HashMap.Strict         as SHM
 import           Data.Text                   (Text)
 import           Stratosphere
 
-import           Qi.Config.AWS.S3
+import           Qi.Config.AWS.S3            (S3Event)
 import           Qi.Config.Identifier
 import           Qi.Program.Lambda.Interface (LambdaProgram)
 
@@ -22,8 +21,7 @@ data Lambda = S3BucketLambda {
   , _lbdS3BucketLambdaProgram  :: S3Event -> LambdaProgram ()
 } deriving Show
 
-instance Show (S3Event -> LambdaProgram ()) where
-  show _ = "..."
+
 
 instance Hashable Lambda where
   hashWithSalt s S3BucketLambda{_lbdName} = s `hashWithSalt` _lbdName

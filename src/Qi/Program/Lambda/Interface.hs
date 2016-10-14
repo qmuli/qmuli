@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -10,7 +11,10 @@ import           Data.ByteString           (ByteString)
 import           Qi.Config.AWS.S3
 
 
-type LambdaProgram a = Program LambdaInstruction a
+type LambdaProgram a = ProgramT LambdaInstruction IO a
+
+instance Show (S3Event -> LambdaProgram ()) where
+  show _ = "..."
 
 data LambdaInstruction a where
   GetS3ObjectContent :: S3Object -> LambdaInstruction ByteString

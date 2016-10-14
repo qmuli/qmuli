@@ -34,18 +34,18 @@ data LambdaEventConfig = LambdaEventConfig {
 
 makeLenses ''LambdaEventConfig
 
+
 newtype S3Key = S3Key Text
-
-
+  deriving Show
 
 data S3Object = S3Object {
     bucketId :: S3BucketIdentifier
   , key      :: S3Key
-  }
+  } deriving Show
 
 data S3Event = S3Event {
     s3Object :: S3Object
-  }
+  } deriving Show
 
 
 data S3Bucket = S3Bucket {
