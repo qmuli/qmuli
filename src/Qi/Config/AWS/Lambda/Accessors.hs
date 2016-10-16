@@ -1,10 +1,9 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Qi.Config.Util where
+module Qi.Config.AWS.Lambda.Accessors where
 
 import           Control.Lens
-import           Data.Default         (Default, def)
 import qualified Data.HashMap.Strict  as SHM
 import           Data.Maybe           (fromJust)
 import           Data.Text            (Text)
@@ -12,7 +11,7 @@ import qualified Data.Text            as T
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.Lambda (Lambda, lbdName, lcLambdas)
-import           Qi.Config.AWS.S3     (S3Bucket, S3Config, bucketName)
+import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
 
 
@@ -28,20 +27,13 @@ getLambdaResourceNameFromId
   :: LambdaIdentifier
   -> Config
   -> Text
-getLambdaResourceNameFromId lbdId config =
-  getLambdaResourceName $ getLambdaById lbdId config
+getLambdaResourceNameFromId lid config =
+  getLambdaResourceName $ getLambdaById lid config
 
 getLambdaResourceName
   :: Lambda
   -> Text
 getLambdaResourceName lbd =  T.concat [lbd ^. lbdName, "Lambda"]
 
-getS3LambdaPermissionResourceName
-  :: Lambda
-  -> Text
-getS3LambdaPermissionResourceName lbd =  T.concat [lbd ^. lbdName, "S3LambdaPermission"]
 
-getS3BucketResourceName
-  :: S3Bucket
-  -> Text
-getS3BucketResourceName bucket =  T.concat [bucket ^. bucketName, "S3Bucket"]
+

@@ -43,17 +43,15 @@ interpret config =  do
       conf <- get
 
       let newBucket = S3Bucket {
-            _bucketName = name
-          , _lbdEventConfigs = []
+            _s3bName = name
+          , _s3bLbdEventConfigs = []
           }
-          newBucketIdentifier = S3BucketIdentifier $ hash newBucket
 
-      put $ conf <> def{_s3Config = def{
-            _s3Buckets = SHM.singleton newBucketIdentifier newBucket
-          }
-        }
+      let (newBucketId, s3ConfigModifier) = insertBucket newBucket
 
-      return newBucketIdentifier
+      put $ over s3Config s3ConfigModifier conf
+
+      return newBucketId
 
 
     createS3BucketLambda name bucketId lbdProgramFunc = do
@@ -62,8 +60,8 @@ interpret config =  do
       let newLambda = S3BucketLambda name bucketId lbdProgramFunc
           newLambdaIdentifier = LambdaIdentifier $ hash newLambda
 
-          modifyBucket = over lbdEventConfigs ((LambdaEventConfig S3ObjectCreatedAll newLambdaIdentifier):)
-          modifiedConf = over (s3Config . s3Buckets) (SHM.adjust modifyBucket bucketId) conf
+          modifyBucket = over s3bLbdEventConfigs ((LambdaEventConfig S3ObjectCreatedAll newLambdaIdentifier):)
+          modifiedConf = over (s3Config . s3Buckets . s3idxIdToS3Bucket) (SHM.adjust modifyBucket bucketId) conf
 
       put $ modifiedConf <> def{_lbdConfig = def{_lcLambdas = SHM.singleton newLambdaIdentifier newLambda}}
 

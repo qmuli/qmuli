@@ -1,0 +1,38 @@
+{
+    "Records": [
+        {
+            "eventVersion": "2.0",
+            "eventSource": "aws:s3",
+            "awsRegion": "us-east-1",
+            "eventTime": "2016-10-09T23:59:39.430Z",
+            "eventName": "ObjectCreated:Put",
+            "userIdentity": {
+                "principalId": "A2LJIUV93EEHGA"
+            },
+            "requestParameters": {
+                "sourceIPAddress": "69.203.150.55"
+            },
+            "responseElements": {
+                "x-amz-request-id": "8323C50A1A8BAB54",
+                "x-amz-id-2": "ou/GOUnrTXEvwo8rGkjgRk/aRNdGbj2UGb3fy+Nzksuuzpy+YKM/bfEwPetnUf4n"
+            },
+            "s3": {
+                "s3SchemaVersion": "1.0",
+                "configurationId": "c0474702-4e7b-430e-8298-eb27a9f469d0",
+                "bucket": {
+                    "name": "qmuli-incoming",
+                    "ownerIdentity": {
+                        "principalId": "A2LJIUV93EEHGA"
+                    },
+                    "arn": "arn:aws:s3:::qmuli-incoming"
+                },
+                "object": {
+                    "key": "Bridgewater-Associates-Ray-Dalio-Principles.pdf",
+                    "size": 2375748,
+                    "eTag": "d39405e64a6a219d6b13f13cae6f9804",
+                    "sequencer": "0057FAD9EB17C0299C"
+                }
+            }
+        }
+    ]
+}

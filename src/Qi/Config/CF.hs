@@ -2,28 +2,30 @@
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Qi.Config.CF where
+module Qi.Config.CF (render) where
 
-import           Data.Aeson           (Value (Array), object)
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.HashMap.Strict  as SHM
-import           Data.Text            (Text)
-import qualified Data.Text            as T
+import           Data.Aeson                     (Value (Array), object)
+import qualified Data.ByteString.Lazy           as LBS
+import qualified Data.HashMap.Strict            as SHM
+import           Data.Text                      (Text)
+import qualified Data.Text                      as T
 import           Stratosphere
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.Lambda
+import           Qi.Config.AWS.Lambda.Accessors
 import           Qi.Config.AWS.S3
+import           Qi.Config.AWS.S3.Accessors
 import           Qi.Config.Identifier
-import           Qi.Config.Util
 
 
-namePrefix = "qmuli"
-
-render :: Config -> LBS.ByteString
-render config = encodeTemplate $
+render
+  :: Text
+  -> Config
+  -> LBS.ByteString
+render namePrefix config = encodeTemplate $
   template
-    (toResources config)
+    (toResources namePrefix config)
     & description ?~ "Example"
     & formatVersion ?~ "2010-09-09"
 
@@ -32,9 +34,10 @@ lambdaBasicExecutionIAMRoleResourceName = "lambdaBasicExecutionIAMRole"
 
 
 toResources
-  :: Config
+  :: Text
+  -> Config
   -> Resources
-toResources config = mconcat [s3Resources, roleResources, lbdResources]
+toResources namePrefix config = mconcat [s3Resources, roleResources, lbdResources]
   where
     roleResources = Resources [lbdRoleRes]
       where
@@ -140,13 +143,13 @@ toResources config = mconcat [s3Resources, roleResources, lbdResources]
 
 
 
-    s3Resources = Resources . map toS3BucketRes $ SHM.elems (config ^. s3Config . s3Buckets)
+    s3Resources = Resources . map toS3BucketRes $ getAllBuckets config
       where
-        toS3BucketRes s3@S3Bucket{_bucketName, _lbdEventConfigs} = (
+        toS3BucketRes s3@S3Bucket{_s3bName, _s3bLbdEventConfigs} = (
           resource name $
             BucketProperties $
             bucket
-            & bBucketName ?~ (Literal $ T.concat [namePrefix, "-", _bucketName])
+            & bBucketName ?~ (Literal $ T.concat [namePrefix, "-", _s3bName])
             & bNotificationConfiguration ?~ lbdConfigs
           )
           & dependsOn ?~ reqs
@@ -155,12 +158,12 @@ toResources config = mconcat [s3Resources, roleResources, lbdResources]
             name = getS3BucketResourceName s3
 
             reqs =
-              map (\lec -> getLambdaResourceNameFromId (lec ^. lbdId) config ) _lbdEventConfigs
+              map (\lec -> getLambdaResourceNameFromId (lec ^. lbdId) config ) _s3bLbdEventConfigs
 
 
 
             lbdConfigs = s3NotificationConfiguration
-              & sncLambdaConfigurations ?~ (map lbdConfig _lbdEventConfigs)
+              & sncLambdaConfigurations ?~ (map lbdConfig _s3bLbdEventConfigs)
 
             lbdConfig LambdaEventConfig{_event, _lbdId} = s3NotificationConfigurationLambdaConfiguration
               (Literal . T.pack $ show _event)

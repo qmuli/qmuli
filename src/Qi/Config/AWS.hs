@@ -6,8 +6,14 @@ module Qi.Config.AWS where
 
 import           Control.Lens
 import           Data.Default         (Default, def)
-import           Qi.Config.AWS.Lambda (Lambda, LambdaConfig, lcLambdas)
-import           Qi.Config.AWS.S3     (S3Config)
+import qualified Data.HashMap.Strict  as SHM
+import           Data.Maybe           (fromJust)
+import           Data.Text            (Text)
+import qualified Data.Text            as T
+
+import           Qi.Config.AWS.Lambda (LambdaConfig)
+import           Qi.Config.AWS.S3
+import           Qi.Config.Identifier
 
 
 data Config = Config {
@@ -38,5 +44,6 @@ instance Default Config where
   }
 
 makeLenses ''Config
+
 
 
