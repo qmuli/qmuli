@@ -26,6 +26,17 @@ getS3BucketResourceName
 getS3BucketResourceName bucket =  T.concat [bucket ^. s3bName, "S3Bucket"]
 
 
+
+
+
+getS3BucketById
+  :: S3BucketIdentifier
+  -> Config
+  -> S3Bucket
+getS3BucketById bid = fromJust . SHM.lookup bid . s3bHm
+  where
+    s3bHm config = config ^. s3Config . s3Buckets . s3idxIdToS3Bucket
+
 getS3BucketIdByName
   :: Text
   -> Config

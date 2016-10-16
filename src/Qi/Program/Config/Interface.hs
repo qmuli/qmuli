@@ -4,7 +4,7 @@
 
 module Qi.Program.Config.Interface where
 
-import           Control.Monad.Operational   (ProgramT, singleton)
+import           Control.Monad.Operational   (Program, singleton)
 import           Control.Monad.State.Strict  (State)
 import           Data.ByteString             (ByteString)
 import           Data.Default                (Default, def)
@@ -16,7 +16,7 @@ import           Qi.Config.Identifier
 import           Qi.Program.Lambda.Interface (LambdaProgram)
 
 
-type ConfigProgram a = ProgramT ConfigInstruction (State Config) a
+type ConfigProgram a = Program ConfigInstruction a
 
 data ConfigInstruction a where
   CreateS3Bucket

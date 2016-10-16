@@ -27,7 +27,7 @@
                     "arn": "arn:aws:s3:::qmuli-incoming"
                 },
                 "object": {
-                    "key": "Bridgewater-Associates-Ray-Dalio-Principles.pdf",
+                    "key": "test.pdf",
                     "size": 2375748,
                     "eTag": "d39405e64a6a219d6b13f13cae6f9804",
                     "sequencer": "0057FAD9EB17C0299C"

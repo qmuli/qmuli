@@ -26,7 +26,7 @@ import           Qi.Program.Lambda.Interface          (LambdaProgram)
 import qualified Qi.Program.Lambda.Interpreters.IO    as LIO
 
 
-namePrefix = "qmuli"
+appName = "qmuli"
 
 
 main :: IO ()
@@ -54,9 +54,9 @@ main = do
     cmd:_ -> putStrLn $ "Unexpected command: '" ++ cmd ++ "'"
 
   where
-    configuration = snd . (`runState` def) $ CB.interpret config
+    configuration = snd . (`runState` def{_namePrefix = appName}) $ CB.interpret config
 
-    configJson = render namePrefix configuration
+    configJson = render configuration
 
 
     lbdIOMap = SHM.fromList $ map toLbdIOPair lbds
@@ -69,7 +69,7 @@ main = do
             lbdIO eventJson = do
               case parseEither (`S3Event.parse` configuration) =<< eitherDecode (LBS.pack eventJson) of
                 Right s3Event ->
-                  LIO.interpret $ _lbdS3BucketLambdaProgram s3Event
+                  LIO.run (_lbdS3BucketLambdaProgram s3Event) configuration
                 Left err ->
                   fail $ "Could not parse event: " ++ show eventJson
 

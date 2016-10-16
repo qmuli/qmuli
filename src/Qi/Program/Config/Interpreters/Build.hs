@@ -5,7 +5,7 @@
 
 module Qi.Program.Config.Interpreters.Build where
 
-import           Control.Lens
+import           Control.Lens                hiding (view)
 import           Control.Monad.Operational
 import           Control.Monad.State.Strict  (State, get, put)
 import           Data.Default                (def)
@@ -24,9 +24,8 @@ import           Qi.Program.Config.Interface (ConfigInstruction (CreateS3Bucket,
 interpret
   :: ConfigProgram ()
   -> State Config ()
-interpret config =  do
-  i <- viewT config
-  case i of
+interpret program =  do
+  case view program of
     (CreateS3Bucket name) :>>= is -> do
       interpret . is =<< createS3Bucket name
 

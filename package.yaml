@@ -28,6 +28,12 @@ dependencies:
   - unordered-containers
   - lens
   - stratosphere
+  - amazonka
+  - amazonka-core
+  - amazonka-s3
+  - conduit
+  - conduit-extra
+  - resourcet
 
 library:
   source-dirs:

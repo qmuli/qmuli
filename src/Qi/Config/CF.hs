@@ -9,35 +9,32 @@ import qualified Data.ByteString.Lazy           as LBS
 import qualified Data.HashMap.Strict            as SHM
 import           Data.Text                      (Text)
 import qualified Data.Text                      as T
-import           Stratosphere
+import           Stratosphere                   hiding (name)
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.Lambda.Accessors
 import           Qi.Config.AWS.S3
 import           Qi.Config.AWS.S3.Accessors
-import           Qi.Config.Identifier
 
 
 render
-  :: Text
-  -> Config
+  :: Config
   -> LBS.ByteString
-render namePrefix config = encodeTemplate $
+render config = encodeTemplate $
   template
-    (toResources namePrefix config)
+    (toResources config)
     & description ?~ "Example"
     & formatVersion ?~ "2010-09-09"
 
 
-lambdaBasicExecutionIAMRoleResourceName = "lambdaBasicExecutionIAMRole"
+lambdaBasicExecutionIAMRoleResourceName = "lambdaBasicExecutionIAMRole" :: Text
 
 
 toResources
-  :: Text
-  -> Config
+  :: Config
   -> Resources
-toResources namePrefix config = mconcat [s3Resources, roleResources, lbdResources]
+toResources config@Config{_namePrefix} = mconcat [s3Resources, roleResources, lbdResources]
   where
     roleResources = Resources [lbdRoleRes]
       where
@@ -45,7 +42,7 @@ toResources namePrefix config = mconcat [s3Resources, roleResources, lbdResource
           IAMRoleProperties $
           iamRole rolePolicyDocumentObject
           & iamrPolicies ?~ [ executePolicy ]
-          & iamrRoleName ?~ (Literal $ T.concat [namePrefix, "-", "LambdaBasicExecutionRole"])
+          & iamrRoleName ?~ (Literal $ "LambdaBasicExecutionRole" `namePrefixWith` config)
           & iamrPath ?~ "/"
 
         executePolicy =
@@ -53,7 +50,7 @@ toResources namePrefix config = mconcat [s3Resources, roleResources, lbdResource
           [ ("Version", "2012-10-17")
           , ("Statement", statement)
           ] $
-          Literal $ T.concat [namePrefix, "-", "LambdaExecutionPolicy"]
+          Literal $ "LambdaExecutionPolicy" `namePrefixWith` config
 
 
           where
@@ -97,51 +94,60 @@ toResources namePrefix config = mconcat [s3Resources, roleResources, lbdResource
         toAllLambdaResources :: Lambda -> Resources
         toAllLambdaResources l = Resources $ [toS3LambdaPermissionResource l, toLambdaResource l]
 
-        toS3LambdaPermissionResource lbd@S3BucketLambda{_lbdName} = resource name $
-          LambdaPermissionProperties $
-          lambdaPermission
-            "lambda:*"
-            (GetAtt (getLambdaResourceName lbd) "Arn")
-            "s3.amazonaws.com"
+        toS3LambdaPermissionResource lbd@S3BucketLambda{_lbdName} =
+          resource resourceName $
+            LambdaPermissionProperties $
+            lambdaPermission
+              "lambda:*"
+              (GetAtt (getLambdaResourceName lbd) "Arn")
+              "s3.amazonaws.com"
           where
-            name = getS3LambdaPermissionResourceName lbd
+            resourceName = getS3LambdaPermissionResourceName lbd
 
 
         toLambdaResource lbd@S3BucketLambda{_lbdName} = (
-          resource name $
+          resource resourceName $
             LambdaFunctionProperties $
             lambdaFunction
               lbdCode
               "index.handler"
               (GetAtt lambdaBasicExecutionIAMRoleResourceName "Arn")
               "nodejs4.3"
-            & lfFunctionName ?~ (Literal $ T.concat [namePrefix, "-", _lbdName])
+            & lfFunctionName ?~ (Literal $ _lbdName `namePrefixWith` config)
           )
           & dependsOn ?~ [ lambdaBasicExecutionIAMRoleResourceName ]
 
           where
-            name = getLambdaResourceName lbd
+            resourceName = getLambdaResourceName lbd
 
             lbdCode :: LambdaFunctionCode
             lbdCode = lambdaFunctionCode
               & lfcZipFile ?~ code
 
             code :: Val Text
-            code = "\
-            \ var AWS = require('aws-sdk'); \
-            \ var s3 = new AWS.S3({apiVersion: '2006-03-01'}); \
-            \ exports.handler = function(event, context, callback) { \
-            \  console.log(JSON.stringify(event)); \
-            \  var rec = event.Records[0]; \
-            \  var bucket = rec.s3.bucket.name; \
-            \  var key = rec.s3.object.key; \
-            \  s3.copyObject({Bucket: \"qmuli-outgoing\", Key: key, CopySource: \"qmuli-incoming/\"+key}, function(err){ \
-            \    callback(null, \"copied s3 object\"); \
-            \  }); \
-            \ } \
-            \ "
-
-
+            code = ""
+            {- code = "\ -}
+                    {- \ process.env['PATH'] = process.env['PATH'] + ':' + process.env['LAMBDA_TASK_ROOT'] \ -}
+                    {- \ var exec = require('child_process').exec; \ -}
+                    {- \ exports.handler = function(event, context) { \ -}
+                    {- \  var input = JSON.stringify(event['body-json']) \ -}
+                    {- \    .replace(/\\\\/g, \"\\\\\\\\\") \ -}
+                    {- \    .replace(/\\$/g, \"\\\\$\") \ -}
+                    {- \    .replace(/'/g, \"\\\\'\") \ -}
+                    {- \    .replace(/\"/g, \"\\\\\\\"\"); \ -}
+                    {- \  console.log(\"input:\", input) \ -}
+                    {- \  var child = exec('./" -}
+                    {- ++ namePrefix ++ -}
+                    {- " lbd " -}
+                    {- ++ _lbdName ++ -}
+                    {- "\"' + input + '\"', {maxBuffer: 1024 * 500}, function(error, stdout, stderr) { \ -}
+                    {- \    console.log('stdout: ' + stdout); \ -}
+                    {- \    console.log('stderr: ' + stderr); \ -}
+                    {- \    if (error !== null) { console.log('exec error: ' + error); } \ -}
+                    {- \    context.done(null, JSON.parse(stdout)); \ -}
+                    {- \  }); \ -}
+                    {- \ } \ -}
+                    {- \ " -}
 
     s3Resources = Resources . map toS3BucketRes $ getAllBuckets config
       where
@@ -149,7 +155,7 @@ toResources namePrefix config = mconcat [s3Resources, roleResources, lbdResource
           resource name $
             BucketProperties $
             bucket
-            & bBucketName ?~ (Literal $ T.concat [namePrefix, "-", _s3bName])
+            & bBucketName ?~ (Literal $ _s3bName `namePrefixWith` config)
             & bNotificationConfiguration ?~ lbdConfigs
           )
           & dependsOn ?~ reqs
@@ -163,8 +169,8 @@ toResources namePrefix config = mconcat [s3Resources, roleResources, lbdResource
 
 
             lbdConfigs = s3NotificationConfiguration
-              & sncLambdaConfigurations ?~ (map lbdConfig _s3bLbdEventConfigs)
+              & sncLambdaConfigurations ?~ (map lbdC _s3bLbdEventConfigs)
 
-            lbdConfig LambdaEventConfig{_event, _lbdId} = s3NotificationConfigurationLambdaConfiguration
+            lbdC LambdaEventConfig{_event, _lbdId} = s3NotificationConfigurationLambdaConfiguration
               (Literal . T.pack $ show _event)
               (GetAtt (getLambdaResourceNameFromId _lbdId config) "Arn")
