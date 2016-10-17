@@ -20,11 +20,11 @@
                 "s3SchemaVersion": "1.0",
                 "configurationId": "c0474702-4e7b-430e-8298-eb27a9f469d0",
                 "bucket": {
-                    "name": "qmuli-incoming",
+                    "name": "myqmulus-incoming",
                     "ownerIdentity": {
                         "principalId": "A2LJIUV93EEHGA"
                     },
-                    "arn": "arn:aws:s3:::qmuli-incoming"
+                    "arn": "arn:aws:s3:::myqmulus-incoming"
                 },
                 "object": {
                     "key": "test.pdf",

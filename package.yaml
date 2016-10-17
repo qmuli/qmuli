@@ -41,9 +41,9 @@ library:
   ghc-options: -Wall
 
 executables:
-  qmuli:
+  simple-s3-copy:
     main: Main.hs
-    source-dirs: app
+    source-dirs: examples/simple-s3-copy/src
     dependencies:
       - base >= 4.8 && < 5
       - qmuli

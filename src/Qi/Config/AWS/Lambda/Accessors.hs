@@ -19,7 +19,8 @@ getLambdaById
   :: LambdaIdentifier
   -> Config
   -> Lambda
-getLambdaById lid = fromJust . SHM.lookup lid . lbdHm
+getLambdaById lid =
+    fromJust . SHM.lookup lid . lbdHm
   where
     lbdHm config = config ^. lbdConfig . lcLambdas
 
@@ -33,7 +34,12 @@ getLambdaResourceNameFromId lid config =
 getLambdaResourceName
   :: Lambda
   -> Text
-getLambdaResourceName lbd =  T.concat [lbd ^. lbdName, "Lambda"]
+getLambdaResourceName lbd =
+  T.concat [lbd ^. lbdName, "Lambda"]
 
 
-
+getAllLambdas
+  :: Config
+  -> [Lambda]
+getAllLambdas config =
+  SHM.elems $ config ^. lbdConfig . lcLambdas
