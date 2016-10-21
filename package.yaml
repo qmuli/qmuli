@@ -31,9 +31,12 @@ dependencies:
   - amazonka
   - amazonka-core
   - amazonka-s3
+  - amazonka-cloudformation
   - conduit
   - conduit-extra
   - resourcet
+  - turtle
+  - executable-path
 
 library:
   source-dirs:

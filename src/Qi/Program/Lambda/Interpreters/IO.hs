@@ -21,7 +21,7 @@ import qualified Data.Text                    as T
 import qualified Data.Text.IO                 as T
 import           Network.AWS                  hiding (send)
 import qualified Network.AWS.S3               as A
-import           System.IO
+import           System.IO (stdout)
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.Lambda

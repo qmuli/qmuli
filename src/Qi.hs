@@ -20,19 +20,21 @@ import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.Lambda.Accessors       (getAllLambdas)
 import           Qi.Config.AWS.S3
 import qualified Qi.Config.AWS.S3.Event               as S3Event (parse)
-import           Qi.Config.CF                         (render)
+import           Qi.Config.CF                         as CF
 import           Qi.Config.Identifier
+import qualified Qi.Deploy.CF                         as CF
+import qualified Qi.Deploy.Lambda                     as Lambda
 import           Qi.Program.Config.Interface          (ConfigProgram)
 import qualified Qi.Program.Config.Interpreters.Build as CB
 import           Qi.Program.Lambda.Interface          (LambdaProgram)
 import qualified Qi.Program.Lambda.Interpreters.IO    as LIO
+
 
 withConfig
   :: Text
   -> ConfigProgram ()
   -> IO ()
 withConfig appName configProgram = do
-
 
   if invalid appName
     then
@@ -43,12 +45,17 @@ withConfig appName configProgram = do
         [] -> do
           putStrLn "Unexpected arguments. <print usage>"
 
-        "cf":_ -> do
-          LBS.putStr configJson
+        "cf":"deploy":_ -> do
+          CF.deploy appName $ CF.render config
 
         "lbd":[] -> do
           putStrLn "Please specify lambda name"
 
+        "lbd":"deploy":_ -> do
+          Lambda.deploy appName
+
+
+        -- run the lambda
         "lbd":lbdName:event:_ -> do
           case SHM.lookup (T.pack lbdName) lbdIOMap of
             Nothing ->
@@ -57,14 +64,13 @@ withConfig appName configProgram = do
               lbdIO event
 
 
-        cmd:_ -> putStrLn $ "Unexpected command: '" ++ cmd ++ "'"
+        _ -> putStrLn $ "Unexpected arguments: '" ++ show args ++ "'"
 
   where
-    invalid = not . all (\c -> isLower c || isDigit c) . T.unpack
+    invalid = not . all ((||) <$> isLower <*> isDigit) . T.unpack
 
     config = snd . (`runState` def{_namePrefix = appName}) $ CB.interpret configProgram
 
-    configJson = render config
 
 
     lbdIOMap = SHM.fromList $ map toLbdIOPair $ getAllLambdas config
