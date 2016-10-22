@@ -24,6 +24,7 @@ import           Qi.Config.CF                         as CF
 import           Qi.Config.Identifier
 import qualified Qi.Deploy.CF                         as CF
 import qualified Qi.Deploy.Lambda                     as Lambda
+import qualified Qi.Deploy.S3                         as S3
 import           Qi.Program.Config.Interface          (ConfigProgram)
 import qualified Qi.Program.Config.Interpreters.Build as CB
 import           Qi.Program.Lambda.Interface          (LambdaProgram)
@@ -42,20 +43,12 @@ withConfig appName configProgram = do
     else do
       args <- getArgs
       case args of
-        [] -> do
-          putStrLn "Unexpected arguments. <print usage>"
-
-        "cf":"deploy":_ -> do
+        "deploy":[] -> do -- deploy CF template and the lambda package
+          S3.deploy appName
           CF.deploy appName $ CF.render config
-
-        "lbd":[] -> do
-          putStrLn "Please specify lambda name"
-
-        "lbd":"deploy":_ -> do
           Lambda.deploy appName
 
-
-        -- run the lambda
+        -- execute the lambda on the event
         "lbd":lbdName:event:_ -> do
           case SHM.lookup (T.pack lbdName) lbdIOMap of
             Nothing ->
@@ -70,8 +63,6 @@ withConfig appName configProgram = do
     invalid = not . all ((||) <$> isLower <*> isDigit) . T.unpack
 
     config = snd . (`runState` def{_namePrefix = appName}) $ CB.interpret configProgram
-
-
 
     lbdIOMap = SHM.fromList $ map toLbdIOPair $ getAllLambdas config
 

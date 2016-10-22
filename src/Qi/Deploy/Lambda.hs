@@ -17,7 +17,6 @@ import           Turtle                        hiding (stdout)
 import           Qi.Deploy.JS                  (js)
 
 
-
 log = liftIO . echo
 
 toTextIgnore x = case toText x of
@@ -28,24 +27,12 @@ deploy
   :: Text
   -> IO ()
 deploy appName = sh $ do
-  createDirs
   lambdaPackagePath <- createLambdaPackage
   liftIO . uploadToS3 . T.unpack $ toTextIgnore lambdaPackagePath
 
   where
-    createDirs = do
-        mapM_ ensureDir [".deploy", ".deploy/lambda"]
-      where
-        ensureDir dirName = do
-          res <- testdir dirName
-          if res
-            then
-              log $ T.concat ["'", toTextIgnore dirName, "' dir already exists, skipping creation"]
-            else do
-              log "creating dir..."
-              mkdir dirName
-
     createLambdaPackage = do
+      mktree ".deploy/lambda"
       cd ".deploy/lambda"
 
       -- write the JS wrapper
