@@ -1,45 +1,70 @@
 Qmu.li
 ======
 
+###TL;DR: [Serverless AWS framework](https://serverless.com/) for [Haskell](https://www.haskell.org/)
 
-Background
-----------
-
-AWS currently gives tech companies a great way to cut time and cost to develop and delpoy infrastructure for their services and products by taking care of some software service layers in addition to the low level 
-physical and OS infrastrucure layer. There is a case to be made however for potential headroom for improvement by creating a suite of convenient high level tools that would reduce the development friction and add safety even further
-by providing a unified expressive high-level integrated domain specific language (DSL). One would be able to completely describe their entire infrastructure in this DSL as opposed to having to specify the AWS resources 
-configuration (like CloudFormation json templates) separately from the code that would run on some of the resources (AWS Lambda), triggered by events originating in other AWS resources.
 
 Purpose
 -------
 
-Qmu.li is an experimental effort to explore this possibility of creating a unified environment, in which one could specify both configuration **and** behavior of a cloud architecture side-by-side in one statically typed language 
-without the artificial boundary imposed by the current generation of AWS tools.
+Qmu.li is an experimental effort in creating a unified environment, in which one could specify both resource configuration **and** lambda 
+behavior of a cloud architecture built on AWS side-by-side in one language without the artificial boundary imposed by the current 
+generation of AWS tools.
 Advantages of such unification are numerous:
-- a more convenient way to specify AWS resources configuration than with regular CF templates codified in JSON, in a language subset that is as declarative as JSON but much more powerful and expressive
-- ability of performing static analisys on **both** configuration **and** behaviors **at the same time**, which is more powerful and encompassing than doing this on each one of those separately
-- possibility of automatic infrastructure diagram/graph generation from this high level DSL code
-- no need to duplicate the resource configuration information in the 'code' that drives the behavior, as it is available and easily accessible during the building phase
 
-Name
-----
-
-Qmu.li is a derivative of "Cumuli", a plural for Cumulus, which means "heap" or "pile" in Latin. We will call a unified specification for configuration and behavior a "qmulus"
-
-Language
---------
-
-DSLs provided to a user are high level DSLs embedded into Haskell - a modern statically-typed pure functional language.
+* a more convenient way to specify AWS resources configuration than with regular CloudFormation templates codified in JSON, in a language 
+subset that is as declarative as JSON but much more powerful and expressive
+* ability of performing static analisys on **both** configuration **and** behaviors **at the same time**, which is more powerful and 
+encompassing than doing this on each individually
+* possibility of automatic infrastructure diagram/graph generation from this high level DSL code
+* no need to duplicate the resource configuration information in the lambda logic that drives the behavior, as it is available and easily 
+accessible during the building phase
 
 
-Example
--------
+Motivating Example
+------------------
 
-Below is an example of how one would express a "qmulus" that would automatically copy the content of any new file uploaded into `incoming` bucket into an s3 object in `outgoing` bucket:
+Let's say we want to create a simple contrived example of architecture that would automatically copy the content of any new file uploaded 
+to `incoming` bucket into the `outgoing` bucket:
+
+
+
+    +-------------+          +-------------------+         +-------------+
+    |             |          |  Lambda that      |         |             |
+    |  Incoming   | S3 event |  receives the S3  |         |  Outgoing   |
+    |  S3 bucket  +--------->|  event and copies +-------->|  S3 bucket  |
+    |             |          |  the S3 object    |         |             |
+    +-------------+          +-------------------+         +-------------+
+
+
+In order to accomplish this with regular tools provided by AWS, we would create these resources using one of 3 methods:
+
+- using the AWS console 
+- using the AWS command line interface (CLI)
+- using CloudFormation template
+
+Using console is great for beginners to learn how to provision resources or for quick ad-hoc changes, but involves lots of clicking around 
+and therefore is not very practical for non-trivial deployments and hard to replicate exactly.
+
+Using AWS CLI allows for better replication/reproducing and maintenance and is much more practical for non-trivial deployments. One could
+script the CLI commands to create reproducible provisioning sequences, but one needs to somehow guarantee that the sequence is correct to
+satisfy the inter-dependencies among the resources and that the delays are correct to ensure dependencies have been provisioned before 
+the dependents are attempted to be provisioned.
+
+Using CloudFormation is a step up in that it allows to completely describe the infrastructure that needs to be provisioned in a declarative 
+json document that could be version-controlled and used as a specification. However writing and maintaining the json template specification 
+can get unwieldy and lambda behaviors still need to be specified separately and may result in errors if the behavior specification assumes
+permissions or resources that don't match or exist in the CloudFormation template.
+
+Qmuli tries to solve the problem of mismatched resource and behavior specification and tries to unify them. Then it statically analyzes, 
+while compiling, prior to actual deployment, whether all the pieces fit and would work correctly together once deployed.
+
+Below is an example of how one would express the above architecture as a "qmulus" (i.e. a unified specification for architecture resources 
+and behavior) in a single file:
 
 ```haskell
 main :: IO ()
-main = "myqmulus" `withConfig` config
+main = "simples3copy" `withConfig` config
   where
     config :: ConfigProgram ()
     config = do
@@ -60,24 +85,84 @@ main = "myqmulus" `withConfig` config
       :: S3BucketIdentifier
       -> S3Event
       -> LambdaProgram ()
-    copyContentsLambda sinkBucket S3Event{s3Object} = do
+    copyContentsLambda sinkBucket S3Event{s3Object = s3Obj@S3Object{s3oKey = s3Key}} = do
 
       -- get the content of the newly uploaded file
-      content <- getS3ObjectContent s3Object
+      content <- getS3ObjectContent s3Obj
 
       -- write the content into a new file in the "output" bucket
       putS3ObjectContent outputS3Object content
 
       where
-        outputS3Object = S3Object sinkBucket (S3Key "out")
+        outputS3Object = S3Object sinkBucket s3Key
 ```
 
-DSL
----
+Compiling this qmulus results in a multi-purpose executable binary, which can be used as a CLI tool for management tasks like provisioning 
+as well as the binary executable that gets packaged and used in all lambdas. 
 
-The "Config DSL" would have functions like `createS3Bucket` or `createS3BucketLambda` for creating/defining the AWS resources like s3 bucket or a lambda that gets triggered by an s3 event.
+Getting started
+---------------
 
-The "Lambda DSL" would consist of functions like `getS3ObjectContent` and `putS3ObjectContent` used in the above qmulus for operations like accessing and writing content of s3 objects.
+Qmulus needs to be built on an Amazon Linux AMI in order to be compatible with running it on a lambda.
 
-Once the qmulus is built successfully, a binary file becomes available, which exposes various commands for deploying it onto the cloud.
+###Provision EC2 instance:
+
+- Go to EC2 console and click the "Launch instance" button
+- Choose "AWS Marketplace" and type in "Amazon Linux AMI HVM" into the search bar
+- From the search results, choose something that looks like "Amazon Linux AMI (HVM / 64-bit)"
+- Provision this instance as t2.small - this gives adequate building speed to do the initial build. Later it is ok to change it to the less 
+expensive t2.micro to do incremental builds
+
+
+###Prepare the instance
+
+install dependencies
+```sh
+sudo yum -y --enablerepo=epel install haskell-platform git make ncurses-devel patch gcc-c++
+```
+
+install stack
+```sh
+curl -sSL https://s3.amazonaws.com/download.fpcomplete.com/centos/7/fpco.repo | sudo tee /etc/yum.repos.d/fpco.repo
+sudo yum -y install stack
+stack setup
+```
+
+make your AWS keys available in the environment. Put the following lines in `~/.profile` or `~/.bashrc` file:
+```sh
+export AWS_ACCESS_KEY_ID=<YOUR KEY>
+export AWS_SECRET_ACCESS_KEY=<YOUR SECRET>
+```
+
+###Clone and build the library and examples
+```sh
+git clone https://github.com/qmuli/qmuli.git
+cd qmuli
+stack install
+```
+
+###Running an example
+The above example is available as the "simple-s3-copy" qmulus.
+
+The `simple-s3-copy deploy` command does the following:
+
+- generates the CloudFormation (CF) json template
+- packages/zips up the executable to be used by lambda
+- uploads those to the qmulus S3 bucket (with the same name)
+
+After that is deployed, just create a new CF stack (using AWS console for example) and point to the generated CF json template that is now 
+in the qmulus S3 bucket. And voila, you should now have the example deployed and working. 
+Try uploading a small file into the 'incoming' bucket, you should see the same file copied automatically to the 'outgoing' bucket.
+
+
+Future work
+-----------
+
+The idea is to use this project as an experiment platform to design a toolset that would allow very rapid and painless development for 
+serverless architectures, and of course, would leverage all the great stuff that haskell has to offer. The plan is to add all the usual 
+AWS SaaS puzzle pieces like ApiGateway, Dynamo, SQS, etc and make them easily composable. Furthermore, using free/operational monad based 
+DSLs would allow for various ways to statically analyze architecture + lambda behaviors and infer various properties that would allow for 
+optimizations, correctness checking, generating artifacts like visual diagrams, etc in addition to making code safer by not directly using 
+IO.
+
 

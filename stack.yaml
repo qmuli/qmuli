@@ -6,8 +6,9 @@ resolver: nightly-2016-08-30
 
 # Local packages, usually specified by relative directory name
 packages:
-- '.'
-- stratosphere
+- location:
+    git: git@github.com:frontrowed/stratosphere
+    commit: 3efe89b845ad538153a4cb27c9ae0f66d0ebd3f2
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps: []
