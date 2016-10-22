@@ -21,7 +21,7 @@ import qualified Data.Text                    as T
 import qualified Data.Text.IO                 as T
 import           Network.AWS                  hiding (send)
 import qualified Network.AWS.S3               as A
-import           System.IO (stdout)
+import           System.IO                    (stdout)
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.Lambda
@@ -61,12 +61,12 @@ run program config = do
         getS3ObjectContent
           :: S3Object
           -> QiAWS ByteString
-        getS3ObjectContent s3Obj@S3Object{s3oBucketId} = do
+        getS3ObjectContent s3Obj@S3Object{s3oBucketId, s3oKey = S3Key objKey} = do
           {- putStrLn $ "GetS3ObjectContent: " ++ show s3Obj -}
           config <- lift ask
           let bucketName = (getS3BucketById s3oBucketId config) ^. s3bName
           say "Reading s3 object content..." ""
-          r <- send $ A.getObject (A.BucketName $ bucketName `namePrefixWith` config) (A.ObjectKey "test.pdf")
+          r <- send . A.getObject (A.BucketName $ bucketName `namePrefixWith` config) $ A.ObjectKey objKey
           sinkBody (r ^. A.gorsBody) sinkLbs
 
 -- TODO: add a streaming version that takes a sink and streams the rsBody into it
@@ -77,14 +77,13 @@ run program config = do
           :: S3Object
           -> ByteString
           -> QiAWS ()
-        putS3ObjectContent s3Obj@S3Object{s3oBucketId} content = do
+        putS3ObjectContent s3Obj@S3Object{s3oBucketId, s3oKey = S3Key objKey} content = do
           {- putStrLn $ "PutS3ObjectContent: " ++ show s3Obj -}
           config <- lift ask
           let bucketName = (getS3BucketById s3oBucketId config) ^. s3bName
           say "Writing s3 object content..." ""
-          r <- send $ A.putObject (A.BucketName $ bucketName `namePrefixWith` config) (A.ObjectKey "test.pdf") $ toBody content
+          r <- send . A.putObject (A.BucketName $ bucketName `namePrefixWith` config) (A.ObjectKey objKey) $ toBody content
           return ()
-
 
         say :: Show a => Text -> a -> QiAWS ()
         say msg = liftIO . T.putStrLn . mappend msg . T.pack . show

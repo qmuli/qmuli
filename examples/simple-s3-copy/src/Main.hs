@@ -15,7 +15,7 @@ import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
 
 
 main :: IO ()
-main = "myqmulus" `withConfig` config
+main = "simples3copy" `withConfig` config
   where
     config :: ConfigProgram ()
     config = do
@@ -36,13 +36,13 @@ main = "myqmulus" `withConfig` config
       :: S3BucketIdentifier
       -> S3Event
       -> LambdaProgram ()
-    copyContentsLambda sinkBucket S3Event{s3Object} = do
+    copyContentsLambda sinkBucket S3Event{s3Object = s3Obj@S3Object{s3oKey = s3Key}} = do
 
       -- get the content of the newly uploaded file
-      content <- getS3ObjectContent s3Object
+      content <- getS3ObjectContent s3Obj
 
       -- write the content into a new file in the "output" bucket
       putS3ObjectContent outputS3Object content
 
       where
-        outputS3Object = S3Object sinkBucket (S3Key "out")
+        outputS3Object = S3Object sinkBucket s3Key

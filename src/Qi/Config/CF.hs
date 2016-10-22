@@ -114,6 +114,8 @@ toResources config@Config{_namePrefix} = mconcat [s3Resources, roleResources, lb
               (GetAtt lambdaBasicExecutionIAMRoleResourceName "Arn")
               "nodejs4.3"
             & lfFunctionName ?~ (Literal $ _lbdName `namePrefixWith` config)
+            & lfMemorySize ?~ Literal 1536
+            & lfTimeout ?~ Literal 90
           )
           & dependsOn ?~ [ lambdaBasicExecutionIAMRoleResourceName ]
 
