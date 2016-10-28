@@ -2,22 +2,30 @@
 # For more information, see: http://docs.haskellstack.org/en/stable/yaml_configuration/
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
-resolver: nightly-2016-08-30
+resolver: nightly-2016-10-28
 
 # Local packages, usually specified by relative directory name
 packages:
+- '.'
 - location:
     git: git@github.com:frontrowed/stratosphere
     commit: 3efe89b845ad538153a4cb27c9ae0f66d0ebd3f2
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
-extra-deps: []
+extra-deps:
+- amazonka-1.4.4.1
+- amazonka-cloudformation-1.4.4
+- amazonka-core-1.4.4
+- amazonka-s3-1.4.4
 
 # Override default flag values for local packages and extra-deps
 flags: {}
 
 # Extra package databases containing global packages
 extra-package-dbs: []
+
+# ghc-options:
+  # "*": -static -optc-static -optl-static -optl-pthread
 
 # Control whether we use the GHC we find on the path
 # system-ghc: true
