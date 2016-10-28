@@ -8,7 +8,7 @@ resolver: nightly-2016-10-28
 packages:
 - '.'
 - location:
-    git: git@github.com:frontrowed/stratosphere
+    git: https://github.com/frontrowed/stratosphere.git
     commit: 3efe89b845ad538153a4cb27c9ae0f66d0ebd3f2
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)

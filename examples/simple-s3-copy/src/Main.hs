@@ -1,5 +1,6 @@
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
@@ -15,7 +16,14 @@ import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
 
 
 main :: IO ()
-main = "simples3copy" `withConfig` config
+main = do
+  -- Qmulus name must be globaly unique as the main deployment S3 bucket uses this name and
+  -- all underlying resource names use it as a prefix. To avoid collisions, rename this demo:
+  --
+  --   "myfancyuniquelynamedproject" `withConfig` config
+  --
+  "simples3copy" `withConfig` config
+
   where
     config :: ConfigProgram ()
     config = do

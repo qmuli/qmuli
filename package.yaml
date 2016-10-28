@@ -50,6 +50,7 @@ executables:
     dependencies:
       - base >= 4.8 && < 5
       - qmuli
+      - random
     ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
   # api-gw-lambda:
     # main: Main.hs
