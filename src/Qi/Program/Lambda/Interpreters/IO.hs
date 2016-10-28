@@ -23,6 +23,7 @@ import           Network.AWS                  hiding (send)
 import qualified Network.AWS.S3               as A
 import           System.IO                    (stdout)
 
+import           Qi.Amazonka                  (currentRegion)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
@@ -38,9 +39,9 @@ run
   -> Config
   -> IO ()
 run program config = do
-  env <- newEnv NorthVirginia Discover
   logger <- newLogger Debug stdout
-  runResourceT . (`runReaderT` config) . runAWST (env & envLogger .~ logger) $ interpret program
+  env <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion
+  runResourceT . (`runReaderT` config) . runAWST env $ interpret program
 
   where
     interpret

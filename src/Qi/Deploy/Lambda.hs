@@ -4,7 +4,6 @@
 module Qi.Deploy.Lambda (deploy) where
 
 import           Control.Lens                  hiding (view)
-import           Control.Monad.Trans.AWS       (AWST, runAWST, send)
 import qualified Data.ByteString.Lazy          as LBS
 import qualified Data.Text                     as T
 import           Network.AWS                   hiding (send)
@@ -15,6 +14,7 @@ import           System.IO                     (stdout)
 import           Turtle                        hiding (stdout)
 
 import           Qi.Deploy.JS                  (js)
+import qualified Qi.Deploy.S3                  as S3
 
 
 log = liftIO . echo
@@ -54,11 +54,6 @@ deploy appName = sh $ do
     uploadToS3
       :: String
       -> IO ()
-    uploadToS3 path = do
-      env <- newEnv NorthVirginia Discover
-      logger <- newLogger Debug stdout
-      lambdaPackage <- LBS.readFile path
-      runResourceT . runAWST (env & envLogger .~ logger) $ do
-        r <- send $ A.putObject (A.BucketName appName) (A.ObjectKey "lambda.zip") $ toBody lambdaPackage
-        return ()
+    uploadToS3 path =
+      S3.upload appName "lambda.zip" =<< LBS.readFile path
 

@@ -22,7 +22,6 @@ import           Qi.Config.AWS.S3
 import qualified Qi.Config.AWS.S3.Event               as S3Event (parse)
 import           Qi.Config.CF                         as CF
 import           Qi.Config.Identifier
-import qualified Qi.Deploy.CF                         as CF
 import qualified Qi.Deploy.Lambda                     as Lambda
 import qualified Qi.Deploy.S3                         as S3
 import           Qi.Program.Config.Interface          (ConfigProgram)
@@ -44,8 +43,8 @@ withConfig appName configProgram = do
       args <- getArgs
       case args of
         "deploy":[] -> do -- deploy CF template and the lambda package
-          S3.deploy appName
-          CF.deploy appName $ CF.render config
+          S3.createBucket appName
+          S3.upload appName "cf.json" $ CF.render config
           Lambda.deploy appName
 
         -- execute the lambda on the event
