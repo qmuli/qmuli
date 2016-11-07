@@ -26,47 +26,49 @@ instance Show S3EventType where
   show S3ObjectRemovedAll = "s3:ObjectRemoved:*"
 
 
-data LambdaEventConfig = LambdaEventConfig {
+data S3EventConfig = S3EventConfig {
     _event :: S3EventType
-  , _lbdId :: LambdaIdentifier
+  , _lbdId :: LambdaId
   } deriving Show
-
-makeLenses ''LambdaEventConfig
-
 
 newtype S3Key = S3Key Text
   deriving Show
 
 data S3Object = S3Object {
-    s3oBucketId :: S3BucketIdentifier
-  , s3oKey      :: S3Key
+    _s3oBucketId :: S3BucketId
+  , _s3oKey      :: S3Key
   } deriving Show
 
+s3Object
+  :: S3BucketId
+  -> S3Key
+  -> S3Object
+s3Object = S3Object
 
 data S3Event = S3Event {
-    s3Object :: S3Object
+    _s3eObject :: S3Object
   } deriving Show
-
 
 
 data S3Bucket = S3Bucket {
-    _s3bName            :: Text
-  , _s3bLbdEventConfigs :: [LambdaEventConfig]
+    _s3bName         :: Text
+  , _s3bEventConfigs :: [S3EventConfig]
   } deriving Show
+
+instance Default S3Bucket where
+  def = S3Bucket {
+    _s3bName = "default"
+  , _s3bEventConfigs = def
+  }
 
 instance Hashable S3Bucket where
   hashWithSalt s S3Bucket{_s3bName} = s `hashWithSalt` _s3bName
 
 
-makeLenses ''S3Bucket
-
-
-
 data S3BucketIndex = S3BucketIndex {
-    _s3idxIdToS3Bucket :: HashMap S3BucketIdentifier S3Bucket
-  , _s3idxNameToId     :: HashMap Text S3BucketIdentifier
+    _s3idxIdToS3Bucket :: HashMap S3BucketId S3Bucket
+  , _s3idxNameToId     :: HashMap Text S3BucketId
   } deriving Show
-makeLenses ''S3BucketIndex
 
 instance Monoid S3BucketIndex where
   mappend
@@ -96,21 +98,13 @@ instance Default S3Config where
     _s3Buckets = def
   }
 
+
+makeLenses ''S3EventConfig
+makeLenses ''S3Object
+makeLenses ''S3Bucket
+makeLenses ''S3Event
+makeLenses ''S3BucketIndex
 makeLenses ''S3Config
 
-
-insertBucket
-  :: S3Bucket
-  -> (S3BucketIdentifier, (S3Config -> S3Config))
-insertBucket bucket = (bid, insertNameToId . insertIdToS3Bucket)
-  where
-    insertIdToS3Bucket :: S3Config -> S3Config
-    insertIdToS3Bucket = over (s3Buckets . s3idxIdToS3Bucket) (SHM.insert bid bucket)
-
-    insertNameToId :: S3Config -> S3Config
-    insertNameToId = over (s3Buckets . s3idxNameToId) (SHM.insert bname bid)
-
-    bid = S3BucketIdentifier $ hash bucket
-    bname = bucket ^. s3bName
 
 

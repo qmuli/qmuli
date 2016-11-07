@@ -16,7 +16,7 @@ import           Qi.Config.Identifier
 
 
 getLambdaById
-  :: LambdaIdentifier
+  :: LambdaId
   -> Config
   -> Lambda
 getLambdaById lid =
@@ -25,7 +25,7 @@ getLambdaById lid =
     lbdHm config = config ^. lbdConfig . lcLambdas
 
 getLambdaResourceNameFromId
-  :: LambdaIdentifier
+  :: LambdaId
   -> Config
   -> Text
 getLambdaResourceNameFromId lid config =
@@ -43,3 +43,10 @@ getAllLambdas
   -> [Lambda]
 getAllLambdas config =
   SHM.elems $ config ^. lbdConfig . lcLambdas
+
+
+getLambdaPermissionResourceName
+  :: Lambda
+  -> Text
+getLambdaPermissionResourceName lbd =  T.concat [lbd ^. lbdName, "LambdaPermission"]
+

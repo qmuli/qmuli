@@ -52,12 +52,22 @@ executables:
       - qmuli
       - random
     ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-  # api-gw-lambda:
-    # main: Main.hs
-    # source-dirs: examples/api-gw-lambda/src
-    # dependencies:
-      # - base >= 4.8 && < 5
-      # - qmuli
-    # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  api-gw-lambda:
+    main: Main.hs
+    source-dirs: examples/api-gw-lambda/src
+    dependencies:
+      - base >= 4.8 && < 5
+      - qmuli
+    ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
 
-
+tests:
+  tasty:
+    main: Main.hs
+    source-dirs:
+      - tests
+    dependencies:
+      - base
+      - qmuli
+      - stratosphere
+      - tasty
+      - tasty-hspec

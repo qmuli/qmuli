@@ -19,8 +19,8 @@ js = T.concat ["\
   \    .replace(/\"/g, \"\\\\\\\"\");\n\
   \  console.log(\"input:\", input)\n\
   \  var child = exec('./' + appName + ' lbd ' + lbdName + ' \"' + input + '\"', {maxBuffer: 1024 * 500}, function(error, stdout, stderr) {\n\
-  \    console.log('stdout: ' + stdout);\n\
-  \    console.log('stderr: ' + stderr);\n\
+  \    console.log('stdout: \"' + stdout + '\"');\n\
+  \    console.log('stderr: \"' + stderr + '\"');\n\
   \    if (error !== null) { console.log('exec error: ' + error); }\n\
   \    context.done(null, JSON.parse(stdout));\n\
   \  });\n\

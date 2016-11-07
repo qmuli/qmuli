@@ -1,14 +1,17 @@
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 module Main where
 
+import           Control.Lens
 import           Control.Monad               (void)
 
 import           Qi                          (withConfig)
-import           Qi.Config.AWS.S3
-import           Qi.Config.Identifier        (S3BucketIdentifier)
+import           Qi.Config.AWS.S3            (S3Event, s3Object, s3eObject,
+                                              s3oBucketId, s3oKey)
+import           Qi.Config.Identifier        (S3BucketId)
 import           Qi.Program.Config.Interface (ConfigProgram, createS3Bucket,
                                               createS3BucketLambda)
 import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
@@ -27,30 +30,29 @@ main = do
   where
     config :: ConfigProgram ()
     config = do
-
       -- create an "input" s3 bucket
       incoming <- createS3Bucket "incoming"
 
       -- create an "output" s3 bucket
       outgoing <- createS3Bucket "outgoing"
 
-      -- create a lambda, which will copy an s3 object from "input" to "output" buckets
+      -- create a lambda, which will copy an s3 object from "incoming" to "outgoing" buckets
       -- upon an S3 "Put" event.
-      -- Attach the lambda to the "input" bucket such way so each time a file is uploaded to
+      -- Attach the lambda to the "incoming" bucket such way so each time a file is uploaded to
       -- the bucket, the lambda is called with the information about the newly uploaded file.
       void $ createS3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing)
 
     copyContentsLambda
-      :: S3BucketIdentifier
+      :: S3BucketId
       -> S3Event
       -> LambdaProgram ()
-    copyContentsLambda sinkBucket S3Event{s3Object = s3Obj@S3Object{s3oKey = s3Key}} = do
+    copyContentsLambda sinkBucketId event = do
 
+      let incomingS3Obj = event ^. s3eObject
+          outgoingS3Object = s3oBucketId .~ sinkBucketId $ incomingS3Obj
       -- get the content of the newly uploaded file
-      content <- getS3ObjectContent s3Obj
+      content <- getS3ObjectContent incomingS3Obj
 
       -- write the content into a new file in the "output" bucket
-      putS3ObjectContent outputS3Object content
+      putS3ObjectContent outgoingS3Object content
 
-      where
-        outputS3Object = S3Object sinkBucket s3Key

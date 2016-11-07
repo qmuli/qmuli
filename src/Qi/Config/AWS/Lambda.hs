@@ -11,27 +11,30 @@ import qualified Data.HashMap.Strict         as SHM
 import           Data.Text                   (Text)
 import           Stratosphere
 
+import           Qi.Config.AWS.Api           (ApiEvent)
 import           Qi.Config.AWS.S3            (S3Event)
 import           Qi.Config.Identifier
 import           Qi.Program.Lambda.Interface (LambdaProgram)
 
 data Lambda = S3BucketLambda {
+    _lbdName                  :: Text
+  , _lbdS3BucketLambdaProgram :: S3Event -> LambdaProgram ()
+  } | ApiLambda {
     _lbdName                   :: Text
-  , _lbdS3BucketLambdaBucketId :: S3BucketIdentifier
-  , _lbdS3BucketLambdaProgram  :: S3Event -> LambdaProgram ()
-} deriving Show
-
-
-
-instance Hashable Lambda where
-  hashWithSalt s S3BucketLambda{_lbdName} = s `hashWithSalt` _lbdName
+  , _lbdApiMethodLambdaProgram :: ApiEvent -> LambdaProgram ()
+  } deriving Show
 
 makeLenses ''Lambda
 
+instance Hashable Lambda where
+  hashWithSalt s lbd = s `hashWithSalt` (lbd ^. lbdName)
+
 
 data LambdaConfig = LambdaConfig {
-  _lcLambdas :: HashMap LambdaIdentifier Lambda
-} deriving Show
+    _lcLambdas :: HashMap LambdaId Lambda
+  } deriving Show
+
+makeLenses ''LambdaConfig
 
 instance Monoid LambdaConfig where
   LambdaConfig { _lcLambdas = l1 } `mappend` LambdaConfig { _lcLambdas = l2 } =
@@ -43,7 +46,6 @@ instance Default LambdaConfig where
     _lcLambdas = SHM.empty
   }
 
-makeLenses ''LambdaConfig
 
 
 

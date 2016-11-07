@@ -16,12 +16,12 @@ import qualified Data.Text                            as T
 import           System.Environment                   (getArgs)
 
 import           Qi.Config.AWS
+import qualified Qi.Config.AWS.Api.Event              as ApiEvent (parse)
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.Lambda.Accessors       (getAllLambdas)
 import           Qi.Config.AWS.S3
 import qualified Qi.Config.AWS.S3.Event               as S3Event (parse)
 import           Qi.Config.CF                         as CF
-import           Qi.Config.Identifier
 import qualified Qi.Deploy.Lambda                     as Lambda
 import qualified Qi.Deploy.S3                         as S3
 import           Qi.Program.Config.Interface          (ConfigProgram)
@@ -42,6 +42,9 @@ withConfig appName configProgram = do
     else do
       args <- getArgs
       case args of
+        "cf":[] ->
+          LBS.putStr $ CF.render config
+
         "deploy":[] -> do -- deploy CF template and the lambda package
           S3.createBucket appName
           S3.upload appName "cf.json" $ CF.render config
@@ -66,16 +69,28 @@ withConfig appName configProgram = do
     lbdIOMap = SHM.fromList $ map toLbdIOPair $ getAllLambdas config
 
       where
-        toLbdIOPair :: Lambda -> (Text, String -> IO ())
-        toLbdIOPair S3BucketLambda{_lbdName, _lbdS3BucketLambdaProgram} = (_lbdName, lbdIO)
-          where
-            lbdIO :: String -> IO ()
-            lbdIO eventJson = do
-              case parseEither (`S3Event.parse` config) =<< eitherDecode (LBS.pack eventJson) of
-                Right s3Event ->
-                  LIO.run (_lbdS3BucketLambdaProgram s3Event) config
-                Left err ->
-                  fail $ "Could not parse event: " ++ show eventJson
+        toLbdIOPair
+          :: Lambda
+          -> (Text, String -> IO ())
+        toLbdIOPair lbd = (lbd ^. lbdName, lbdIO lbd)
 
-        toLbdIOPair lbd = error $ "unsupported lambda constructor: " ++ show lbd
+        parseLambdaEvent
+          :: Lambda
+          -> String
+          -> Either String (LambdaProgram ())
+        parseLambdaEvent S3BucketLambda{_lbdS3BucketLambdaProgram} eventJson =
+          _lbdS3BucketLambdaProgram <$> (parseEither (`S3Event.parse` config) =<< eitherDecode (LBS.pack eventJson))
+        parseLambdaEvent ApiLambda{_lbdApiMethodLambdaProgram} eventJson =
+          _lbdApiMethodLambdaProgram <$> (parseEither (`ApiEvent.parse` config) =<< eitherDecode (LBS.pack eventJson))
+
+        lbdIO
+          :: Lambda
+          -> String
+          -> IO ()
+        lbdIO lbd eventJson =
+          either
+            (\err -> fail $ concat ["Could not parse event: ", show eventJson, ", error was: ", err])
+            (`LIO.run` config)
+            (parseLambdaEvent lbd eventJson)
+
 
