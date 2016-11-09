@@ -69,7 +69,6 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                         (Literal $ apir ^. arName)
                         (Ref apiResName)
                   )
-                  & dependsOn ?~ deps
 
 
                 -- TODO
@@ -78,7 +77,6 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
 
               where
                 apiParent = GetAtt apiResName "RootResourceId"
-                deps = [ apiResName ]
 
 
             methodResources = map toMethodResource (apir ^. arMethodConfigs)
@@ -95,19 +93,19 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                     & agmeMethodResponses ?~ [ methodResponse ]
               )
               & dependsOn ?~ [
-                  apirResName,
-                  apiResName
-                ]
+                    lbdPermResName
+                  ]
 
               where
                 name = getApiMethodCFResourceName apir _verb
                 verb = Literal . T.pack $ show _verb
                 methodResponse = apiGatewayMethodResponse "200"
                 lbdResName = getLambdaResourceNameFromId _lbdId config
+                lbdPermResName = getLambdaPermissionResourceName $ getLambdaById _lbdId config
 
                 integration =
                   apiGatewayIntegration "AWS"
-                  & agiIntegrationHttpMethod ?~ verb
+                  & agiIntegrationHttpMethod ?~ "POST" -- looks like this should always be "POST"
                   & agiUri ?~ uri
                   & agiPassthroughBehavior ?~ passthroughBehavior
                   & agiRequestTemplates ?~ requestTemplates
@@ -127,8 +125,8 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                       -- {"body" : $input.json('$')}
 
                     passthroughBehavior = case _verb of
-                      Get   -> "NEVER"
-                      Post  -> "WHEN_NO_TEMPLATES"
+                      Get  -> "WHEN_NO_TEMPLATES"
+                      Post -> "WHEN_NO_TEMPLATES"
 
                 integrationResponse = apiGatewayIntegrationResponse
                   & agirResponseTemplates ?~ responseTemplates

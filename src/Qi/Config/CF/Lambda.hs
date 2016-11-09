@@ -35,8 +35,8 @@ toResources config = foldMap toAllLambdaResources $ getAllLambdas config
               principal
           where
             principal = case lbd of
-              S3BucketLambda{}  -> "s3.amazonaws.com"
-              ApiLambda{}       -> "apigateway.amazonaws.com"
+              S3BucketLambda{} -> "s3.amazonaws.com"
+              ApiLambda{}      -> "apigateway.amazonaws.com"
 
         lambdaCFResource = (
           resource lbdResName $
@@ -50,10 +50,6 @@ toResources config = foldMap toAllLambdaResources $ getAllLambdas config
             & lfMemorySize ?~ Literal 1536
             & lfTimeout ?~ Literal 90
           )
-          & dependsOn ?~ [ 
-              Role.lambdaBasicExecutionIAMRoleResourceName
-            , lbdPermResName
-            ]
 
           where
             lbdCode :: LambdaFunctionCode
