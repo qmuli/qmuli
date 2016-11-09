@@ -42,13 +42,19 @@ withConfig appName configProgram = do
     else do
       args <- getArgs
       case args of
-        "cf":[] ->
+        "cf":"template":[] ->
           LBS.putStr $ CF.render config
 
-        "deploy":[] -> do -- deploy CF template and the lambda package
+        "cf":"deploy":[] -> do -- deploy CF template and the lambda package
           S3.createBucket appName
           S3.upload appName "cf.json" $ CF.render config
           Lambda.deploy appName
+
+        "cf":"create":[] -> do -- create CF stack
+          undefined
+
+        "cf":"destroy":[] -> do -- destroy CF stack
+          undefined
 
         -- execute the lambda on the event
         "lbd":lbdName:event:_ -> do

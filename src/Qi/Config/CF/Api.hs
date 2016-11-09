@@ -110,7 +110,7 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                   & agiIntegrationHttpMethod ?~ verb
                   & agiUri ?~ uri
                   & agiIntegrationResponses ?~ [ integrationResponse ]
-                  & agiPassthroughBehavior ?~ "NEVER"
+                  & agiPassthroughBehavior ?~ "WHEN_NO_TEMPLATES"
                   & agiRequestTemplates ?~ requestTemplates
 
                   where
@@ -124,7 +124,7 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                     requestTemplates = [ ("application/json", jsonTemplate) ]
                       where
                         jsonTemplate = case _verb of
-                          Get -> "{\"body\": \"\""
+                          Get -> "{\"body\": \"\"}"
                           Post -> "{\"body\": $input.body}"
 
                 integrationResponse = apiGatewayIntegrationResponse

@@ -18,8 +18,8 @@ import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
                                               putS3ObjectContent, output)
 
 
--- curl -v -X POST -H "Content-Type: application/json" -d "{\"description\": \"test thing\"}" "https://16wwl2y29d.execute-api.us-east-1.amazonaws.com/v1/things"
--- curl -v -X GET "https://16wwl2y29d.execute-api.us-east-1.amazonaws.com/v1/things"
+-- curl -v -X POST -H "Content-Type: application/json" -d "\"false\"" "https://jc8bt40t4m.execute-api.us-east-1.amazonaws.com/v1/things"
+-- curl -v -X GET -H "Accept: application/json" "https://jc8bt40t4m.execute-api.us-east-1.amazonaws.com/v1/things"
 
 main :: IO ()
 main = "apigwlambda" `withConfig` config
