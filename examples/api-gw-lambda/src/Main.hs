@@ -21,56 +21,59 @@ import           Qi.Program.Config.Interface (ConfigProgram, createApi,
 import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
                                               output, putS3ObjectContent)
 
-
--- curl -v -X POST -H "Content-Type: application/json" -d "{\"testvalue\": 3}" "https://fkxk2h6lp7.execute-api.us-east-1.amazonaws.com/v1/things"
--- curl -v -X GET "https://fkxk2h6lp7.execute-api.us-east-1.amazonaws.com/v1/things"
+-- Used the two curl commands below to test-drive the two endpoints (substitute your unique api stage url first):
+--
+-- curl -v -X POST -H "Content-Type: application/json" -d "{\"testvalue\": 3}" "https://ns45qabsx8.execute-api.us-east-1.amazonaws.com/v1/things"
+-- curl -v -X GET "https://ns45qabsx8.execute-api.us-east-1.amazonaws.com/v1/things"
+--
 
 main :: IO ()
-main = "apigwlambda" `withConfig` config
-  where
-    config :: ConfigProgram ()
-    config = do
-      bucketId  <- createS3Bucket "things"
+main =
+  "apigwlambda" `withConfig` config
 
-      apiId         <- createApi "world"
-      apiResourceId <- createApiRootResource "things" apiId
+    where
+      config :: ConfigProgram ()
+      config = do
+        bucketId  <- createS3Bucket "things"
 
-      void $ createApiMethodLambda
-        "createThing"
-        Post
-        apiResourceId
-        $ writeContentsLambda bucketId
+        apiId         <- createApi "world"
+        apiResourceId <- createApiRootResource "things" apiId
 
-      void $ createApiMethodLambda
-        "viewThing"
-        Get
-        apiResourceId
-        $ readContentsLambda bucketId
+        void $ createApiMethodLambda
+          "createThing"
+          Post
+          apiResourceId
+          $ writeContentsLambda bucketId
 
-
-    writeContentsLambda
-      :: S3BucketId
-      -> ApiEvent
-      -> LambdaProgram ()
-    writeContentsLambda bucketId event@ApiEvent{_aeBody} = do
-      -- write the body into a new file in the "output" bucket
-      putS3ObjectContent (s3Object bucketId) content
-      output "successfully added content"
-
-      where
-        content = case _aeBody of
-          PlainTextBody t -> LBS.fromStrict $ encodeUtf8 t
-          JsonBody v      -> encode v
+        void $ createApiMethodLambda
+          "viewThing"
+          Get
+          apiResourceId
+          $ readContentsLambda bucketId
 
 
-    readContentsLambda
-      :: S3BucketId
-      -> ApiEvent
-      -> LambdaProgram ()
-    readContentsLambda bucketId _ = do
-      content <- getS3ObjectContent $ s3Object bucketId
-      output $ LBS.toStrict content
+      writeContentsLambda
+        :: S3BucketId
+        -> ApiEvent
+        -> LambdaProgram ()
+      writeContentsLambda bucketId event@ApiEvent{_aeBody} = do
+        putS3ObjectContent (s3Object bucketId) content
+        output "successfully added content"
+
+        where
+          content = case _aeBody of
+            PlainTextBody t -> LBS.fromStrict $ encodeUtf8 t
+            JsonBody v      -> encode v
 
 
-    s3Object = (`S3Object` s3Key)
-    s3Key = S3Key "thing.json"
+      readContentsLambda
+        :: S3BucketId
+        -> ApiEvent
+        -> LambdaProgram ()
+      readContentsLambda bucketId _ = do
+        content <- getS3ObjectContent $ s3Object bucketId
+        output $ LBS.toStrict content
+
+
+      s3Object = (`S3Object` s3Key)
+      s3Key = S3Key "thing.json"

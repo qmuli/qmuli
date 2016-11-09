@@ -39,66 +39,69 @@ to `incoming` bucket into the `outgoing` bucket:
 
 In order to accomplish this with regular tools provided by AWS, we would create these resources using one of 3 methods:
 
-- using the AWS console 
+- using the AWS console
 - using the AWS command line interface (CLI)
 - using CloudFormation template
 
-Using console is great for beginners to learn how to provision resources or for quick ad-hoc changes, but involves lots of clicking around 
+Using console is great for beginners to learn how to provision resources or for quick ad-hoc changes, but involves lots of clicking around
 and therefore is not very practical for non-trivial deployments and hard to replicate exactly.
 
 Using AWS CLI allows for better replication/reproducing and maintenance and is much more practical for non-trivial deployments. One could
 script the CLI commands to create reproducible provisioning sequences, but one needs to somehow guarantee that the sequence is correct to
-satisfy the inter-dependencies among the resources and that the delays are correct to ensure dependencies have been provisioned before 
+satisfy the inter-dependencies among the resources and that the delays are correct to ensure dependencies have been provisioned before
 the dependents are attempted to be provisioned.
 
-Using CloudFormation is a step up in that it allows to completely describe the infrastructure that needs to be provisioned in a declarative 
-json document that could be version-controlled and used as a specification. However writing and maintaining the json template specification 
+Using CloudFormation is a step up in that it allows to completely describe the infrastructure that needs to be provisioned in a declarative
+json document that could be version-controlled and used as a specification. However writing and maintaining the json template specification
 can get unwieldy and lambda behaviors still need to be specified separately and may result in errors if the behavior specification assumes
 permissions or resources that don't match or exist in the CloudFormation template.
 
-Qmuli tries to solve the problem of mismatched resource and behavior specification and tries to unify them. Then it statically analyzes, 
-while compiling, prior to actual deployment, whether all the pieces fit and would work correctly together once deployed.
+Qmuli tries to solve potential problems stemming from mismatched resource and behavior specification by unifying them. Then it statically
+analyzes, while compiling, prior to actual deployment, whether all the pieces fit and would work correctly together once deployed.
 
-Below is an example of how one would express the above architecture as a "qmulus" (i.e. a unified specification for architecture resources 
+Below is an example of how one would express the above architecture as a "qmulus" (i.e. a unified specification for architecture resources
 and behavior) in a single file:
 
 ```haskell
 main :: IO ()
-main = "simples3copy" `withConfig` config
-  where
-    config :: ConfigProgram ()
-    config = do
+main =
+  "simples3copy" `withConfig` config
 
-      -- create an "input" s3 bucket
-      incoming <- createS3Bucket "incoming"
+    where
+      config :: ConfigProgram ()
+      config = do
+        -- create an "input" s3 bucket
+        incoming <- createS3Bucket "incoming"
 
-      -- create an "output" s3 bucket
-      outgoing <- createS3Bucket "outgoing"
+        -- create an "output" s3 bucket
+        outgoing <- createS3Bucket "outgoing"
 
-      -- create a lambda, which will copy an s3 object from "input" to "output" buckets
-      -- upon an S3 "Put" event.
-      -- Attach the lambda to the "input" bucket such way so each time a file is uploaded to
-      -- the bucket, the lambda is called with the information about the newly uploaded file.
-      void $ createS3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing)
+        -- create a lambda, which will copy an s3 object from "incoming" to "outgoing" buckets
+        -- upon an S3 "Put" event.
+        -- Attach the lambda to the "incoming" bucket such way so each time a file is uploaded to
+        -- the bucket, the lambda is called with the information about the newly uploaded file.
+        void $ createS3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing)
 
-    copyContentsLambda
-      :: S3BucketIdentifier
-      -> S3Event
-      -> LambdaProgram ()
-    copyContentsLambda sinkBucket S3Event{s3Object = s3Obj@S3Object{s3oKey = s3Key}} = do
+      copyContentsLambda
+        :: S3BucketId
+        -> S3Event
+        -> LambdaProgram ()
+      copyContentsLambda sinkBucketId event = do
 
-      -- get the content of the newly uploaded file
-      content <- getS3ObjectContent s3Obj
+        let incomingS3Obj = event ^. s3eObject
+            outgoingS3Obj = s3oBucketId .~ sinkBucketId $ incomingS3Obj
+            
+        -- get the content of the newly uploaded file
+        content <- getS3ObjectContent incomingS3Obj
 
-      -- write the content into a new file in the "output" bucket
-      putS3ObjectContent outputS3Object content
-
-      where
-        outputS3Object = S3Object sinkBucket s3Key
+        -- write the content into a new file in the "output" bucket
+        putS3ObjectContent outgoingS3Obj content
 ```
 
-Compiling this qmulus results in a multi-purpose executable binary, which can be used as a CLI tool for management tasks like provisioning 
-as well as the binary executable that gets packaged and used in all lambdas. 
+Compiling this qmulus results in a multi-purpose executable binary, which can be used as a CLI tool for management tasks like provisioning
+as well as the binary executable that gets packaged and used in all lambdas.
+
+Note: see other examples in the `examples` folder
 
 Getting started
 ---------------
@@ -144,25 +147,32 @@ stack install
 ###Running an example
 The above example is available as the "simple-s3-copy" qmulus.
 
-The `simple-s3-copy deploy` command does the following:
+The `simple-s3-copy cf deploy` command does the following:
 
 - generates the CloudFormation (CF) json template
 - packages/zips up the executable to be used by lambda
 - uploads those to the qmulus S3 bucket (with the same name)
 
-After that is deployed, just create a new CF stack (using AWS console for example) and point to the generated CF json template that is now 
-in the qmulus S3 bucket. And voila, you should now have the example deployed and working. 
+After that is deployed, just create a new CF stack
+
+`simple-s3-copy cf create`
+
+And voila, you should now have the example deployed and working.
 Try uploading a small file into the 'incoming' bucket, you should see the same file copied automatically to the 'outgoing' bucket.
+
+To destroy a stack use the following command
+
+`simple-s3-copy cf destroy`
 
 
 Future work
 -----------
 
 The idea is to use this project as an experiment platform to design a toolset that would allow very rapid and painless development for 
-serverless architectures, and of course, would leverage all the great stuff that haskell has to offer. The plan is to add all the usual 
-AWS SaaS puzzle pieces like ApiGateway, Dynamo, SQS, etc and make them easily composable. Furthermore, using free/operational monad based 
+serverless architectures, and of course, would leverage all the great stuff that Haskell has to offer. The plan is to add all the usual 
+AWS SaaS puzzle-pieces like ApiGateway, Dynamo, SQS, etc and make them easily composable. Furthermore, using free/operational monad based 
 DSLs would allow for various ways to statically analyze architecture + lambda behaviors and infer various properties that would allow for 
 optimizations, correctness checking, generating artifacts like visual diagrams, etc in addition to making code safer by not directly using 
-IO.
+the IO.
 
 

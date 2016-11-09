@@ -27,32 +27,33 @@ main = do
   --
   "simples3copy" `withConfig` config
 
-  where
-    config :: ConfigProgram ()
-    config = do
-      -- create an "input" s3 bucket
-      incoming <- createS3Bucket "incoming"
+    where
+      config :: ConfigProgram ()
+      config = do
+        -- create an "input" s3 bucket
+        incoming <- createS3Bucket "incoming"
 
-      -- create an "output" s3 bucket
-      outgoing <- createS3Bucket "outgoing"
+        -- create an "output" s3 bucket
+        outgoing <- createS3Bucket "outgoing"
 
-      -- create a lambda, which will copy an s3 object from "incoming" to "outgoing" buckets
-      -- upon an S3 "Put" event.
-      -- Attach the lambda to the "incoming" bucket such way so each time a file is uploaded to
-      -- the bucket, the lambda is called with the information about the newly uploaded file.
-      void $ createS3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing)
+        -- create a lambda, which will copy an s3 object from "incoming" to "outgoing" buckets
+        -- upon an S3 "Put" event.
+        -- Attach the lambda to the "incoming" bucket such way so each time a file is uploaded to
+        -- the bucket, the lambda is called with the information about the newly uploaded file.
+        void $ createS3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing)
 
-    copyContentsLambda
-      :: S3BucketId
-      -> S3Event
-      -> LambdaProgram ()
-    copyContentsLambda sinkBucketId event = do
+      copyContentsLambda
+        :: S3BucketId
+        -> S3Event
+        -> LambdaProgram ()
+      copyContentsLambda sinkBucketId event = do
 
-      let incomingS3Obj = event ^. s3eObject
-          outgoingS3Object = s3oBucketId .~ sinkBucketId $ incomingS3Obj
-      -- get the content of the newly uploaded file
-      content <- getS3ObjectContent incomingS3Obj
+        let incomingS3Obj = event ^. s3eObject
+            outgoingS3Obj = s3oBucketId .~ sinkBucketId $ incomingS3Obj
 
-      -- write the content into a new file in the "output" bucket
-      putS3ObjectContent outgoingS3Object content
+        -- get the content of the newly uploaded file
+        content <- getS3ObjectContent incomingS3Obj
+
+        -- write the content into a new file in the "output" bucket
+        putS3ObjectContent outgoingS3Obj content
 
