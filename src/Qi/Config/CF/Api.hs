@@ -109,9 +109,9 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                   apiGatewayIntegration "AWS"
                   & agiIntegrationHttpMethod ?~ verb
                   & agiUri ?~ uri
-                  & agiIntegrationResponses ?~ [ integrationResponse ]
-                  & agiPassthroughBehavior ?~ "WHEN_NO_TEMPLATES"
+                  & agiPassthroughBehavior ?~ passthroughBehavior
                   & agiRequestTemplates ?~ requestTemplates
+                  & agiIntegrationResponses ?~ [ integrationResponse ]
 
                   where
                     uri = (Join "" [
@@ -121,11 +121,14 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                       , GetAtt lbdResName "Arn"
                       , "/invocations"])
 
-                    requestTemplates = [ ("application/json", jsonTemplate) ]
-                      where
-                        jsonTemplate = case _verb of
-                          Get -> "{\"body\": \"\"}"
-                          Post -> "{\"body\": $input.body}"
+                    requestTemplates = case _verb of
+                      Get   -> []
+                      Post  -> [ ("application/json", "{\"body\": $input.body}") ]
+                      -- {"body" : $input.json('$')}
+
+                    passthroughBehavior = case _verb of
+                      Get   -> "NEVER"
+                      Post  -> "WHEN_NO_TEMPLATES"
 
                 integrationResponse = apiGatewayIntegrationResponse
                   & agirResponseTemplates ?~ responseTemplates

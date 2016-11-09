@@ -4,6 +4,7 @@
 
 module Qi.Config.AWS.Api.Event where
 
+import           Control.Applicative
 import           Control.Lens
 import           Data.Aeson
 import           Data.Aeson.Types
@@ -20,8 +21,10 @@ parse
   :: Value
   -> Config
   -> Parser ApiEvent
-parse (Object e) config = do
-    body <- e .: "body"
-    return $ ApiEvent body
+parse (Object e) config = ApiEvent <$> (json <|> plainText <|> pure EmptyBody)
+  where
+     json = JsonBody <$> e .: "body"
+     plainText = PlainTextBody <$> e .: "body"
+
 parse v _ =
-    fail "event must be a json object and contain \"body\""
+    fail "event must be a json object"

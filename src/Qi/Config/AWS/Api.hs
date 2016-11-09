@@ -12,11 +12,18 @@ import           Data.HashMap.Strict  (HashMap)
 import qualified Data.HashMap.Strict  as SHM
 import           Data.Text            (Text)
 import qualified Data.Text            as T
+import           Data.Aeson
 
 import           Qi.Config.Identifier
 
+data RequestBody =
+    EmptyBody
+  | PlainTextBody Text
+  | JsonBody Value
+  deriving Show
+
 data ApiEvent = ApiEvent {
-    _aeBody :: Text
+    _aeBody :: RequestBody
   } deriving Show
 
 
