@@ -22,24 +22,25 @@ toResources config = foldMap toAllLambdaResources lambdas
     lambdas = getAllLambdas config
 
     toAllLambdaResources :: Lambda -> Resources
-    toAllLambdaResources l = Resources $ [toLambdaPermissionResource l, toLambdaResource l]
+    toAllLambdaResources lbd = Resources $ [lambdaPermissionCFResource, lambdaCFResource]
 
-    toLambdaPermissionResource lbd =
-      resource resName $
+    lbdResName = getLambdaResourceName lbd
+    lbdPermResName = getLambdaPermissionResourceName lbd
+
+    lambdaPermissionCFResource =
+      resource lbdPermResName $
         LambdaPermissionProperties $
         lambdaPermission
           "lambda:*"
           (GetAtt lbdResName "Arn")
           principal
       where
-        lbdResName = getLambdaResourceName lbd
-        resName = getLambdaPermissionResourceName lbd
         principal = case lbd of
-          S3BucketLambda{} -> "s3.amazonaws.com"
-          ApiLambda{} -> "apigateway.amazonaws.com"
+          S3BucketLambda{}  -> "s3.amazonaws.com"
+          ApiLambda{}       -> "apigateway.amazonaws.com"
 
-    toLambdaResource lbd = (
-      resource resourceName $
+    lambdaCFResource = (
+      resource lbdResName $
         LambdaFunctionProperties $
         lambdaFunction
           lbdCode
@@ -50,11 +51,12 @@ toResources config = foldMap toAllLambdaResources lambdas
         & lfMemorySize ?~ Literal 1536
         & lfTimeout ?~ Literal 90
       )
-      & dependsOn ?~ [ Role.lambdaBasicExecutionIAMRoleResourceName ]
+      & dependsOn ?~ [ 
+          Role.lambdaBasicExecutionIAMRoleResourceName
+        , lbdPermResName
+        ]
 
       where
-        resourceName = getLambdaResourceName lbd
-
         lbdCode :: LambdaFunctionCode
         lbdCode = lambdaFunctionCode
           & lfcS3Bucket ?~ lambdaS3Bucket
