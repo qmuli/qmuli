@@ -23,8 +23,8 @@ parse
   -> Parser ApiEvent
 parse (Object e) config = ApiEvent <$> (json <|> plainText <|> pure EmptyBody)
   where
-     json = JsonBody <$> e .: "body"
-     plainText = PlainTextBody <$> e .: "body"
+     json = JsonBody <$> e .: "body-json"
+     plainText = PlainTextBody <$> e .: "body-plaintext"
 
 parse v _ =
     fail "event must be a json object"

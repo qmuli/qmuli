@@ -1,6 +1,7 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
 
 module Qi.Config.CF.Api (toResources) where
 
@@ -9,13 +10,13 @@ import qualified Data.ByteString.Lazy           as LBS
 import qualified Data.HashMap.Strict            as SHM
 import           Data.Text                      (Text)
 import qualified Data.Text                      as T
-import           Stratosphere                   hiding (name)
-
 import           Qi.Config.AWS
 import           Qi.Config.AWS.Api
 import           Qi.Config.AWS.Api.Accessors
 import           Qi.Config.AWS.Lambda.Accessors
 import           Qi.Config.Identifier
+import           Stratosphere                   hiding (name)
+import           Text.Heredoc
 
 
 toResources config = Resources $ foldMap toStagedApiResources $ getAllApis config
@@ -24,9 +25,7 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
     toStagedApiResources :: (ApiId, Api) -> [Resource]
     toStagedApiResources (aid, api) = deploymentResource:apiResources
       where
-
         apiResources = [ apiResource ] ++ foldMap toApiChildResources (getApiChildren (Left aid) config)
-
 
         apiResName = getApiCFResourceName api
 
@@ -112,6 +111,8 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                   & agiIntegrationResponses ?~ [ integrationResponse ]
 
                   where
+                    jsonContentType = "application/json"
+
                     uri = (Join "" [
                         "arn:aws:apigateway:"
                       , Ref "AWS::Region"
@@ -120,20 +121,23 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                       , "/invocations"])
 
                     requestTemplates = case _verb of
-                      Get   -> []
-                      Post  -> [ ("application/json", "{\"body\": $input.body}") ]
-                      -- {"body" : $input.json('$')}
+                      Get  -> []
+                      Post -> [ (jsonContentType, postTemplate) ]
+
+                      where
+                        postTemplate = [there|./js/post_template.js|]
 
                     passthroughBehavior = case _verb of
                       Get  -> "WHEN_NO_TEMPLATES"
                       Post -> "WHEN_NO_TEMPLATES"
 
-                integrationResponse = apiGatewayIntegrationResponse
-                  & agirResponseTemplates ?~ responseTemplates
-                  & agirStatusCode ?~ "200"
 
-                  where
-                    responseTemplates = [ ("application/json", "$input.json('$.body')") ]
+                    integrationResponse = apiGatewayIntegrationResponse
+                      & agirResponseTemplates ?~ responseTemplates
+                      & agirStatusCode ?~ "200"
+
+                      where
+                        responseTemplates = [ (jsonContentType, "$input.json('$.body')") ]
 
 
 

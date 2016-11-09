@@ -1,5 +1,6 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes       #-}
 
 module Qi.Deploy.Lambda (deploy) where
 
@@ -11,16 +12,16 @@ import qualified Network.AWS.S3                as A
 import           Prelude                       hiding (log)
 import           System.Environment.Executable (getExecutablePath)
 import           System.IO                     (stdout)
+import           Text.Heredoc                  (there)
 import           Turtle                        hiding (stdout)
 
-import           Qi.Deploy.JS                  (js)
 import qualified Qi.Deploy.S3                  as S3
 
 
 log = liftIO . echo
 
 toTextIgnore x = case toText x of
-  Right s -> s
+  Right s  -> s
   Left err -> ""
 
 deploy
@@ -36,7 +37,7 @@ deploy appName = sh $ do
       cd ".deploy/lambda"
 
       -- write the JS wrapper
-      output "index.js" $ pure js
+      output "index.js" $ pure [there|./js/index.js|]
 
       -- copy the global executable to the delpoy destination
       execPath <- liftIO getExecutablePath

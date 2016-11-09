@@ -37,6 +37,7 @@ dependencies:
   - resourcet
   - turtle
   - executable-path
+  - heredoc
 
 library:
   source-dirs:
