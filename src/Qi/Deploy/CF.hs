@@ -22,6 +22,7 @@ create appName = do
   runAmazonka $ do
     _ <- send $ createStack appName 
                   & csTemplateURL ?~ T.concat ["https://s3.amazonaws.com/", appName, "/cf.json"]
+                  & csCapabilities .~ [CapabilityNamedIAM]
     return ()
 
 

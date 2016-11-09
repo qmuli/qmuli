@@ -17,54 +17,53 @@ import           Qi.Config.AWS.Lambda.Accessors
 import qualified Qi.Config.CF.Role              as Role
 
 
-toResources config = foldMap toAllLambdaResources lambdas
+toResources config = foldMap toAllLambdaResources $ getAllLambdas config
   where
-    lambdas = getAllLambdas config
-
     toAllLambdaResources :: Lambda -> Resources
     toAllLambdaResources lbd = Resources $ [lambdaPermissionCFResource, lambdaCFResource]
 
-    lbdResName = getLambdaResourceName lbd
-    lbdPermResName = getLambdaPermissionResourceName lbd
-
-    lambdaPermissionCFResource =
-      resource lbdPermResName $
-        LambdaPermissionProperties $
-        lambdaPermission
-          "lambda:*"
-          (GetAtt lbdResName "Arn")
-          principal
       where
-        principal = case lbd of
-          S3BucketLambda{}  -> "s3.amazonaws.com"
-          ApiLambda{}       -> "apigateway.amazonaws.com"
+        lbdResName = getLambdaResourceName lbd
+        lbdPermResName = getLambdaPermissionResourceName lbd
 
-    lambdaCFResource = (
-      resource lbdResName $
-        LambdaFunctionProperties $
-        lambdaFunction
-          lbdCode
-          "index.handler"
-          (GetAtt Role.lambdaBasicExecutionIAMRoleResourceName "Arn")
-          "nodejs4.3"
-        & lfFunctionName ?~ (Literal $ (lbd ^. lbdName) `namePrefixWith` config)
-        & lfMemorySize ?~ Literal 1536
-        & lfTimeout ?~ Literal 90
-      )
-      & dependsOn ?~ [ 
-          Role.lambdaBasicExecutionIAMRoleResourceName
-        , lbdPermResName
-        ]
+        lambdaPermissionCFResource =
+          resource lbdPermResName $
+            LambdaPermissionProperties $
+            lambdaPermission
+              "lambda:*"
+              (GetAtt lbdResName "Arn")
+              principal
+          where
+            principal = case lbd of
+              S3BucketLambda{}  -> "s3.amazonaws.com"
+              ApiLambda{}       -> "apigateway.amazonaws.com"
 
-      where
-        lbdCode :: LambdaFunctionCode
-        lbdCode = lambdaFunctionCode
-          & lfcS3Bucket ?~ lambdaS3Bucket
-          & lfcS3Key    ?~ lambdaS3Object
+        lambdaCFResource = (
+          resource lbdResName $
+            LambdaFunctionProperties $
+            lambdaFunction
+              lbdCode
+              "index.handler"
+              (GetAtt Role.lambdaBasicExecutionIAMRoleResourceName "Arn")
+              "nodejs4.3"
+            & lfFunctionName ?~ (Literal $ (lbd ^. lbdName) `namePrefixWith` config)
+            & lfMemorySize ?~ Literal 1536
+            & lfTimeout ?~ Literal 90
+          )
+          & dependsOn ?~ [ 
+              Role.lambdaBasicExecutionIAMRoleResourceName
+            , lbdPermResName
+            ]
 
-        lambdaS3Bucket :: Val Text
-        lambdaS3Bucket = Literal $ config ^. namePrefix
+          where
+            lbdCode :: LambdaFunctionCode
+            lbdCode = lambdaFunctionCode
+              & lfcS3Bucket ?~ lambdaS3Bucket
+              & lfcS3Key    ?~ lambdaS3Object
 
-        lambdaS3Object :: Val Text
-        lambdaS3Object = "lambda.zip"
+            lambdaS3Bucket :: Val Text
+            lambdaS3Bucket = Literal $ config ^. namePrefix
+
+            lambdaS3Object :: Val Text
+            lambdaS3Object = "lambda.zip"
 
