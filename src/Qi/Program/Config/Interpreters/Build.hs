@@ -7,7 +7,7 @@ module Qi.Program.Config.Interpreters.Build where
 
 import           Control.Lens                hiding (view)
 import           Control.Monad.Operational
-import           Control.Monad.State.Strict  (State, get, put)
+import           Control.Monad.State.Strict  (State)
 import           Data.Default                (def)
 import           Data.Hashable               (hash)
 import qualified Data.HashMap.Strict         as SHM
@@ -16,6 +16,8 @@ import           Data.Monoid                 ((<>))
 import           Qi.Config.AWS
 import           Qi.Config.AWS.Api
 import           Qi.Config.AWS.Api.Accessors
+import           Qi.Config.AWS.DDB
+import           Qi.Config.AWS.DDB.Accessors
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
 import           Qi.Config.AWS.S3.Accessors
@@ -28,37 +30,40 @@ interpret
   -> State Config ()
 interpret program =  do
   case view program of
-    (CreateS3Bucket name) :>>= is -> do
-      interpret . is =<< createS3Bucket name
+    (RS3Bucket name) :>>= is -> do
+      interpret . is =<< rS3Bucket name
 
-    (CreateS3BucketLambda name bucketId lbdProgramFunc) :>>= is -> do
-      interpret . is =<< createS3BucketLambda name bucketId lbdProgramFunc
+    (RS3BucketLambda name bucketId lbdProgramFunc) :>>= is -> do
+      interpret . is =<< rS3BucketLambda name bucketId lbdProgramFunc
 
-    (CreateApi name) :>>= is -> do
-      interpret . is =<< createApi name
+    (RDdbTable name hashAttrDef rangeAttrDef provCap) :>>= is -> do
+      interpret . is =<< rDdbTable name hashAttrDef rangeAttrDef provCap
 
-    (CreateApiRootResource name apiId) :>>= is -> do
-      interpret . is =<< createApiRootResource name apiId
+    (RApi name) :>>= is -> do
+      interpret . is =<< rApi name
 
-    (CreateApiChildResource name apiResourceId) :>>= is -> do
-      interpret . is =<< createApiChildResource name apiResourceId
+    (RApiRootResource name apiId) :>>= is -> do
+      interpret . is =<< rApiRootResource name apiId
 
-    (CreateApiMethodLambda name verb apiResourceId lbdProgramFunc) :>>= is -> do
-      interpret . is =<< createApiMethodLambda name verb apiResourceId lbdProgramFunc
+    (RApiChildResource name apiResourceId) :>>= is -> do
+      interpret . is =<< rApiChildResource name apiResourceId
+
+    (RApiMethodLambda name verb apiResourceId lbdProgramFunc) :>>= is -> do
+      interpret . is =<< rApiMethodLambda name verb apiResourceId lbdProgramFunc
 
 
     Return _ ->
       return def
 
   where
-    createS3Bucket name = do
+    rS3Bucket name = do
       let newBucket = def & s3bName .~ name
           (newBucketId, s3ConfigModifier) = insertBucket newBucket
 
       s3Config %= s3ConfigModifier
       return newBucketId
 
-    createS3BucketLambda name bucketId lbdProgramFunc = do
+    rS3BucketLambda name bucketId lbdProgramFunc = do
 
       let newLambda = S3BucketLambda name lbdProgramFunc
           newLambdaId = LambdaId $ hash newLambda
@@ -70,21 +75,33 @@ interpret program =  do
       return newLambdaId
 
 
+    rDdbTable name hashAttrDef rangeAttrDef provCap = do
+      let newDdbTable = DdbTable {
+          _dtName         = name
+        , _dtHashAttrDef  = hashAttrDef
+        , _dtRangeAttrDef = rangeAttrDef
+        , _dtProvCap      = provCap
+        }
+          (newDdbTableId, ddbConfigModifier) = insertDdbTable newDdbTable
 
-    createApi name = do
+      ddbConfig %= ddbConfigModifier
+      return newDdbTableId
+
+
+    rApi name = do
       let newApi = def & aName .~ name
           (newApiId, apiConfigModifier) = insertApi newApi
 
       apiConfig %= apiConfigModifier
       return newApiId
 
-    createApiRootResource name apiId =
-      createApiResource name $ Left apiId
+    rApiRootResource name apiId =
+      rApiResource name $ Left apiId
 
-    createApiChildResource name apiResourceId =
-      createApiResource name $ Right apiResourceId
+    rApiChildResource name apiResourceId =
+      rApiResource name $ Right apiResourceId
 
-    createApiResource name parentId = do
+    rApiResource name parentId = do
       let newApiResource = apiResource name parentId
           (newApiResourceId, apiConfigModifier) = insertApiResource newApiResource
 
@@ -92,7 +109,7 @@ interpret program =  do
       return newApiResourceId
 
 
-    createApiMethodLambda name verb apiResourceId lbdProgramFunc = do
+    rApiMethodLambda name verb apiResourceId lbdProgramFunc = do
 
       let newLambda = ApiLambda name lbdProgramFunc
           newLambdaId = LambdaId $ hash newLambda
@@ -101,4 +118,6 @@ interpret program =  do
       apiConfig.acApiResources %= SHM.adjust modifyApiResource apiResourceId
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
       return newLambdaId
+
+
 

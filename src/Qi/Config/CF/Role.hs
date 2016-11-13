@@ -49,8 +49,11 @@ toResources config = Resources [lbdRoleRes]
           , "logs:CreateLogStream"
           , "logs:PutLogEvents"
 
-          , "s3:PutObject"
           , "s3:GetObject"
+          , "s3:PutObject"
+
+          , "dynamodb:GetItem"
+          , "dynamodb:PutItem"
           ]
 
 

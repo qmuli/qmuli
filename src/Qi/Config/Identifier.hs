@@ -21,7 +21,6 @@ newtype ApiResourceId = ApiResourceId Int deriving (Eq, Show)
 instance Hashable ApiResourceId where
   s `hashWithSalt` (ApiResourceId identifierHash) = s `hashWithSalt` identifierHash
 
-newtype ApiMethodId = ApiMethodId Int deriving (Eq, Show)
-instance Hashable ApiMethodId where
-  s `hashWithSalt` (ApiMethodId identifierHash) = s `hashWithSalt` identifierHash
-
+newtype DdbTableId = DdbTableId Int deriving (Eq, Show)
+instance Hashable DdbTableId where
+  s `hashWithSalt` (DdbTableId identifierHash) = s `hashWithSalt` identifierHash

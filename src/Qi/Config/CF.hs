@@ -13,6 +13,7 @@ import           Stratosphere         hiding (name)
 
 import           Qi.Config.AWS
 import qualified Qi.Config.CF.Api     as Api
+import qualified Qi.Config.CF.DDB     as DDB
 import qualified Qi.Config.CF.Lambda  as Lambda
 import qualified Qi.Config.CF.Role    as Role
 import qualified Qi.Config.CF.S3      as S3
@@ -35,6 +36,7 @@ toResources config = mconcat [
     , Role.toResources config
     , Lambda.toResources config
     , Api.toResources config
+    , DDB.toResources config
     ]
 
 

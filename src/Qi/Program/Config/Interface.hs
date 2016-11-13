@@ -12,6 +12,7 @@ import           Data.Text                   (Text)
 
 import           Qi.Config.AWS               (Config)
 import           Qi.Config.AWS.Api
+import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
 import           Qi.Program.Lambda.Interface (LambdaProgram)
@@ -20,31 +21,38 @@ import           Qi.Program.Lambda.Interface (LambdaProgram)
 type ConfigProgram a = Program ConfigInstruction a
 
 data ConfigInstruction a where
-  CreateS3Bucket
+  RS3Bucket
     :: Text
     -> ConfigInstruction S3BucketId
 
-  CreateS3BucketLambda
+  RS3BucketLambda
     :: Text
     -> S3BucketId
     -> (S3Event -> LambdaProgram ())
     -> ConfigInstruction LambdaId
 
-  CreateApi
+  RDdbTable
+    :: Text
+    -> DdbAttrDef
+    -> Maybe DdbAttrDef
+    -> DdbProvCap
+    -> ConfigInstruction DdbTableId
+
+  RApi
     :: Text
     -> ConfigInstruction ApiId
 
-  CreateApiRootResource
+  RApiRootResource
     :: Text
     -> ApiId
     -> ConfigInstruction ApiResourceId
 
-  CreateApiChildResource
+  RApiChildResource
     :: Text
     -> ApiResourceId
     -> ConfigInstruction ApiResourceId
 
-  CreateApiMethodLambda
+  RApiMethodLambda
     :: Text
     -> ApiVerb
     -> ApiResourceId
@@ -52,15 +60,17 @@ data ConfigInstruction a where
     -> ConfigInstruction LambdaId
 
 
-createS3Bucket = singleton . CreateS3Bucket
+s3Bucket = singleton . RS3Bucket
 
-createS3BucketLambda name s3BucketId = singleton . CreateS3BucketLambda name s3BucketId
+s3BucketLambda name s3BucketId = singleton . RS3BucketLambda name s3BucketId
 
-createApi = singleton . CreateApi
+ddbTable name hashAttrDef rangeAttrDef = singleton . RDdbTable name hashAttrDef rangeAttrDef
 
-createApiRootResource name = singleton . CreateApiRootResource name
+api = singleton . RApi
 
-createApiChildResource name = singleton . CreateApiChildResource name
+apiRootResource name = singleton . RApiRootResource name
 
-createApiMethodLambda name verb resourceId = singleton . CreateApiMethodLambda name verb resourceId
+apiChildResource name = singleton . RApiChildResource name
+
+apiMethodLambda name verb resourceId = singleton . RApiMethodLambda name verb resourceId
 

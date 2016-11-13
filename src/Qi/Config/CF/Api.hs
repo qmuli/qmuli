@@ -48,34 +48,45 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
 
           where
             name = getApiStageCFResourceName api
-            deps = map (\d -> d ^. resName) apiResources
+            deps = map (^. resName) apiResources
 
 
         toApiChildResources :: ApiResourceId -> [Resource]
         toApiChildResources arid =
-          [ apirResource ] ++ methodResources ++ foldMap toApiChildResources (getApiChildren (Right arid) config)
+          [ apirResource ] ++
+          methodResources ++
+          foldMap toApiChildResources (getApiChildren (Right arid) config)
+
           where
             apir = getApiResourceById arid config
             apirResName = getApiResourceCFResourceName apir
 
             apirResource =
               case apir of
-                ApiResource{_arParent = Left aid} -> (
+                ApiResource{_arParent = Left aid} ->
+                  let
+                    apiParent = GetAtt apiResName "RootResourceId"
+                  in
                     resource apirResName $
                       ApiGatewayResourceProperties $
                       apiGatewayResource
                         apiParent
                         (Literal $ apir ^. arName)
                         (Ref apiResName)
-                  )
 
 
-                -- TODO
-                ApiResource{_arParent = Right arid'} -> undefined
+                ApiResource{_arParent = Right arid'} ->
+                  let
+                    apirParentResName = getApiResourceCFResourceName $ getApiResourceById arid' config
+                  in
+                    resource apirResName $
+                      ApiGatewayResourceProperties $
+                      apiGatewayResource
+                        (Ref apirParentResName)
+                        (Literal $ apir ^. arName)
+                        (Ref apiResName)
 
 
-              where
-                apiParent = GetAtt apiResName "RootResourceId"
 
 
             methodResources = map toMethodResource (apir ^. arMethodConfigs)
@@ -121,11 +132,12 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                       , "/invocations"])
 
                     requestTemplates = case _verb of
-                      Get  -> []
+                      Get  -> [ (jsonContentType, postTemplate) ]
                       Post -> [ (jsonContentType, postTemplate) ]
 
                       where
-                        postTemplate = [there|./js/post_template.js|]
+                        getTemplate   = [there|./js/get_template.js|]
+                        postTemplate  = [there|./js/post_template.js|]
 
                     passthroughBehavior = case _verb of
                       Get  -> "WHEN_NO_TEMPLATES"

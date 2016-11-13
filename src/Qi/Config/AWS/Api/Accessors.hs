@@ -4,6 +4,7 @@
 module Qi.Config.AWS.Api.Accessors where
 
 import           Control.Lens
+import           Data.Char            (isAlphaNum)
 import           Data.Hashable
 import qualified Data.HashMap.Strict  as SHM
 import           Data.Maybe           (fromJust)
@@ -15,51 +16,49 @@ import           Qi.Config.AWS.Api
 import           Qi.Config.Identifier
 
 
+makeAlphaNumeric = T.filter isAlphaNum
+
 getApiCFResourceName
   :: Api
   -> Text
-getApiCFResourceName api = T.concat [api ^. aName, "Api"]
-
-getApiStageCFResourceName
-  :: Api
-  -> Text
-getApiStageCFResourceName api = T.concat [api ^. aName, "ApiDeployment"]
-
+getApiCFResourceName api = T.concat [api^.aName, "Api"]
 
 getApiById
   :: ApiId
   -> Config
   -> Api
-getApiById aid = fromJust . SHM.lookup aid . aHm
-  where
-    aHm config = config ^. apiConfig . acApis
+getApiById aid = fromJust . SHM.lookup aid . (^.apiConfig.acApis)
 
 
 getApiResourceCFResourceName
   :: ApiResource
   -> Text
-getApiResourceCFResourceName apir = T.concat [apir ^. arName, "ApiResource"]
+getApiResourceCFResourceName apir = T.concat [makeAlphaNumeric $ apir^.arName, "ApiResource"]
 
 getApiResourceById
   :: ApiResourceId
   -> Config
   -> ApiResource
-getApiResourceById arid = fromJust . SHM.lookup arid . arHm
-  where
-    arHm config = config ^. apiConfig . acApiResources
+getApiResourceById arid = fromJust . SHM.lookup arid . (^.apiConfig.acApiResources)
+
+
+getApiStageCFResourceName
+  :: Api
+  -> Text
+getApiStageCFResourceName api = T.concat [api^.aName, "ApiDeployment"]
 
 
 getApiMethodCFResourceName
   :: ApiResource
   -> ApiVerb
   -> Text
-getApiMethodCFResourceName apir verb = T.concat [apir ^. arName, T.pack $ show verb]
+getApiMethodCFResourceName apir verb = T.concat [makeAlphaNumeric $ apir^.arName, T.pack $ show verb]
 
 
 getAllApis
   :: Config
   -> [(ApiId, Api)]
-getAllApis config = SHM.toList $ config ^. apiConfig . acApis
+getAllApis config = SHM.toList $ config^.apiConfig.acApis
 
 
 
@@ -67,7 +66,7 @@ getApiChildren
   :: Either ApiId ApiResourceId
   -> Config
   -> [ApiResourceId]
-getApiChildren rid config = SHM.lookupDefault [] rid $ config ^. apiConfig . acApiDeps
+getApiChildren rid config = SHM.lookupDefault [] rid $ config^.apiConfig.acApiDeps
 
 
 insertApi
@@ -87,7 +86,7 @@ insertApiResource
 insertApiResource apiResource = (arid, insertIdToApiResource . insertIdToApiDeps)
   where
     insertIdToApiResource = acApiResources %~ SHM.insert arid apiResource
-    insertIdToApiDeps = acApiDeps %~ SHM.unionWith (++) (SHM.singleton (apiResource ^. arParent) [arid])
+    insertIdToApiDeps = acApiDeps %~ SHM.unionWith (++) (SHM.singleton (apiResource^.arParent) [arid])
 
     arid = ApiResourceId $ hash apiResource
-    arname = apiResource ^. arName
+    arname = apiResource^.arName

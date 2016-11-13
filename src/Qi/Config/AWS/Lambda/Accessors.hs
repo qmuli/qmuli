@@ -20,9 +20,7 @@ getLambdaById
   -> Config
   -> Lambda
 getLambdaById lid =
-    fromJust . SHM.lookup lid . lbdHm
-  where
-    lbdHm config = config ^. lbdConfig . lcLambdas
+    fromJust . SHM.lookup lid . (^.lbdConfig.lcLambdas)
 
 getLambdaResourceNameFromId
   :: LambdaId

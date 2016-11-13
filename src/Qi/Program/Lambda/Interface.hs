@@ -7,11 +7,13 @@ module Qi.Program.Lambda.Interface where
 
 import           Control.Monad.Operational    (Program, singleton)
 import           Control.Monad.Trans.Resource (ResourceT)
-import qualified Data.ByteString         as BS
+import qualified Data.ByteString              as BS
 import qualified Data.ByteString.Lazy         as LBS
-import qualified Data.Conduit                 as C
+import           Data.Text                    (Text)
+import           Qi.Config.Identifier         (DdbTableId)
 
 import           Qi.Config.AWS.Api
+import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.S3
 
 
@@ -33,6 +35,16 @@ data LambdaInstruction a where
     -> LBS.ByteString
     -> LambdaInstruction ()
 
+  GetDdbRecord
+    :: DdbTableId
+    -> DdbAttrs
+    -> LambdaInstruction DdbAttrs
+
+  PutDdbRecord
+    :: DdbTableId
+    -> DdbAttrs
+    -> LambdaInstruction ()
+
   Output
     :: BS.ByteString
     -> LambdaInstruction ()
@@ -48,6 +60,18 @@ putS3ObjectContent
   -> LBS.ByteString
   -> LambdaProgram ()
 putS3ObjectContent s3Obj = singleton . PutS3ObjectContent s3Obj
+
+getDdbRecord
+  :: DdbTableId
+  -> DdbAttrs
+  -> LambdaProgram DdbAttrs
+getDdbRecord ddbTableId = singleton . GetDdbRecord ddbTableId
+
+putDdbRecord
+  :: DdbTableId
+  -> DdbAttrs
+  -> LambdaProgram ()
+putDdbRecord ddbTableId = singleton . PutDdbRecord ddbTableId
 
 output
   :: BS.ByteString

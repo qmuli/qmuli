@@ -32,6 +32,7 @@ dependencies:
   - amazonka-core
   - amazonka-s3
   - amazonka-cloudformation
+  - amazonka-dynamodb
   - conduit
   - conduit-extra
   - resourcet
@@ -53,9 +54,16 @@ executables:
       - qmuli
       - random
     ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-  api-gw-lambda:
+  apigw-lambda-s3:
     main: Main.hs
-    source-dirs: examples/api-gw-lambda/src
+    source-dirs: examples/apigw-lambda-s3/src
+    dependencies:
+      - base >= 4.8 && < 5
+      - qmuli
+    ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  apigw-lambda-dynamodb:
+    main: Main.hs
+    source-dirs: examples/apigw-lambda-dynamodb/src
     dependencies:
       - base >= 4.8 && < 5
       - qmuli

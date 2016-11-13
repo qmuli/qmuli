@@ -12,8 +12,8 @@ import           Qi                          (withConfig)
 import           Qi.Config.AWS.S3            (S3Event, s3Object, s3eObject,
                                               s3oBucketId, s3oKey)
 import           Qi.Config.Identifier        (S3BucketId)
-import           Qi.Program.Config.Interface (ConfigProgram, createS3Bucket,
-                                              createS3BucketLambda)
+import           Qi.Program.Config.Interface (ConfigProgram, s3Bucket,
+                                              s3BucketLambda)
 import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
                                               putS3ObjectContent)
 
@@ -31,16 +31,16 @@ main = do
       config :: ConfigProgram ()
       config = do
         -- create an "input" s3 bucket
-        incoming <- createS3Bucket "incoming"
+        incoming <- s3Bucket "incoming"
 
         -- create an "output" s3 bucket
-        outgoing <- createS3Bucket "outgoing"
+        outgoing <- s3Bucket "outgoing"
 
         -- create a lambda, which will copy an s3 object from "incoming" to "outgoing" buckets
         -- upon an S3 "Put" event.
         -- Attach the lambda to the "incoming" bucket such way so each time a file is uploaded to
         -- the bucket, the lambda is called with the information about the newly uploaded file.
-        void $ createS3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing)
+        void $ s3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing)
 
       copyContentsLambda
         :: S3BucketId

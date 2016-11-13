@@ -5,6 +5,7 @@
 module Qi.Config.AWS.Api where
 
 import           Control.Lens
+import           Data.Aeson
 import           Data.ByteString      (ByteString)
 import           Data.Default         (Default, def)
 import           Data.Hashable
@@ -12,18 +13,23 @@ import           Data.HashMap.Strict  (HashMap)
 import qualified Data.HashMap.Strict  as SHM
 import           Data.Text            (Text)
 import qualified Data.Text            as T
-import           Data.Aeson
 
 import           Qi.Config.Identifier
 
+
+data RequestParams = RequestParams {
+    _rpPath :: HashMap Text Value
+  } deriving Show
+
 data RequestBody =
     EmptyBody
-  | PlainTextBody Text
-  | JsonBody Value
+  | PlainTextBody { unPlainTextBody :: Text }
+  | JsonBody { unJsonBody :: Value }
   deriving Show
 
 data ApiEvent = ApiEvent {
-    _aeBody :: RequestBody
+    _aeParams :: RequestParams
+  , _aeBody   :: RequestBody
   } deriving Show
 
 
@@ -113,4 +119,6 @@ instance Default ApiConfig where
 makeLenses ''ApiConfig
 makeLenses ''Api
 makeLenses ''ApiResource
+makeLenses ''ApiEvent
+makeLenses ''RequestParams
 

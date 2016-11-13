@@ -14,17 +14,16 @@ import           Qi.Config.AWS.Api           (ApiEvent (..),
 import           Qi.Config.AWS.S3            (S3Key (S3Key),
                                               S3Object (S3Object))
 import           Qi.Config.Identifier        (S3BucketId)
-import           Qi.Program.Config.Interface (ConfigProgram, createApi,
-                                              createApiMethodLambda,
-                                              createApiRootResource,
-                                              createS3Bucket)
+import           Qi.Program.Config.Interface (ConfigProgram, api,
+                                              apiMethodLambda, apiRootResource,
+                                              s3Bucket)
 import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
                                               output, putS3ObjectContent)
 
 -- Used the two curl commands below to test-drive the two endpoints (substitute your unique api stage url first):
 --
--- curl -v -X POST -H "Content-Type: application/json" -d "{\"testvalue\": 3}" "https://ns45qabsx8.execute-api.us-east-1.amazonaws.com/v1/things"
--- curl -v -X GET "https://ns45qabsx8.execute-api.us-east-1.amazonaws.com/v1/things"
+-- curl -v -X POST -H "Content-Type: application/json" -d "{\"property\": 3}" "https://50nk1jhzda.execute-api.us-east-1.amazonaws.com/v1/things"
+-- curl -v -X GET "https://50nk1jhzda.execute-api.us-east-1.amazonaws.com/v1/things"
 --
 
 main :: IO ()
@@ -34,18 +33,18 @@ main =
     where
       config :: ConfigProgram ()
       config = do
-        bucketId  <- createS3Bucket "things"
+        bucketId  <- s3Bucket "things"
 
-        apiId         <- createApi "world"
-        apiResourceId <- createApiRootResource "things" apiId
+        apiId         <- api "world"
+        apiResourceId <- apiRootResource "things" apiId
 
-        void $ createApiMethodLambda
+        void $ apiMethodLambda
           "createThing"
           Post
           apiResourceId
           $ writeContentsLambda bucketId
 
-        void $ createApiMethodLambda
+        void $ apiMethodLambda
           "viewThing"
           Get
           apiResourceId
