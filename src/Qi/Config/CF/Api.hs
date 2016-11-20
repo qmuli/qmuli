@@ -139,7 +139,7 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                         responseTemplates = [ (jsonContentType, "") ]
                         responseParams = [
                             ("method.response.header.Access-Control-Allow-Headers", "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'")
-                          , ("method.response.header.Access-Control-Allow-Methods", "'*'")
+                          , ("method.response.header.Access-Control-Allow-Methods", "'DELETE,GET,HEAD,POST,PUT,OPTIONS,TRACE'")
                           , ("method.response.header.Access-Control-Allow-Origin", "'*'")
                           ]
 
@@ -222,7 +222,7 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                         responseTemplates = [ (jsonContentType, "$input.json('$.body')") ]
                         responseParams = [
                             ("method.response.header.Access-Control-Allow-Headers", "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'")
-                          , ("method.response.header.Access-Control-Allow-Methods", "'*'")
+                          , ("method.response.header.Access-Control-Allow-Methods", "'DELETE,GET,HEAD,POST,PUT,OPTIONS,TRACE'")
                           , ("method.response.header.Access-Control-Allow-Origin", "'*'")
                           ]
 
