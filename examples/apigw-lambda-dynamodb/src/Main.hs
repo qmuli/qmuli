@@ -1,11 +1,12 @@
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
 import           Control.Lens                hiding (view, (.=))
-import           Control.Monad               (void)
+import           Control.Monad               (void, (<=<))
 import           Data.Aeson
 import           Data.Aeson.Types            (typeMismatch)
 import qualified Data.ByteString.Char8       as BS
@@ -31,8 +32,8 @@ import           Qi.Program.Lambda.Interface (LambdaProgram, getDdbRecord,
 
 -- Used the two curl commands below to test-drive the two endpoints (substitute your unique api stage url first):
 --
--- curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"cup\", \"shape\": \"round\", \"size\": 3}" "https://kwicm1057j.execute-api.us-east-1.amazonaws.com/v1/things/mycup"
--- curl -v -X GET "https://kwicm1057j.execute-api.us-east-1.amazonaws.com/v1/things/mycup"
+-- curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"cup\", \"shape\": \"round\", \"size\": 3}" "https://rd2nb7yjxh.execute-api.us-east-1.amazonaws.com/v1/things/mycup"
+-- curl -v -X GET "https://rd2nb7yjxh.execute-api.us-east-1.amazonaws.com/v1/things/mycup"
 --
 
 
@@ -48,7 +49,7 @@ instance ToJSON Thing where
 instance FromJSON Thing where
 
 
-newtype DdbThing = DdbThing {inDDB :: Thing}
+newtype DdbThing = DdbThing {unDdbThing :: Thing}
 
 instance ToJSON DdbThing where
   toJSON (DdbThing Thing{name, shape, size}) =
@@ -78,6 +79,22 @@ instance FromJSON DdbThing where
         )
   -- A non-Object value is of the wrong type, so fail.
   parseJSON invalid = typeMismatch "DdbThing" invalid
+
+
+
+castFromDdbAttrs
+  :: (FromJSON a, ToJSON b, FromJSON c)
+  => (a -> b)
+  -> AttributeValue
+  -> Result c
+castFromDdbAttrs ddbDeconstructor = fromJSON <=< fmap (toJSON . ddbDeconstructor) . fromJSON . toJSON
+
+castToDdbAttrs
+  :: (FromJSON a, ToJSON b)
+  => (a -> b)
+  -> Value
+  -> Result AttributeValue
+castToDdbAttrs ddbConstructor = fromJSON <=< fmap (toJSON . ddbConstructor) . fromJSON
 
 
 
@@ -116,12 +133,17 @@ main =
           let keys = SHM.fromList [
                   ("Id", attributeValue & avS .~ Just tid)
                 ]
-          thing <- getDdbRecord ddbTableId keys
-          case SHM.lookup "Data" thing of
-            Just d ->
-              output $ LBS.toStrict $ encode d
+          ddbRecord <- getDdbRecord ddbTableId keys
+          case SHM.lookup "Data" ddbRecord of
+            Just thingAttrs -> do
+              case castFromDdbAttrs unDdbThing thingAttrs of
+                Success (thing :: Thing)  ->
+                  output . LBS.toStrict . encode $ thing
+                Error err                 ->
+                  output . BS.pack $ "Error: fromJson: " ++ err
+
             Nothing ->
-              output . BS.pack $ "Error: could not extract thing data, thing was: " ++ show thing
+              output . BS.pack $ "Error: could not extract thing data, DDB record was: " ++ show ddbRecord
 
 
 
@@ -146,9 +168,9 @@ main =
         -> (AttributeValue -> LambdaProgram ())
         -> LambdaProgram ()
       withThingAttributes event f = case event^.aeBody of
-        JsonBody jb -> case fromJSON =<< ((toJSON . DdbThing) <$> fromJSON jb) of
-          Success thingAttrs -> f thingAttrs
-          Error err          -> output . BS.pack $ "Error: fromJson: " ++ err
+        JsonBody jb -> case castToDdbAttrs DdbThing jb of
+          Success thing -> f thing
+          Error err     -> output . BS.pack $ "Error: fromJson: " ++ err
         unexpected  ->
           output . BS.pack $ "Unexpected request body: " ++ show unexpected
 

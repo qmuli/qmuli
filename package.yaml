@@ -39,9 +39,9 @@ dependencies:
   - turtle
   - executable-path
   - heredoc
-  - groundhog
-  - groundhog-th
-  - groundhog-sqlite
+  # - groundhog
+  # - groundhog-th
+  # - groundhog-sqlite
 
 library:
   source-dirs:
