@@ -20,8 +20,8 @@ dependencies:
   - aeson >= 0.11.2.1
   - data-default
   - text
-  - transformers >= 0.4.2.0
-  - mtl >= 2.2.1
+  - transformers
+  - mtl
   - operational
   - bytestring
   - hashable
@@ -39,6 +39,9 @@ dependencies:
   - turtle
   - executable-path
   - heredoc
+  - groundhog
+  - groundhog-th
+  - groundhog-sqlite
 
 library:
   source-dirs:
@@ -52,7 +55,6 @@ executables:
     dependencies:
       - base >= 4.8 && < 5
       - qmuli
-      - random
     ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
   apigw-lambda-s3:
     main: Main.hs
@@ -68,6 +70,16 @@ executables:
       - base >= 4.8 && < 5
       - qmuli
     ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  # apigw-lambda-rds:
+    # main: Main.hs
+    # source-dirs: examples/apigw-lambda-rds/src
+    # dependencies:
+      # - base >= 4.8 && < 5
+      # - qmuli
+      # - groundhog
+      # - groundhog-th
+      # - groundhog-sqlite
+    # ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
 
 tests:
   tasty:

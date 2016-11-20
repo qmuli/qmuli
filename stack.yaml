@@ -2,7 +2,7 @@
 # For more information, see: http://docs.haskellstack.org/en/stable/yaml_configuration/
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
-resolver: nightly-2016-10-28
+resolver: lts-7.9
 
 # Local packages, usually specified by relative directory name
 packages:
@@ -10,6 +10,14 @@ packages:
 - location:
     git: https://github.com/ababkin/stratosphere.git
     commit: 755e80796bc3129e8a13846735dc1932caafe3f8
+- location:
+    git: https://github.com/lykahb/groundhog.git
+    commit: fa62710364d55fdbc6de5a4a33f3a8d0d9d125dd
+  subdirs: 
+  - groundhog
+  - groundhog-th
+  - groundhog-sqlite
+  - groundhog-postgresql
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
@@ -18,12 +26,22 @@ extra-deps:
 - amazonka-core-1.4.4
 - amazonka-s3-1.4.4
 - amazonka-dynamodb-1.4.4
+- turtle-1.2.8
+- managed-1.0.5
+- optional-args-1.0.1
+- aeson-0.11.2.1
+- http-conduit-2.2.3
+- http-client-0.5.4
+- http-client-tls-0.3.3
 
 # Override default flag values for local packages and extra-deps
 flags: {}
 
 # Extra package databases containing global packages
 extra-package-dbs: []
+
+# docker:
+  # enable: true
 
 # ghc-options:
   # "*": -static -optc-static -optl-static -optl-pthread
