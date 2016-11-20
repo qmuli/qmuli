@@ -6,8 +6,6 @@ module Qi.Config.AWS where
 
 import           Control.Lens
 import           Data.Default         (Default, def)
-import qualified Data.HashMap.Strict  as SHM
-import           Data.Maybe           (fromJust)
 import           Data.Text            (Text)
 import qualified Data.Text            as T
 

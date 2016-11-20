@@ -5,12 +5,10 @@
 
 module Qi.Program.Lambda.Interface where
 
-import           Control.Monad.Operational    (Program, singleton)
-import           Control.Monad.Trans.Resource (ResourceT)
-import qualified Data.ByteString              as BS
-import qualified Data.ByteString.Lazy         as LBS
-import           Data.Text                    (Text)
-import           Qi.Config.Identifier         (DdbTableId)
+import           Control.Monad.Operational (Program, singleton)
+import qualified Data.ByteString           as BS
+import qualified Data.ByteString.Lazy      as LBS
+import           Qi.Config.Identifier      (DdbTableId)
 
 import           Qi.Config.AWS.Api
 import           Qi.Config.AWS.DDB
@@ -35,6 +33,10 @@ data LambdaInstruction a where
     -> LBS.ByteString
     -> LambdaInstruction ()
 
+  ScanDdbRecords
+    :: DdbTableId
+    -> LambdaInstruction [DdbAttrs]
+
   GetDdbRecord
     :: DdbTableId
     -> DdbAttrs
@@ -45,10 +47,17 @@ data LambdaInstruction a where
     -> DdbAttrs
     -> LambdaInstruction ()
 
+  DeleteDdbRecord
+    :: DdbTableId
+    -> DdbAttrs
+    -> LambdaInstruction ()
+
   Output
     :: BS.ByteString
     -> LambdaInstruction ()
 
+
+-- S3
 
 getS3ObjectContent
   :: S3Object
@@ -61,6 +70,14 @@ putS3ObjectContent
   -> LambdaProgram ()
 putS3ObjectContent s3Obj = singleton . PutS3ObjectContent s3Obj
 
+
+-- DDB
+
+scanDdbRecords
+  :: DdbTableId
+  -> LambdaProgram [DdbAttrs]
+scanDdbRecords = singleton . ScanDdbRecords
+
 getDdbRecord
   :: DdbTableId
   -> DdbAttrs
@@ -72,6 +89,14 @@ putDdbRecord
   -> DdbAttrs
   -> LambdaProgram ()
 putDdbRecord ddbTableId = singleton . PutDdbRecord ddbTableId
+
+deleteDdbRecord
+  :: DdbTableId
+  -> DdbAttrs
+  -> LambdaProgram ()
+deleteDdbRecord ddbTableId = singleton . DeleteDdbRecord ddbTableId
+
+-- Util
 
 output
   :: BS.ByteString

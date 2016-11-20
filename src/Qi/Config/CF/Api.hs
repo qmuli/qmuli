@@ -191,17 +191,26 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                       , GetAtt lbdResName "Arn"
                       , "/invocations"])
 
-                    requestTemplates = case _verb of
-                      Get  -> [ (jsonContentType, postTemplate) ]
-                      Post -> [ (jsonContentType, postTemplate) ]
+                    requestTemplates =
+                      -- TODO: all the same for now. Need to figure out how it should differ for different verbs
+                      [ (jsonContentType, postTemplate) ]
+                      {- case _verb of -}
+                        {- Get  -> [ (jsonContentType, postTemplate) ] -}
+                        {- Post -> [ (jsonContentType, postTemplate) ] -}
+
 
                       where
                         getTemplate   = [there|./js/get_template.js|]
                         postTemplate  = [there|./js/post_template.js|]
 
-                    passthroughBehavior = case _verb of
-                      Get  -> "WHEN_NO_TEMPLATES"
-                      Post -> "WHEN_NO_TEMPLATES"
+                    passthroughBehavior =
+                      -- TODO: all the same for now. Need to figure out how it should differ for different verbs
+                      "WHEN_NO_TEMPLATES"
+                      {- case _verb of -}
+                        {- Get  -> "WHEN_NO_TEMPLATES" -}
+                        {- Post -> "WHEN_NO_TEMPLATES" -}
+
+
 
 
                     integrationResponse = apiGatewayIntegrationResponse
