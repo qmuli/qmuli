@@ -125,11 +125,9 @@ run program config = do
 -- DynamoDB
         scanDdbRecords
           :: DdbTableId
-          -> QiAWS [DdbAttrs]
+          -> QiAWS ScanResponse
         scanDdbRecords ddbTableId = do
-          {- config <- lift ask -}
-          r <- send $ A.scan tableName
-          return $ r ^. A.srsItems
+          send $ A.scan tableName
 
           where
             tableName = (getDdbTableById ddbTableId config)^.dtName
@@ -138,11 +136,9 @@ run program config = do
         getDdbRecord
           :: DdbTableId
           -> DdbAttrs
-          -> QiAWS DdbAttrs
+          -> QiAWS GetItemResponse
         getDdbRecord ddbTableId keys = do
-          {- config <- lift ask -}
-          r <- send $ A.getItem tableName & giKey .~ keys
-          return $ r ^. A.girsItem
+          send $ A.getItem tableName & giKey .~ keys
 
           where
             tableName = (getDdbTableById ddbTableId config)^.dtName
@@ -151,11 +147,9 @@ run program config = do
         putDdbRecord
           :: DdbTableId
           -> DdbAttrs
-          -> QiAWS ()
+          -> QiAWS PutItemResponse
         putDdbRecord ddbTableId item = do
-          {- config <- lift ask -}
-          r <- send $ A.putItem tableName & piItem .~ item
-          return ()
+          send $ A.putItem tableName & piItem .~ item
 
           where
             tableName = (getDdbTableById ddbTableId config)^.dtName
@@ -164,11 +158,9 @@ run program config = do
         deleteDdbRecord
           :: DdbTableId
           -> DdbAttrs
-          -> QiAWS ()
+          -> QiAWS DeleteItemResponse
         deleteDdbRecord ddbTableId key = do
-          {- config <- lift ask -}
-          r <- send $ A.deleteItem tableName & diKey .~ key
-          return ()
+          send $ A.deleteItem tableName & diKey .~ key
 
           where
             tableName = (getDdbTableById ddbTableId config)^.dtName

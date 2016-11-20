@@ -5,10 +5,14 @@
 
 module Qi.Program.Lambda.Interface where
 
-import           Control.Monad.Operational (Program, singleton)
-import qualified Data.ByteString           as BS
-import qualified Data.ByteString.Lazy      as LBS
-import           Qi.Config.Identifier      (DdbTableId)
+import           Control.Monad.Operational       (Program, singleton)
+import qualified Data.ByteString                 as BS
+import qualified Data.ByteString.Lazy            as LBS
+import           Network.AWS.DynamoDB.DeleteItem
+import           Network.AWS.DynamoDB.GetItem
+import           Network.AWS.DynamoDB.PutItem
+import           Network.AWS.DynamoDB.Scan
+import           Qi.Config.Identifier            (DdbTableId)
 
 import           Qi.Config.AWS.Api
 import           Qi.Config.AWS.DDB
@@ -35,22 +39,22 @@ data LambdaInstruction a where
 
   ScanDdbRecords
     :: DdbTableId
-    -> LambdaInstruction [DdbAttrs]
+    -> LambdaInstruction ScanResponse
 
   GetDdbRecord
     :: DdbTableId
     -> DdbAttrs
-    -> LambdaInstruction DdbAttrs
+    -> LambdaInstruction GetItemResponse
 
   PutDdbRecord
     :: DdbTableId
     -> DdbAttrs
-    -> LambdaInstruction ()
+    -> LambdaInstruction PutItemResponse
 
   DeleteDdbRecord
     :: DdbTableId
     -> DdbAttrs
-    -> LambdaInstruction ()
+    -> LambdaInstruction DeleteItemResponse
 
   Output
     :: BS.ByteString
@@ -59,46 +63,21 @@ data LambdaInstruction a where
 
 -- S3
 
-getS3ObjectContent
-  :: S3Object
-  -> LambdaProgram LBS.ByteString
 getS3ObjectContent = singleton . GetS3ObjectContent
 
-putS3ObjectContent
-  :: S3Object
-  -> LBS.ByteString
-  -> LambdaProgram ()
 putS3ObjectContent s3Obj = singleton . PutS3ObjectContent s3Obj
 
 
 -- DDB
 
-scanDdbRecords
-  :: DdbTableId
-  -> LambdaProgram [DdbAttrs]
 scanDdbRecords = singleton . ScanDdbRecords
 
-getDdbRecord
-  :: DdbTableId
-  -> DdbAttrs
-  -> LambdaProgram DdbAttrs
 getDdbRecord ddbTableId = singleton . GetDdbRecord ddbTableId
 
-putDdbRecord
-  :: DdbTableId
-  -> DdbAttrs
-  -> LambdaProgram ()
 putDdbRecord ddbTableId = singleton . PutDdbRecord ddbTableId
 
-deleteDdbRecord
-  :: DdbTableId
-  -> DdbAttrs
-  -> LambdaProgram ()
 deleteDdbRecord ddbTableId = singleton . DeleteDdbRecord ddbTableId
 
 -- Util
 
-output
-  :: BS.ByteString
-  -> LambdaProgram ()
 output = singleton . Output
