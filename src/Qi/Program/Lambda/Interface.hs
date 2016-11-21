@@ -6,6 +6,7 @@
 module Qi.Program.Lambda.Interface where
 
 import           Control.Monad.Operational       (Program, singleton)
+import           Data.Aeson                      (Value)
 import qualified Data.ByteString                 as BS
 import qualified Data.ByteString.Lazy            as LBS
 import           Network.AWS.DynamoDB.DeleteItem
@@ -56,8 +57,9 @@ data LambdaInstruction a where
     -> DdbAttrs
     -> LambdaInstruction DeleteItemResponse
 
-  Output
-    :: BS.ByteString
+  Respond
+    :: Int
+    -> Value
     -> LambdaInstruction ()
 
 
@@ -80,4 +82,4 @@ deleteDdbRecord ddbTableId = singleton . DeleteDdbRecord ddbTableId
 
 -- Util
 
-output = singleton . Output
+respond status = singleton . Respond status

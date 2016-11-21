@@ -30,18 +30,17 @@ import           Qi.Program.Config.Interface     (ConfigProgram)
 import qualified Qi.Program.Config.Interface     as CI
 import           Qi.Program.Lambda.Interface     (LambdaProgram,
                                                   deleteDdbRecord, getDdbRecord,
-                                                  output, putDdbRecord,
-                                                  scanDdbRecords)
+                                                  putDdbRecord, scanDdbRecords)
+import           Qi.Util.Api
 
 import           Types
-import           Util
 
 
 -- Used the curl commands below to test-drive the endpoints (substitute your unique api stage url first):
 {-
-export API="https://sqdf3rxd19.execute-api.us-east-1.amazonaws.com/v1"
+export API="https://6hivoa32d9.execute-api.us-east-1.amazonaws.com/v1"
 curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"cup\", \"shape\": \"round\", \"size\": 3}" "$API/things/cup"
-curl -v -X GET "$API/things/mycup"
+curl -v -X GET "$API/things/cup"
 curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"chair\", \"shape\": \"square\", \"size\": 10}" "$API/things/chair"
 curl -v -X GET "$API/things"
 curl -v -X DELETE "$API/things/mycup"
@@ -94,14 +93,14 @@ main =
                     Nothing ->
                       Error $ "Error: could not extract thing data, DDB record was: " ++ show ddbRecord
 
-            output $ case thingsResult of
+            case thingsResult of
               Success things ->
-                LBS.toStrict $ encode things
+                success $ toJSON things
               Error err ->
-                BS.pack $ "Parsing error: " ++ show err
+                internalError $ "Parsing error: " ++ show err
 
           unexpected ->
-            output . BS.pack $ "Error: unexpected response status: " ++ show unexpected
+            internalError $ "Error: unexpected response status: " ++ show unexpected
 
 
 
@@ -118,19 +117,24 @@ main =
           res <- getDdbRecord ddbTableId keys
           case res^.girsResponseStatus of
             200 -> do
-              case SHM.lookup "Data" (res^.girsItem) of
-                Just thingAttrs -> do
-                  case castFromDdbAttrs unDdbThing thingAttrs of
-                    Success (thing :: Thing)  ->
-                      output . LBS.toStrict . encode $ thing
-                    Error err                 ->
-                      output . BS.pack $ "Error: fromJson: " ++ err ++ ". Attrs were: " ++ show thingAttrs
+              let item = res^.girsItem
+              if item == SHM.fromList []
+                then -- no found item by that key
+                  notFoundError "no such thing found"
+                else
+                  case SHM.lookup "Data" item of
+                    Just thingAttrs -> do
+                      case castFromDdbAttrs unDdbThing thingAttrs of
+                        Success (thing :: Thing)  ->
+                          success $ toJSON thing
+                        Error err                 ->
+                          internalError $ "Error: fromJson: " ++ err ++ ". Attrs were: " ++ show thingAttrs
 
-                Nothing ->
-                  output . BS.pack $ "Error: could not extract thing data, DDB record was: " ++ show (res^.girsItem)
+                    Nothing ->
+                      internalError $ "Error: could not extract thing data, DDB record was: " ++ show item
 
             unexpected ->
-              output . BS.pack $ "Error: unexpected response status: " ++ show unexpected
+              internalError $ "Error: unexpected response status: " ++ show unexpected
 
       put
         :: DdbTableId
@@ -147,10 +151,10 @@ main =
             res <- putDdbRecord ddbTableId item
             case res^.pirsResponseStatus of
               200 -> do
-                output "successfully put item"
+                successString "successfully put item"
 
               unexpected ->
-                output . BS.pack $ "Error: unexpected response status: " ++ show unexpected
+                internalError $ "Error: unexpected response status: " ++ show unexpected
 
       delete
         :: DdbTableId
@@ -164,11 +168,30 @@ main =
           res <- deleteDdbRecord ddbTableId keys
           case res^.dirsResponseStatus of
             200 -> do
-              output "successfully deleted item"
+              successString "successfully deleted item"
 
             unexpected ->
-              output . BS.pack $ "Error: unexpected response status: " ++ show unexpected
+              internalError $ "Error: unexpected response status: " ++ show unexpected
 
 
+
+withThingAttributes
+  :: ApiEvent
+  -> (AttributeValue -> LambdaProgram ())
+  -> LambdaProgram ()
+withThingAttributes event f = case event^.aeBody of
+  JsonBody jb -> case castToDdbAttrs DdbThing jb of
+    Success thing -> f thing
+    Error err     -> internalError $ "Error: fromJson: " ++ err ++ ". Json was: " ++ show jb
+  unexpected  ->
+    argumentsError $ "Unexpected request body: " ++ show unexpected
+
+
+withId event f = case SHM.lookup "thingId" $ event^.aeParams.rpPath of
+  Just (String x) -> f x
+  Just unexpected ->
+    argumentsError $ "unexpected path parameter: " ++ show unexpected
+  Nothing ->
+    argumentsError "expected path parameter 'thingId' was not found"
 
 

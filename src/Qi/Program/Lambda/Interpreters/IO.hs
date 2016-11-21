@@ -20,7 +20,6 @@ import           Data.Conduit.Binary          (sinkLbs)
 import           Data.Default                 (def)
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
-import           Data.Text.Encoding           (decodeUtf8)
 import qualified Data.Text.IO                 as T
 import           Network.AWS                  hiding (send)
 import           Network.AWS.DynamoDB         as A
@@ -76,8 +75,8 @@ run program config = do
           interpret . is =<< deleteDdbRecord ddbTableId key
 
 -- Util
-        (Output content) :>>= is -> do
-          output content -- final output, no more program instructions
+        (Respond status content) :>>= is -> do
+          respond status content -- final output, no more program instructions
 
         Return _ ->
           return def
@@ -167,11 +166,15 @@ run program config = do
 
 
 -- Util
-        output
-          :: BS.ByteString
+        respond
+          :: Int
+          -> Value
           -> QiAWS ()
-        output content =
-          liftIO . LBS.putStr . encode $ object [("body", String $ decodeUtf8 content)]
+        respond status content =
+          liftIO . LBS.putStr . encode $ object [
+              ("status", Number $ fromIntegral status)
+            , ("body", content)
+            ]
 
 
 

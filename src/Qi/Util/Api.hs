@@ -2,7 +2,7 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Util where
+module Qi.Util.Api where
 
 import           Control.Lens                hiding (view, (.=))
 import           Control.Monad               ((<=<))
@@ -20,29 +20,8 @@ import           Qi.Config.AWS.Api           (ApiEvent (..),
                                               aeParams, rpPath)
 import           Qi.Config.AWS.DDB           (DdbAttrDef (..), DdbAttrType (..),
                                               DdbProvCap (..))
-import           Qi.Program.Lambda.Interface (LambdaProgram, output)
+import           Qi.Program.Lambda.Interface (LambdaProgram, respond)
 
-import           Types
-
-
-withThingAttributes
-  :: ApiEvent
-  -> (AttributeValue -> LambdaProgram ())
-  -> LambdaProgram ()
-withThingAttributes event f = case event^.aeBody of
-  JsonBody jb -> case castToDdbAttrs DdbThing jb of
-    Success thing -> f thing
-    Error err     -> output . BS.pack $ "Error: fromJson: " ++ err ++ ". Json was: " ++ show jb
-  unexpected  ->
-    output . BS.pack $ "Unexpected request body: " ++ show unexpected
-
-
-withId event f = case SHM.lookup "thingId" $ event^.aeParams.rpPath of
-  Just (String x) -> f x
-  Just unexpected ->
-    output $ BS.pack $ "unexpected path parameter: " ++ show unexpected
-  Nothing ->
-    output "expected path parameter 'thingId' was not found"
 
 
 castFromDdbAttrs
@@ -58,3 +37,12 @@ castToDdbAttrs
   -> Value
   -> Result AttributeValue
 castToDdbAttrs ddbConstructor = fromJSON <=< fmap (toJSON . ddbConstructor) . fromJSON
+
+success = respond 200
+successString s = respond 200 $ object [ ("message", String $ T.pack s) ]
+created = respond 201
+
+argumentsError = respond 400 . String . T.pack
+notFoundError = respond 404 . String . T.pack
+internalError = respond 500 . String . T.pack
+

@@ -153,7 +153,7 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                     (Ref apirResName)
                     (Ref apiResName)
                     & agmeIntegration ?~ integration
-                    & agmeMethodResponses ?~ [ methodResponse ]
+                    & agmeMethodResponses ?~ methodResponses
               )
               & dependsOn ?~ [
                     lbdPermResName
@@ -162,10 +162,13 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
               where
                 name = getApiMethodCFResourceName apir _verb
                 verb = Literal . T.pack $ show _verb
-                methodResponse = apiGatewayMethodResponse "200"
-                  & agmrResponseParameters ?~ responseParams
 
+                -- these are all possible response types (statuses) for this method
+                methodResponses = map methodResponse ["200", "400", "404", "500"]
                   where
+                    methodResponse status = apiGatewayMethodResponse status
+                      & agmrResponseParameters ?~ responseParams
+
                     responseParams = [
                         ("method.response.header.Access-Control-Allow-Headers", Bool False)
                       , ("method.response.header.Access-Control-Allow-Methods", Bool False)
@@ -181,7 +184,7 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                   & agiUri ?~ uri
                   & agiPassthroughBehavior ?~ passthroughBehavior
                   & agiRequestTemplates ?~ requestTemplates
-                  & agiIntegrationResponses ?~ [ integrationResponse ]
+                  & agiIntegrationResponses ?~ integrationResponses
 
                   where
                     uri = (Join "" [
@@ -198,9 +201,8 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                         {- Get  -> [ (jsonContentType, postTemplate) ] -}
                         {- Post -> [ (jsonContentType, postTemplate) ] -}
 
-
                       where
-                        getTemplate   = [there|./js/get_template.js|]
+                        {- getTemplate   = [there|./js/get_template.js|] -}
                         postTemplate  = [there|./js/post_template.js|]
 
                     passthroughBehavior =
@@ -211,20 +213,35 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                         {- Post -> "WHEN_NO_TEMPLATES" -}
 
 
+                    integrationResponses = [ integrationResponse200 ] ++
+                      map errorIntegrationResponse [
+                          "400"
+                        , "404"
+                        , "500"
+                        ]
 
-
-                    integrationResponse = apiGatewayIntegrationResponse
+                    integrationResponse200 = apiGatewayIntegrationResponse
                       & agirResponseTemplates ?~ responseTemplates
                       & agirStatusCode ?~ "200"
                       & agirResponseParameters ?~ responseParams
 
                       where
-                        responseTemplates = [ (jsonContentType, "$input.json('$.body')") ]
-                        responseParams = [
-                            ("method.response.header.Access-Control-Allow-Headers", "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'")
-                          , ("method.response.header.Access-Control-Allow-Methods", "'DELETE,GET,HEAD,POST,PUT,OPTIONS,TRACE'")
-                          , ("method.response.header.Access-Control-Allow-Origin", "'*'")
-                          ]
+                        responseTemplates = [ (jsonContentType, [there|./js/success_response_template.js|]) ]
+
+                    errorIntegrationResponse errorStatus = apiGatewayIntegrationResponse
+                      & agirResponseTemplates ?~ responseTemplates
+                      & agirStatusCode ?~ (Literal $ T.pack errorStatus)
+                      & agirSelectionPattern ?~ (Literal . T.pack $ "^\\[" ++ errorStatus ++ "\\].*")
+                      & agirResponseParameters ?~ responseParams
+
+                      where
+                        responseTemplates = [ (jsonContentType, [there|./js/error_response_template.js|]) ]
+
+                    responseParams = [
+                        ("method.response.header.Access-Control-Allow-Headers", "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'")
+                      , ("method.response.header.Access-Control-Allow-Methods", "'DELETE,GET,HEAD,POST,PUT,OPTIONS,TRACE'")
+                      , ("method.response.header.Access-Control-Allow-Origin", "'*'")
+                      ]
 
 
 
