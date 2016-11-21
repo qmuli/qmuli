@@ -31,7 +31,7 @@ import           Qi.Util.Api
 
 main :: IO ()
 main =
-  "apigwlambda" `withConfig` config
+  "apigwlambdas3" `withConfig` config
 
     where
       config :: ConfigProgram ()
