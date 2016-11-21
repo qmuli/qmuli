@@ -55,14 +55,15 @@ instance Hashable Api where
   hashWithSalt s Api{_aName} = s `hashWithSalt` (T.concat [_aName, "Api"])
 
 
-data ApiVerb = Post | Get | Put | Head | Option
+data ApiVerb = Post | Get | Put | Delete | Head | Options
 
 instance Show ApiVerb where
-  show Post   = "POST"
-  show Get    = "GET"
-  show Put    = "PUT"
-  show Head   = "HEAD"
-  show Option = "OPTION"
+  show Post    = "POST"
+  show Get     = "GET"
+  show Put     = "PUT"
+  show Delete  = "DELETE"
+  show Head    = "HEAD"
+  show Options = "OPTIONS"
 
 
 data ApiMethodConfig = ApiMethodConfig {

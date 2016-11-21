@@ -1,110 +1,197 @@
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
-import           Control.Lens                hiding (view)
-import           Control.Monad               (void)
+import           Control.Lens                    hiding (view, (.=))
+import           Control.Monad                   (forM, void, (<=<))
 import           Data.Aeson
-import qualified Data.ByteString.Char8       as BS
-import qualified Data.ByteString.Lazy        as LBS
-import qualified Data.HashMap.Strict         as SHM
-import           Data.Maybe                  (fromJust)
-import           Data.Text.Encoding          (encodeUtf8)
-import           Network.AWS.DynamoDB        (attributeValue, avM, avS)
+import qualified Data.ByteString.Char8           as BS
+import qualified Data.ByteString.Lazy            as LBS
+import qualified Data.HashMap.Strict             as SHM
+import           Network.AWS.DynamoDB            (AttributeValue,
+                                                  attributeValue, avS)
+import           Network.AWS.DynamoDB.DeleteItem
+import           Network.AWS.DynamoDB.GetItem
+import           Network.AWS.DynamoDB.PutItem
+import           Network.AWS.DynamoDB.Scan
 
-import           Qi                          (withConfig)
-import           Qi.Config.AWS.Api           (ApiEvent (..),
-                                              ApiVerb (Get, Post),
-                                              RequestBody (..), aeBody,
-                                              aeParams, rpPath)
-import           Qi.Config.AWS.DDB           (DdbAttrDef (..), DdbAttrType (..),
-                                              DdbProvCap (..))
-import           Qi.Config.Identifier        (DdbTableId, S3BucketId)
-import           Qi.Program.Config.Interface (ConfigProgram)
-import qualified Qi.Program.Config.Interface as CI
-import           Qi.Program.Lambda.Interface (LambdaProgram, getDdbRecord,
-                                              output, putDdbRecord)
+import           Qi                              (withConfig)
+import           Qi.Config.AWS.Api               (ApiEvent (..),
+                                                  ApiVerb (Delete, Get, Post),
+                                                  RequestBody (..), aeBody,
+                                                  aeParams, rpPath)
+import           Qi.Config.AWS.DDB               (DdbAttrDef (..),
+                                                  DdbAttrType (..),
+                                                  DdbProvCap (..))
+import           Qi.Config.Identifier            (DdbTableId)
+import           Qi.Program.Config.Interface     (ConfigProgram)
+import qualified Qi.Program.Config.Interface     as CI
+import           Qi.Program.Lambda.Interface     (LambdaProgram,
+                                                  deleteDdbRecord, getDdbRecord,
+                                                  putDdbRecord, scanDdbRecords)
+import           Qi.Util.Api
 
--- Used the two curl commands below to test-drive the two endpoints (substitute your unique api stage url first):
---
--- curl -v -X POST -H "Content-Type: application/json" -d "{\"S\": \"hello there\"}" "https://2gezp5kxjb.execute-api.us-east-1.amazonaws.com/v1/things/xyz"
--- curl -v -X GET "https://2gezp5kxjb.execute-api.us-east-1.amazonaws.com/v1/things/xyz"
---
+import           Types
+
+
+-- Used the curl commands below to test-drive the endpoints (substitute your unique api stage url first):
+{-
+export API="https://gliqqtz1pi.execute-api.us-east-1.amazonaws.com/v1"
+curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"cup\", \"shape\": \"round\", \"size\": 3}" "$API/things/cup"
+curl -v -X GET "$API/things/cup"
+curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"chair\", \"shape\": \"square\", \"size\": 10}" "$API/things/chair"
+curl -v -X GET "$API/things"
+curl -v -X DELETE "$API/things/mycup"
+curl -v -X GET "$API/things"
+-}
+
 
 main :: IO ()
 main =
-  "apigwlambda" `withConfig` config
+  "apigwlambdadynamodb" `withConfig` config
 
     where
       config :: ConfigProgram ()
       config = do
-        api     <- CI.api "world"
-        things  <- CI.apiRootResource "things" api
-        thing   <- CI.apiChildResource "{thingId}" things
-
         thingsTable <- CI.ddbTable "things" (DdbAttrDef "Id" S) Nothing (DdbProvCap 1 1)
 
-        void $ CI.apiMethodLambda
-          "getProp"
-          Get
-          thing
-          $ getPropLambda thingsTable
+        CI.api "world" >>= \api ->
+          CI.apiRootResource "things" api >>= \things -> do
 
-        void $ CI.apiMethodLambda
-          "putProp"
-          Post
-          thing
-          $ putPropLambda thingsTable
+            CI.apiMethodLambda "scanThings" Get
+              things $ scan thingsTable
 
 
-      getPropLambda
+            CI.apiChildResource "{thingId}" things >>= \thing -> do
+
+              CI.apiMethodLambda "getThing" Get
+                thing $ get thingsTable
+
+              CI.apiMethodLambda "putThing" Post
+                thing $ put thingsTable
+
+              CI.apiMethodLambda "deleteThing" Delete
+                thing $ delete thingsTable
+
+        return ()
+
+      scan
         :: DdbTableId
         -> ApiEvent
         -> LambdaProgram ()
-      getPropLambda ddbTableId event@ApiEvent{} = do
+      scan ddbTableId event = do
+        res <- scanDdbRecords ddbTableId
+        case res^.srsResponseStatus of
+          200 -> do
+            let thingsResult :: Result [Thing] = forM (res^.srsItems) $ \ddbRecord ->
+                  case SHM.lookup "Data" ddbRecord of
+                    Just thingAttrs -> do
+                      castFromDdbAttrs unDdbThing thingAttrs
+
+                    Nothing ->
+                      Error $ "Error: could not extract thing data, DDB record was: " ++ show ddbRecord
+
+            case thingsResult of
+              Success things ->
+                success $ toJSON things
+              Error err ->
+                internalError $ "Parsing error: " ++ show err
+
+          unexpected ->
+            internalError $ "Error: unexpected response status: " ++ show unexpected
+
+
+
+
+      get
+        :: DdbTableId
+        -> ApiEvent
+        -> LambdaProgram ()
+      get ddbTableId event = do
         withId event $ \tid -> do
           let keys = SHM.fromList [
                   ("Id", attributeValue & avS .~ Just tid)
                 ]
-          thing <- getDdbRecord ddbTableId keys
-          case SHM.lookup "Data" thing of
-            Just d ->
-              output $ LBS.toStrict $ encode d
-            Nothing ->
-              output . BS.pack $ "Error: could not extract thing data, thing was: " ++ show thing
+          res <- getDdbRecord ddbTableId keys
+          case res^.girsResponseStatus of
+            200 -> do
+              let item = res^.girsItem
+              if item == SHM.fromList []
+                then -- no found item by that key
+                  notFoundError "no such thing found"
+                else
+                  case SHM.lookup "Data" item of
+                    Just thingAttrs -> do
+                      case castFromDdbAttrs unDdbThing thingAttrs of
+                        Success (thing :: Thing)  ->
+                          success $ toJSON thing
+                        Error err                 ->
+                          internalError $ "Error: fromJson: " ++ err ++ ". Attrs were: " ++ show thingAttrs
 
+                    Nothing ->
+                      internalError $ "Error: could not extract thing data, DDB record was: " ++ show item
 
+            unexpected ->
+              internalError $ "Error: unexpected response status: " ++ show unexpected
 
-      putPropLambda
+      put
         :: DdbTableId
         -> ApiEvent
         -> LambdaProgram ()
-      putPropLambda ddbTableId event@ApiEvent{} = do
+      put ddbTableId event = do
         withId event $ \tid -> do
-          withData event $ \tdata -> do
+          withThingAttributes event $ \thingAttrs -> do
             let item = SHM.fromList [
                     ("Id",    attributeValue & avS .~ Just tid)
-                  , ("Data",  tdata)
+                  , ("Data",  thingAttrs)
                   ]
 
-            putDdbRecord ddbTableId item
-            output "successfully added item"
+            res <- putDdbRecord ddbTableId item
+            case res^.pirsResponseStatus of
+              200 -> do
+                successString "successfully put item"
+
+              unexpected ->
+                internalError $ "Error: unexpected response status: " ++ show unexpected
+
+      delete
+        :: DdbTableId
+        -> ApiEvent
+        -> LambdaProgram ()
+      delete ddbTableId event = do
+        withId event $ \tid -> do
+          let keys = SHM.fromList [
+                  ("Id", attributeValue & avS .~ Just tid)
+                ]
+          res <- deleteDdbRecord ddbTableId keys
+          case res^.dirsResponseStatus of
+            200 -> do
+              successString "successfully deleted item"
+
+            unexpected ->
+              internalError $ "Error: unexpected response status: " ++ show unexpected
 
 
-      withData event f = case event^.aeBody of
-        JsonBody jb -> case fromJSON jb of
-          Success x -> f x
-          Error err -> output . BS.pack $ "Error: fromJson: " ++ err
-        unexpected ->
-          output . BS.pack $ "Unexpected request body: " ++ show unexpected
 
-      withId event f = case SHM.lookup "thingId" $ event^.aeParams.rpPath of
-        Just (String x) -> f x
-        Just unexpected ->
-          output $ BS.pack $ "unexpected path parameter: " ++ show unexpected
-        Nothing ->
-          output "expected path parameter 'thingId' was not found"
+withThingAttributes
+  :: ApiEvent
+  -> (AttributeValue -> LambdaProgram ())
+  -> LambdaProgram ()
+withThingAttributes event f = case event^.aeBody of
+  JsonBody jb -> case castToDdbAttrs DdbThing jb of
+    Success thing -> f thing
+    Error err     -> internalError $ "Error: fromJson: " ++ err ++ ". Json was: " ++ show jb
+  unexpected  ->
+    argumentsError $ "Unexpected request body: " ++ show unexpected
 
+
+withId event f = case SHM.lookup "thingId" $ event^.aeParams.rpPath of
+  Just (String x) -> f x
+  Just unexpected ->
+    argumentsError $ "unexpected path parameter: " ++ show unexpected
+  Nothing ->
+    argumentsError "expected path parameter 'thingId' was not found"
 
 

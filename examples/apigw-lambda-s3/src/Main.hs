@@ -6,7 +6,8 @@ module Main where
 import           Control.Monad               (void)
 import           Data.Aeson
 import qualified Data.ByteString.Lazy        as LBS
-import           Data.Text.Encoding          (encodeUtf8)
+import           Data.Text.Encoding          (decodeUtf8, encodeUtf8)
+
 import           Qi                          (withConfig)
 import           Qi.Config.AWS.Api           (ApiEvent (..),
                                               ApiVerb (Get, Post),
@@ -18,7 +19,9 @@ import           Qi.Program.Config.Interface (ConfigProgram, api,
                                               apiMethodLambda, apiRootResource,
                                               s3Bucket)
 import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
-                                              output, putS3ObjectContent)
+                                              putS3ObjectContent, respond)
+import           Qi.Util.Api
+
 
 -- Used the two curl commands below to test-drive the two endpoints (substitute your unique api stage url first):
 --
@@ -28,27 +31,29 @@ import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
 
 main :: IO ()
 main =
-  "apigwlambda" `withConfig` config
+  "apigwlambdas3" `withConfig` config
 
     where
       config :: ConfigProgram ()
       config = do
         bucketId  <- s3Bucket "things"
 
-        apiId         <- api "world"
-        apiResourceId <- apiRootResource "things" apiId
+        api "world" >>= \apiId ->
+          apiRootResource "things" apiId >>= \apiResourceId -> do
 
-        void $ apiMethodLambda
-          "createThing"
-          Post
-          apiResourceId
-          $ writeContentsLambda bucketId
+            apiMethodLambda
+              "createThing"
+              Post
+              apiResourceId
+              $ writeContentsLambda bucketId
 
-        void $ apiMethodLambda
-          "viewThing"
-          Get
-          apiResourceId
-          $ readContentsLambda bucketId
+            apiMethodLambda
+              "viewThing"
+              Get
+              apiResourceId
+              $ readContentsLambda bucketId
+
+        return ()
 
 
       writeContentsLambda
@@ -57,7 +62,7 @@ main =
         -> LambdaProgram ()
       writeContentsLambda bucketId event@ApiEvent{_aeBody} = do
         putS3ObjectContent (s3Object bucketId) content
-        output "successfully added content"
+        successString "successfully added content"
 
         where
           content = case _aeBody of
@@ -71,7 +76,7 @@ main =
         -> LambdaProgram ()
       readContentsLambda bucketId _ = do
         content <- getS3ObjectContent $ s3Object bucketId
-        output $ LBS.toStrict content
+        success . String . decodeUtf8 $ LBS.toStrict content
 
 
       s3Object = (`S3Object` s3Key)

@@ -1,0 +1,1 @@
+{"message": $input.json('$.errorMessage')}
