@@ -101,7 +101,7 @@ main =
 Compiling this qmulus results in a multi-purpose executable binary, which can be used as a CLI tool for management tasks like provisioning
 as well as the binary executable that gets packaged and used in all lambdas.
 
-Note: see other examples in the `examples` folder
+Note: see more involved [DynamoDB backed RESTful API example](https://github.com/qmuli/qmuli/blob/master/examples/apigw-lambda-dynamodb/src/Main.hs)
 
 Getting started
 ---------------
