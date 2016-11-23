@@ -11,8 +11,8 @@ let formatError = (statusCode, message) => {
 
 exports.handler = function(event, context, callback) {
   const prefixedLambdaName = context.functionName;
-  const appName = prefixedLambdaName.split('-', 1);
-  const lbdName = prefixedLambdaName.split('-').slice(1);
+  const appName = prefixedLambdaName.split('_', 1);
+  const lbdName = prefixedLambdaName.split('_').slice(1);
   const input = JSON.stringify(event)
     .replace(/\\/g, "\\\\")
     .replace(/\$/g, "\\$")

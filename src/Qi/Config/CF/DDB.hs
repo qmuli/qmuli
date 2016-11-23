@@ -31,7 +31,9 @@ toResources config = Resources . map toDdbTableRes $ getAllDdbTables config
         & ddbtTableName ?~ (Literal $ table^.dtName)
 
       where
-        name = getDdbTableCFResourceName table
+        name = getDdbTableCFResourceName table -- `namePrefixWith` config
+        -- for some reason CF complains about having non-alphanumeric symbols
+        -- in DDB table name
 
         attributeDefinitions = [
             dynamoDBAttributeDefinition
