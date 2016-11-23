@@ -15,7 +15,7 @@ import           Qi.Config.AWS.Api
 import           Qi.Config.AWS.Api.Accessors
 import           Qi.Config.AWS.Lambda.Accessors
 import           Qi.Config.Identifier
-import           Stratosphere                   hiding (name)
+import           Stratosphere                   hiding (Delete, name)
 import           Text.Heredoc
 
 
@@ -97,8 +97,8 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                 resource name $
                   ApiGatewayMethodProperties $
                   apiGatewayMethod
-                    "NONE"
-                    "OPTIONS"
+                    NONE
+                    OPTIONS
                     (Ref apirResName)
                     (Ref apiResName)
                     & agmeIntegration ?~ integration
@@ -121,9 +121,9 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                       ]
 
                 integration =
-                  apiGatewayIntegration "MOCK"
-                  & agiIntegrationHttpMethod ?~ "POST" -- looks like this should always be "POST"
-                  & agiPassthroughBehavior ?~ "WHEN_NO_MATCH"
+                  apiGatewayIntegration MOCK
+                  & agiIntegrationHttpMethod ?~ POST -- looks like this should always be "POST"
+                  & agiPassthroughBehavior ?~ WHEN_NO_MATCH
                   & agiRequestTemplates ?~ requestTemplates
                   & agiIntegrationResponses ?~ [ integrationResponse ]
 
@@ -148,8 +148,8 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                 resource name $
                   ApiGatewayMethodProperties $
                   apiGatewayMethod
-                    "NONE"
-                    verb
+                    NONE
+                    (verb _verb)
                     (Ref apirResName)
                     (Ref apiResName)
                     & agmeIntegration ?~ integration
@@ -161,7 +161,13 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
 
               where
                 name = getApiMethodCFResourceName apir _verb
-                verb = Literal . T.pack $ show _verb
+
+                verb Get     = GET
+                verb Post    = POST
+                verb Put     = PUT
+                verb Delete  = DELETE
+                verb Head    = HEAD
+                verb Options = OPTIONS
 
                 -- these are all possible response types (statuses) for this method
                 methodResponses = map methodResponse ["200", "400", "404", "500"]
@@ -179,8 +185,8 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                 lbdPermResName = getLambdaPermissionResourceName $ getLambdaById _lbdId config
 
                 integration =
-                  apiGatewayIntegration "AWS"
-                  & agiIntegrationHttpMethod ?~ "POST" -- looks like this should always be "POST"
+                  apiGatewayIntegration AWS
+                  & agiIntegrationHttpMethod ?~ POST -- looks like this should always be "POST" no matter what the http verb was used on the endpoint
                   & agiUri ?~ uri
                   & agiPassthroughBehavior ?~ passthroughBehavior
                   & agiRequestTemplates ?~ requestTemplates
@@ -207,20 +213,20 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
 
                     passthroughBehavior =
                       -- TODO: all the same for now. Need to figure out how it should differ for different verbs
-                      "WHEN_NO_TEMPLATES"
+                      WHEN_NO_TEMPLATES
                       {- case _verb of -}
-                        {- Get  -> "WHEN_NO_TEMPLATES" -}
-                        {- Post -> "WHEN_NO_TEMPLATES" -}
+                        {- Get  -> WHEN_NO_TEMPLATES -}
+                        {- Post -> WHEN_NO_TEMPLATES -}
 
 
-                    integrationResponses = [ integrationResponse200 ] ++
+                    integrationResponses = [ successIntegrationResponse ] ++
                       map errorIntegrationResponse [
                           "400"
                         , "404"
                         , "500"
                         ]
 
-                    integrationResponse200 = apiGatewayIntegrationResponse
+                    successIntegrationResponse = apiGatewayIntegrationResponse
                       & agirResponseTemplates ?~ responseTemplates
                       & agirStatusCode ?~ "200"
                       & agirResponseParameters ?~ responseParams
