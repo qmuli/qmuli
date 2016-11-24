@@ -60,5 +60,5 @@ instance Default Config where
 makeLenses ''Config
 
 namePrefixWith :: Text -> Config -> Text
-namePrefixWith name config = T.concat [config ^. namePrefix, "-", name]
+namePrefixWith name config = T.concat [config ^. namePrefix, "_", name]
 

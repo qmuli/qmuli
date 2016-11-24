@@ -31,7 +31,7 @@ import           Qi.Util.Api
 
 main :: IO ()
 main =
-  "apigwlambdas3" `withConfig` config
+  "apigw-lambda-s3" `withConfig` config
 
     where
       config :: ConfigProgram ()

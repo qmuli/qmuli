@@ -4,6 +4,7 @@
 
 module Qi.Config.CF.DDB (toResources) where
 
+import           Control.Lens
 import           Data.Aeson                  (Value (Array), object)
 import qualified Data.ByteString.Lazy        as LBS
 import qualified Data.HashMap.Strict         as SHM
@@ -12,7 +13,9 @@ import qualified Data.Text                   as T
 import           Stratosphere                hiding (name)
 
 import           Qi.Config.AWS
-import           Qi.Config.AWS.DDB
+import           Qi.Config.AWS.DDB           (daName, daType, dpcRead, dpcWrite,
+                                              dtHashAttrDef, dtName, dtProvCap)
+import qualified Qi.Config.AWS.DDB           as DDB
 import           Qi.Config.AWS.DDB.Accessors
 
 
@@ -28,19 +31,23 @@ toResources config = Resources . map toDdbTableRes $ getAllDdbTables config
         & ddbtTableName ?~ (Literal $ table^.dtName)
 
       where
-        name = getDdbTableCFResourceName table
+        name = getDdbTableCFResourceName table -- `namePrefixWith` config
+        -- for some reason CF complains about having non-alphanumeric symbols
+        -- in DDB table name
 
         attributeDefinitions = [
             dynamoDBAttributeDefinition
               (Literal $ table^.dtHashAttrDef.daName)
-              (Literal . T.pack . show $ table^.dtHashAttrDef.daType)
+              (toAttrType $ table^.dtHashAttrDef.daType)
           ]
         keySchema = [
-            dynamoDBKeySchema (Literal $ table^.dtHashAttrDef.daName) "HASH"
+            dynamoDBKeySchema (Literal $ table^.dtHashAttrDef.daName) HASH
           ]
         provisionedThroughput =
           dynamoDBProvisionedThroughput
             (Literal . Integer' $ table^.dtProvCap.dpcRead)
             (Literal . Integer' $ table^.dtProvCap.dpcWrite)
 
-
+        toAttrType DDB.S = S
+        toAttrType DDB.N = N
+        toAttrType DDB.B = B

@@ -50,7 +50,7 @@ curl -v -X GET "$API/things"
 
 main :: IO ()
 main =
-  "apigwlambdadynamodb" `withConfig` config
+  "apigw-lambda-dynamodb" `withConfig` config
 
     where
       config :: ConfigProgram ()

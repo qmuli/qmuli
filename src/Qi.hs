@@ -22,9 +22,9 @@ import           Qi.Config.AWS.Lambda.Accessors       (getAllLambdas)
 import           Qi.Config.AWS.S3
 import qualified Qi.Config.AWS.S3.Event               as S3Event (parse)
 import           Qi.Config.CF                         as CF
+import qualified Qi.Deploy.CF                         as CF
 import qualified Qi.Deploy.Lambda                     as Lambda
 import qualified Qi.Deploy.S3                         as S3
-import qualified Qi.Deploy.CF                         as CF
 import           Qi.Program.Config.Interface          (ConfigProgram)
 import qualified Qi.Program.Config.Interpreters.Build as CB
 import           Qi.Program.Lambda.Interface          (LambdaProgram)
@@ -39,7 +39,7 @@ withConfig appName configProgram = do
 
   if invalid appName
     then
-      putStrLn $ "Invalid qmulus name: '" ++ T.unpack appName ++ "', the name should only contain alphanumeric lower case characters"
+      putStrLn $ "Invalid qmulus name: '" ++ T.unpack appName ++ "', the name should only contain alphanumeric lower case characters or a hyphen"
     else do
       args <- getArgs
       case args of
@@ -70,7 +70,7 @@ withConfig appName configProgram = do
         _ -> putStrLn $ "Unexpected arguments: '" ++ show args ++ "'"
 
   where
-    invalid = not . all ((||) <$> isLower <*> isDigit) . T.unpack
+    invalid = not . all (\c -> isLower c || isDigit c || c == '-') . T.unpack
 
     config = snd . (`runState` def{_namePrefix = appName}) $ CB.interpret configProgram
 
