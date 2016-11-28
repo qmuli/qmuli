@@ -12,6 +12,7 @@ import           Data.Default                (def)
 import           Data.Hashable               (hash)
 import qualified Data.HashMap.Strict         as SHM
 import           Data.Monoid                 ((<>))
+import           Data.Text                   (Text)
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.Api
@@ -22,7 +23,7 @@ import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
 import           Qi.Config.AWS.S3.Accessors
 import           Qi.Config.Identifier
-import           Qi.Program.Config.Interface
+import           Qi.Program.Config.Interface hiding (apiResource)
 
 
 interpret
@@ -42,11 +43,8 @@ interpret program =  do
     (RApi name) :>>= is -> do
       interpret . is =<< rApi name
 
-    (RApiRootResource name apiId) :>>= is -> do
-      interpret . is =<< rApiRootResource name apiId
-
-    (RApiChildResource name apiResourceId) :>>= is -> do
-      interpret . is =<< rApiChildResource name apiResourceId
+    (RApiResource name parentId) :>>= is -> do
+      interpret . is =<< rApiResource name parentId
 
     (RApiMethodLambda name verb apiResourceId lbdProgramFunc) :>>= is -> do
       interpret . is =<< rApiMethodLambda name verb apiResourceId lbdProgramFunc
@@ -95,14 +93,13 @@ interpret program =  do
       apiConfig %= apiConfigModifier
       return newApiId
 
-    rApiRootResource name apiId =
-      rApiResource name $ Left apiId
-
-    rApiChildResource name apiResourceId =
-      rApiResource name $ Right apiResourceId
-
+    rApiResource
+      :: ParentResource a
+      => Text
+      -> a
+      -> State Config ApiResourceId
     rApiResource name parentId = do
-      let newApiResource = apiResource name parentId
+      let newApiResource = apiResource name $ toParentId parentId
           (newApiResourceId, apiConfigModifier) = insertApiResource newApiResource
 
       apiConfig %= apiConfigModifier

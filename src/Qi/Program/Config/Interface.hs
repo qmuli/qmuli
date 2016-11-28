@@ -42,14 +42,10 @@ data ConfigInstruction a where
     :: Text
     -> ConfigInstruction ApiId
 
-  RApiRootResource
-    :: Text
-    -> ApiId
-    -> ConfigInstruction ApiResourceId
-
-  RApiChildResource
-    :: Text
-    -> ApiResourceId
+  RApiResource
+    :: ParentResource a
+    => Text
+    -> a
     -> ConfigInstruction ApiResourceId
 
   RApiMethodLambda
@@ -68,9 +64,12 @@ ddbTable name hashAttrDef rangeAttrDef = singleton . RDdbTable name hashAttrDef 
 
 api = singleton . RApi
 
-apiRootResource name = singleton . RApiRootResource name
-
-apiChildResource name = singleton . RApiChildResource name
+apiResource
+  :: ParentResource a
+  => Text
+  -> a
+  -> ConfigProgram ApiResourceId
+apiResource name = singleton . RApiResource name
 
 apiMethodLambda name verb resourceId = singleton . RApiMethodLambda name verb resourceId
 

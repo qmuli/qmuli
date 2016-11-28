@@ -22,18 +22,18 @@ import           Qi.Config.AWS.DDB.Accessors
 toResources config = Resources . map toDdbTableRes $ getAllDdbTables config
   where
     toDdbTableRes table =
-      resource name $
+      resource resName $
         DynamoDBTableProperties $
         dynamoDBTable
           attributeDefinitions
           keySchema
           provisionedThroughput
-        & ddbtTableName ?~ (Literal $ table^.dtName)
+        & ddbtTableName ?~ (Literal tableName)
 
       where
-        name = getDdbTableCFResourceName table -- `namePrefixWith` config
-        -- for some reason CF complains about having non-alphanumeric symbols
-        -- in DDB table name
+        resName = getDdbTableCFResourceName table
+        tableName = getFullDdbTableName table config
+
 
         attributeDefinitions = [
             dynamoDBAttributeDefinition

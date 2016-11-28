@@ -16,14 +16,14 @@ import           Qi.Config.AWS.S3            (S3Key (S3Key),
                                               S3Object (S3Object))
 import           Qi.Config.Identifier        (S3BucketId)
 import           Qi.Program.Config.Interface (ConfigProgram, api,
-                                              apiMethodLambda, apiRootResource,
+                                              apiMethodLambda, apiResource,
                                               s3Bucket)
 import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
                                               putS3ObjectContent, respond)
 import           Qi.Util.Api
 
 
--- Used the two curl commands below to test-drive the two endpoints (substitute your unique api stage url first):
+-- Use the two curl commands below to test-drive the two endpoints (substitute your unique api stage url first):
 --
 -- curl -v -X POST -H "Content-Type: application/json" -d "{\"property\": 3}" "https://50nk1jhzda.execute-api.us-east-1.amazonaws.com/v1/things"
 -- curl -v -X GET "https://50nk1jhzda.execute-api.us-east-1.amazonaws.com/v1/things"
@@ -39,7 +39,7 @@ main =
         bucketId  <- s3Bucket "things"
 
         api "world" >>= \apiId ->
-          apiRootResource "things" apiId >>= \apiResourceId -> do
+          apiResource "things" apiId >>= \apiResourceId -> do
 
             apiMethodLambda
               "createThing"

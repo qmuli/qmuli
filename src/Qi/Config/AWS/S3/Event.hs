@@ -24,13 +24,13 @@ parse (Object e) config = do
     bucketName  <- (.: "name") =<< s3 .: "bucket"
     key         <- (.: "key")  =<< s3 .: "object"
 
-    return . S3Event $ S3Object (getS3BucketIdByName (removeNamePrefix bucketName) config) (S3Key key)
+    return . S3Event $ S3Object (getS3BucketIdByName (removeDotNamePrefix bucketName) config) (S3Key key)
 
-removeNamePrefix
+removeDotNamePrefix
   :: String
   -> Text
-removeNamePrefix name = T.pack $ drop prefixLength name
+removeDotNamePrefix name = T.pack $ drop prefixLength name
   where
-    prefixLength = 1 + length (takeWhile (/='-') name)
+    prefixLength = 1 + length (takeWhile (/='.') name)
 
 

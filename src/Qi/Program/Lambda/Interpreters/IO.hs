@@ -98,7 +98,7 @@ run program config = do
           sinkBody (r ^. A.gorsBody) sinkLbs
 
           where
-            bucketName = (bucket^.s3bName) `namePrefixWith` config
+            bucketName = getFullBucketName bucket config
             bucket = getS3BucketById _s3oBucketId config
 
 -- TODO: add a streaming version that takes a sink and streams the rsBody into it
@@ -117,7 +117,7 @@ run program config = do
           return ()
 
           where
-            bucketName = (bucket^.s3bName) `namePrefixWith` config
+            bucketName = getFullBucketName bucket config
             bucket = getS3BucketById _s3oBucketId config
 
 
@@ -129,7 +129,7 @@ run program config = do
           send $ A.scan tableName
 
           where
-            tableName = (getDdbTableById ddbTableId config)^.dtName
+            tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config
 
 
         getDdbRecord
@@ -140,7 +140,7 @@ run program config = do
           send $ A.getItem tableName & giKey .~ keys
 
           where
-            tableName = (getDdbTableById ddbTableId config)^.dtName
+            tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config
 
 
         putDdbRecord
@@ -151,7 +151,7 @@ run program config = do
           send $ A.putItem tableName & piItem .~ item
 
           where
-            tableName = (getDdbTableById ddbTableId config)^.dtName
+            tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config
 
 
         deleteDdbRecord
@@ -162,7 +162,7 @@ run program config = do
           send $ A.deleteItem tableName & diKey .~ key
 
           where
-            tableName = (getDdbTableById ddbTableId config)^.dtName
+            tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config
 
 
 -- Util

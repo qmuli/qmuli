@@ -25,7 +25,7 @@ main = do
   --
   --   "myfancyuniquelynamedproject" `withConfig` config
   --
-  "simple-s3-copy" `withConfig` config
+  "my-unique7657657-simple-s3-copy" `withConfig` config
 
     where
       config :: ConfigProgram ()

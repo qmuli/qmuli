@@ -59,6 +59,13 @@ instance Default Config where
 
 makeLenses ''Config
 
-namePrefixWith :: Text -> Config -> Text
-namePrefixWith name config = T.concat [config ^. namePrefix, "_", name]
+underscoreNamePrefixWith = namePrefixWith "_"
+dotNamePrefixWith = namePrefixWith "."
+
+namePrefixWith
+  :: Text
+  -> Text
+  -> Config
+  -> Text
+namePrefixWith sep name config = T.concat [config ^. namePrefix, sep, name]
 
