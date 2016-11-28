@@ -5,7 +5,6 @@
 module Qi.Config.CF.Lambda (toResources) where
 
 import           Data.Aeson                     (Value (Array), object)
-import qualified Data.ByteString.Lazy           as LBS
 import qualified Data.HashMap.Strict            as SHM
 import           Data.Text                      (Text)
 import qualified Data.Text                      as T
@@ -23,8 +22,8 @@ toResources config = foldMap toAllLambdaResources $ getAllLambdas config
     toAllLambdaResources lbd = Resources $ [lambdaPermissionCFResource, lambdaCFResource]
 
       where
-        lbdResName = getLambdaResourceName lbd
-        lbdPermResName = getLambdaPermissionResourceName lbd
+        lbdResName = getLambdaCFResourceName lbd
+        lbdPermResName = getLambdaPermissionCFResourceName lbd
 
         lambdaPermissionCFResource =
           resource lbdPermResName $
@@ -46,12 +45,14 @@ toResources config = foldMap toAllLambdaResources $ getAllLambdas config
               "index.handler"
               (GetAtt Role.lambdaBasicExecutionIAMRoleResourceName "Arn")
               NodeJS43
-            & lfFunctionName ?~ (Literal $ (lbd ^. lbdName) `namePrefixWith` config)
+            & lfFunctionName ?~ (Literal lambdaName)
             & lfMemorySize ?~ Literal 1536
             & lfTimeout ?~ Literal 90
           )
 
           where
+            lambdaName = getFullLambdaName lbd config
+
             lbdCode :: LambdaFunctionCode
             lbdCode = lambdaFunctionCode
               & lfcS3Bucket ?~ lambdaS3Bucket

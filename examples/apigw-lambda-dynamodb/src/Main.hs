@@ -7,8 +7,6 @@ module Main where
 import           Control.Lens                    hiding (view, (.=))
 import           Control.Monad                   (forM, void, (<=<))
 import           Data.Aeson
-import qualified Data.ByteString.Char8           as BS
-import qualified Data.ByteString.Lazy            as LBS
 import qualified Data.HashMap.Strict             as SHM
 import           Network.AWS.DynamoDB            (AttributeValue,
                                                   attributeValue, avS)
@@ -36,7 +34,7 @@ import           Qi.Util.Api
 import           Types
 
 
--- Used the curl commands below to test-drive the endpoints (substitute your unique api stage url first):
+-- Use the curl commands below to test-drive the endpoints (substitute your unique api stage url first):
 {-
 export API="https://gliqqtz1pi.execute-api.us-east-1.amazonaws.com/v1"
 curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"cup\", \"shape\": \"round\", \"size\": 3}" "$API/things/cup"
@@ -57,14 +55,16 @@ main =
       config = do
         thingsTable <- CI.ddbTable "things" (DdbAttrDef "Id" S) Nothing (DdbProvCap 1 1)
 
+        -- create a REST API
         CI.api "world" >>= \api ->
-          CI.apiRootResource "things" api >>= \things -> do
-
+          -- create a "things" resource
+          CI.apiResource "things" api >>= \things -> do
+            -- create a GET method that is attached to the "scan" lambda
             CI.apiMethodLambda "scanThings" Get
               things $ scan thingsTable
 
-
-            CI.apiChildResource "{thingId}" things >>= \thing -> do
+            -- create a "thingId" slug resource under "things"
+            CI.apiResource "{thingId}" things >>= \thing -> do
 
               CI.apiMethodLambda "getThing" Get
                 thing $ get thingsTable

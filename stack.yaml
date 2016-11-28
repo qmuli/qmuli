@@ -2,7 +2,7 @@
 # For more information, see: http://docs.haskellstack.org/en/stable/yaml_configuration/
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
-resolver: lts-7.9
+resolver: lts-7.10
 
 # Local packages, usually specified by relative directory name
 packages:
@@ -28,7 +28,6 @@ extra-deps:
 - amazonka-dynamodb-1.4.4
 - turtle-1.2.8
 - managed-1.0.5
-- optional-args-1.0.1
 - aeson-0.11.2.1
 - http-conduit-2.2.3
 - http-client-0.5.4

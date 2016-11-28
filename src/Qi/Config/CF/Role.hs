@@ -26,7 +26,7 @@ toResources config = Resources [lbdRoleRes]
       IAMRoleProperties $
       iamRole rolePolicyDocumentObject
       & iamrPolicies ?~ [ executePolicy ]
-      & iamrRoleName ?~ (Literal $ "LambdaBasicExecutionRole" `namePrefixWith` config)
+      & iamrRoleName ?~ (Literal $ "LambdaBasicExecutionRole" `underscoreNamePrefixWith` config)
       & iamrPath ?~ "/"
 
     executePolicy =
@@ -34,7 +34,7 @@ toResources config = Resources [lbdRoleRes]
       [ ("Version", "2012-10-17")
       , ("Statement", statement)
       ] $
-      Literal $ "LambdaExecutionPolicy" `namePrefixWith` config
+      Literal $ "LambdaExecutionPolicy" `underscoreNamePrefixWith` config
 
 
       where

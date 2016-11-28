@@ -4,6 +4,8 @@ module Qi.Config.Identifier where
 
 import           Data.Hashable
 
+class ParentResource a where
+  toParentId :: a -> Either ApiId ApiResourceId
 
 newtype S3BucketId = S3BucketId Int deriving (Eq, Show)
 instance Hashable S3BucketId where
@@ -16,10 +18,14 @@ instance Hashable LambdaId where
 newtype ApiId = ApiId Int deriving (Eq, Show)
 instance Hashable ApiId where
   s `hashWithSalt` (ApiId identifierHash) = s `hashWithSalt` identifierHash
+instance ParentResource ApiId where
+  toParentId = Left
 
 newtype ApiResourceId = ApiResourceId Int deriving (Eq, Show)
 instance Hashable ApiResourceId where
   s `hashWithSalt` (ApiResourceId identifierHash) = s `hashWithSalt` identifierHash
+instance ParentResource ApiResourceId where
+  toParentId = Right
 
 newtype DdbTableId = DdbTableId Int deriving (Eq, Show)
 instance Hashable DdbTableId where

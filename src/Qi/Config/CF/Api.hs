@@ -181,8 +181,8 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                       , ("method.response.header.Access-Control-Allow-Origin", Bool False)
                       ]
 
-                lbdResName = getLambdaResourceNameFromId _lbdId config
-                lbdPermResName = getLambdaPermissionResourceName $ getLambdaById _lbdId config
+                lbdResName = getLambdaCFResourceNameFromId _lbdId config
+                lbdPermResName = getLambdaPermissionCFResourceName $ getLambdaById _lbdId config
 
                 integration =
                   apiGatewayIntegration AWS

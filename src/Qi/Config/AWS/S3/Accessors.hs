@@ -6,7 +6,6 @@ module Qi.Config.AWS.S3.Accessors where
 import           Control.Lens
 import           Data.Hashable
 import qualified Data.HashMap.Strict  as SHM
-import           Data.Maybe           (fromJust)
 import           Data.Text            (Text)
 import qualified Data.Text            as T
 
@@ -21,21 +20,35 @@ getS3BucketCFResourceName
   -> Text
 getS3BucketCFResourceName bucket =  T.concat [bucket ^. s3bName, "S3Bucket"]
 
-
+getFullBucketName
+  :: S3Bucket
+  -> Config
+  -> Text
+getFullBucketName bucket config =
+  (bucket^.s3bName) `dotNamePrefixWith` config
 
 getS3BucketById
   :: S3BucketId
   -> Config
   -> S3Bucket
-getS3BucketById bid = fromJust . SHM.lookup bid . (^.s3Config.s3Buckets.s3idxIdToS3Bucket)
+getS3BucketById bid config =
+  case SHM.lookup bid bucketMap of
+    Just lbd -> lbd
+    Nothing  -> error $ "Could not reference s3 bucket with id: " ++ show bid
+  where
+    bucketMap = config^.s3Config.s3Buckets.s3idxIdToS3Bucket
 
 getS3BucketIdByName
   :: Text
   -> Config
   -> S3BucketId
-getS3BucketIdByName bucketName = fromJust . SHM.lookup bucketName . nameToIdHm
+getS3BucketIdByName bucketName config =
+  case SHM.lookup bucketName bucketNameToIdMap of
+    Just lbdId -> lbdId
+    Nothing  -> error $ "Could not find s3 bucket id with name: " ++ show bucketName
   where
-    nameToIdHm config = config ^. s3Config . s3Buckets . s3idxNameToId
+    bucketNameToIdMap = config ^. s3Config . s3Buckets . s3idxNameToId
+
 
 getAllBuckets
   :: Config

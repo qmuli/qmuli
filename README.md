@@ -65,22 +65,22 @@ and behavior) in a single file:
 ```haskell
 main :: IO ()
 main =
-  "simples3copy" `withConfig` config
+  "simple-s3-copy" `withConfig` config
 
     where
       config :: ConfigProgram ()
       config = do
         -- create an "input" s3 bucket
-        incoming <- createS3Bucket "incoming"
+        incoming <- s3Bucket "incoming"
 
         -- create an "output" s3 bucket
-        outgoing <- createS3Bucket "outgoing"
+        outgoing <- s3Bucket "outgoing"
 
         -- create a lambda, which will copy an s3 object from "incoming" to "outgoing" buckets
         -- upon an S3 "Put" event.
         -- Attach the lambda to the "incoming" bucket such way so each time a file is uploaded to
         -- the bucket, the lambda is called with the information about the newly uploaded file.
-        void $ createS3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing)
+        void $ s3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing)
 
       copyContentsLambda
         :: S3BucketId
@@ -151,7 +151,7 @@ The `simple-s3-copy cf deploy` command does the following:
 
 - generates the CloudFormation (CF) json template
 - packages/zips up the executable to be used by lambda
-- uploads those to the qmulus S3 bucket (with the same name)
+- uploads those to the qmulus S3 bucket (named identically with the qmulus)
 
 After that is deployed, just create a new CF stack
 

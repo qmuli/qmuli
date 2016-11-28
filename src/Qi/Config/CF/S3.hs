@@ -19,20 +19,21 @@ import           Qi.Config.AWS.S3.Accessors
 
 toResources config = Resources . map toS3BucketRes $ getAllBuckets config
   where
-    toS3BucketRes s3@S3Bucket{_s3bName, _s3bEventConfigs} = (
-      resource name $
+    toS3BucketRes s3Bucket@S3Bucket{_s3bEventConfigs} = (
+      resource resName $
         BucketProperties $
         bucket
-        & bBucketName ?~ (Literal $ _s3bName `namePrefixWith` config)
+        & bBucketName ?~ (Literal bucketName)
         & bNotificationConfiguration ?~ lbdConfigs
       )
       & dependsOn ?~ reqs
 
       where
-        name = getS3BucketCFResourceName s3
+        resName = getS3BucketCFResourceName s3Bucket
+        bucketName = getFullBucketName s3Bucket config
 
         reqs =
-          map (\lec -> getLambdaResourceNameFromId (lec ^. lbdId) config ) _s3bEventConfigs
+          map (\lec -> getLambdaCFResourceNameFromId (lec ^. lbdId) config ) _s3bEventConfigs
 
 
         lbdConfigs = s3NotificationConfiguration
@@ -40,4 +41,4 @@ toResources config = Resources . map toS3BucketRes $ getAllBuckets config
 
         lbdC S3EventConfig{_event, _lbdId} = s3NotificationConfigurationLambdaConfiguration
           (Literal . T.pack $ show _event)
-          (GetAtt (getLambdaResourceNameFromId _lbdId config) "Arn")
+          (GetAtt (getLambdaCFResourceNameFromId _lbdId config) "Arn")

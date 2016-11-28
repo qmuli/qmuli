@@ -7,7 +7,6 @@ import           Control.Lens
 import           Data.Char            (isAlphaNum)
 import           Data.Hashable
 import qualified Data.HashMap.Strict  as SHM
-import           Data.Maybe           (fromJust)
 import           Data.Text            (Text)
 import qualified Data.Text            as T
 
@@ -27,7 +26,12 @@ getApiById
   :: ApiId
   -> Config
   -> Api
-getApiById aid = fromJust . SHM.lookup aid . (^.apiConfig.acApis)
+getApiById aid config =
+  case SHM.lookup aid aMap of
+    Just a  -> a
+    Nothing -> error $ "Could not reference api with id: " ++ show aid
+  where
+    aMap = config^.apiConfig.acApis
 
 
 getApiResourceCFResourceName
@@ -35,11 +39,17 @@ getApiResourceCFResourceName
   -> Text
 getApiResourceCFResourceName apir = T.concat [makeAlphaNumeric $ apir^.arName, "ApiResource"]
 
+
 getApiResourceById
   :: ApiResourceId
   -> Config
   -> ApiResource
-getApiResourceById arid = fromJust . SHM.lookup arid . (^.apiConfig.acApiResources)
+getApiResourceById arid config =
+  case SHM.lookup arid arMap of
+    Just ar -> ar
+    Nothing  -> error $ "Could not reference api resource with id: " ++ show arid
+  where
+    arMap = config^.apiConfig.acApiResources
 
 
 getApiStageCFResourceName
