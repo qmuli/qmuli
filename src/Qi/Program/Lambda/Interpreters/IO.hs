@@ -65,6 +65,9 @@ run program config = do
         (ScanDdbRecords ddbTableId) :>>= is -> do
           interpret . is =<< scanDdbRecords ddbTableId
 
+        (QueryDdbRecords ddbTableId keyCond) :>>= is -> do
+          interpret . is =<< queryDdbRecords ddbTableId keyCond
+
         (GetDdbRecord ddbTableId keys) :>>= is -> do
           interpret . is =<< getDdbRecord ddbTableId keys
 
@@ -127,6 +130,18 @@ run program config = do
           -> QiAWS ScanResponse
         scanDdbRecords ddbTableId = do
           send $ A.scan tableName
+
+          where
+            tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config
+
+
+        queryDdbRecords
+          :: DdbTableId
+          -> Maybe Text
+          -> QiAWS QueryResponse
+        queryDdbRecords ddbTableId keyCond = do
+          send $ A.query tableName
+            & qKeyConditionExpression .~ keyCond
 
           where
             tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config

@@ -8,9 +8,11 @@ module Qi.Program.Lambda.Interface where
 import           Control.Monad.Operational       (Program, singleton)
 import           Data.Aeson                      (Value)
 import qualified Data.ByteString.Lazy            as LBS
+import           Data.Text                       (Text)
 import           Network.AWS.DynamoDB.DeleteItem
 import           Network.AWS.DynamoDB.GetItem
 import           Network.AWS.DynamoDB.PutItem
+import           Network.AWS.DynamoDB.Query
 import           Network.AWS.DynamoDB.Scan
 import           Qi.Config.Identifier            (DdbTableId)
 
@@ -40,6 +42,11 @@ data LambdaInstruction a where
   ScanDdbRecords
     :: DdbTableId
     -> LambdaInstruction ScanResponse
+
+  QueryDdbRecords
+    :: DdbTableId
+    -> Maybe Text
+    -> LambdaInstruction QueryResponse
 
   GetDdbRecord
     :: DdbTableId
@@ -75,6 +82,9 @@ putS3ObjectContent s3Obj = singleton . PutS3ObjectContent s3Obj
 
 scanDdbRecords :: DdbTableId -> LambdaProgram ScanResponse
 scanDdbRecords = singleton . ScanDdbRecords
+
+queryDdbRecords :: DdbTableId -> Maybe Text -> LambdaProgram QueryResponse
+queryDdbRecords ddbTableId = singleton . QueryDdbRecords ddbTableId
 
 getDdbRecord :: DdbTableId -> DdbAttrs -> LambdaProgram GetItemResponse
 getDdbRecord ddbTableId = singleton . GetDdbRecord ddbTableId
