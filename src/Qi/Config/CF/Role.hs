@@ -53,6 +53,7 @@ toResources config = Resources [lbdRoleRes]
           , "s3:PutObject"
 
           , "dynamodb:Scan"
+          , "dynamodb:Query"
           , "dynamodb:GetItem"
           , "dynamodb:PutItem"
           , "dynamodb:DeleteItem"

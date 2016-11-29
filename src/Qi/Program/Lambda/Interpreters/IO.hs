@@ -13,7 +13,6 @@ import           Control.Monad.Trans.Class    (lift)
 import           Control.Monad.Trans.Reader   (ReaderT, ask, runReaderT)
 import           Control.Monad.Trans.Resource (ResourceT)
 import           Data.Aeson                   (Value (..), encode, object)
-import qualified Data.ByteString              as BS
 import qualified Data.ByteString.Lazy         as LBS
 import qualified Data.Conduit                 as C
 import           Data.Conduit.Binary          (sinkLbs)
@@ -65,8 +64,8 @@ run program config = do
         (ScanDdbRecords ddbTableId) :>>= is -> do
           interpret . is =<< scanDdbRecords ddbTableId
 
-        (QueryDdbRecords ddbTableId keyCond) :>>= is -> do
-          interpret . is =<< queryDdbRecords ddbTableId keyCond
+        (QueryDdbRecords ddbTableId keyCond expAttrs) :>>= is -> do
+          interpret . is =<< queryDdbRecords ddbTableId keyCond expAttrs
 
         (GetDdbRecord ddbTableId keys) :>>= is -> do
           interpret . is =<< getDdbRecord ddbTableId keys
@@ -138,10 +137,12 @@ run program config = do
         queryDdbRecords
           :: DdbTableId
           -> Maybe Text
+          -> DdbAttrs
           -> QiAWS QueryResponse
-        queryDdbRecords ddbTableId keyCond = do
+        queryDdbRecords ddbTableId keyCond expAttrs = do
           send $ A.query tableName
             & qKeyConditionExpression .~ keyCond
+            & qExpressionAttributeValues .~ expAttrs
 
           where
             tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config

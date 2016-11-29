@@ -46,6 +46,7 @@ data LambdaInstruction a where
   QueryDdbRecords
     :: DdbTableId
     -> Maybe Text
+    -> DdbAttrs
     -> LambdaInstruction QueryResponse
 
   GetDdbRecord
@@ -83,8 +84,8 @@ putS3ObjectContent s3Obj = singleton . PutS3ObjectContent s3Obj
 scanDdbRecords :: DdbTableId -> LambdaProgram ScanResponse
 scanDdbRecords = singleton . ScanDdbRecords
 
-queryDdbRecords :: DdbTableId -> Maybe Text -> LambdaProgram QueryResponse
-queryDdbRecords ddbTableId = singleton . QueryDdbRecords ddbTableId
+queryDdbRecords :: DdbTableId -> Maybe Text -> DdbAttrs -> LambdaProgram QueryResponse
+queryDdbRecords ddbTableId keyCond = singleton . QueryDdbRecords ddbTableId keyCond
 
 getDdbRecord :: DdbTableId -> DdbAttrs -> LambdaProgram GetItemResponse
 getDdbRecord ddbTableId = singleton . GetDdbRecord ddbTableId
