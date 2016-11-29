@@ -39,6 +39,8 @@ dependencies:
   - turtle
   - executable-path
   - heredoc
+  - system-extra
+  - process
   # - groundhog
   # - groundhog-th
   # - groundhog-sqlite

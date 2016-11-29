@@ -10,12 +10,12 @@ import qualified Data.Text                     as T
 import           Network.AWS                   hiding (send)
 import qualified Network.AWS.S3                as A
 import           Prelude                       hiding (log)
+import           Qi.Deploy.Build
+import qualified Qi.Deploy.S3                  as S3
 import           System.Environment.Executable (getExecutablePath)
 import           System.IO                     (stdout)
 import           Text.Heredoc                  (there)
 import           Turtle                        hiding (stdout)
-
-import qualified Qi.Deploy.S3                  as S3
 
 
 log = liftIO . echo
@@ -28,7 +28,7 @@ deploy
   :: Text
   -> IO ()
 deploy appName = sh $ do
-  lambdaPackagePath <- createLambdaPackage
+  lambdaPackagePath <- liftIO $ build (Build "." (T.unpack appName))
   liftIO . uploadToS3 . T.unpack $ toTextIgnore lambdaPackagePath
 
   where

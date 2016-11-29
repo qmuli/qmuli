@@ -10,6 +10,7 @@ packages:
 - location:
     git: https://github.com/ababkin/stratosphere.git
     commit: 002208ba0a6e19174c6ae4bf581ade6701708e1a
+- 'system-extra'
 # - location:
     # git: https://github.com/lykahb/groundhog.git
     # commit: fa62710364d55fdbc6de5a4a33f3a8d0d9d125dd
