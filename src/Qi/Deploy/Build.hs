@@ -1,19 +1,22 @@
 {-# LANGUAGE RecordWildCards #-}
-module Qi.Deploy.Build where
+module Qi.Deploy.Build(build, buildConfig, Build) where
 
 import           System.Build
 import           System.Docker
 import           System.Process
 
 data Build = Build { lambdaSrcDirectory :: FilePath
-                   , lambdaTargetName   :: String
+                   , lambdaTarget       :: BuildTarget
                    }
+
+buildConfig :: FilePath -> String -> Build
+buildConfig srcDir exeTarget = Build srcDir (FullTarget "qmuli" exeTarget)
 
 build :: Build -> IO FilePath
 build Build{..} = do
   buildDocker
   -- build executable with docker
-  exe <- stackInDocker (ImageName "ghc-centos:qmuli") lambdaSrcDirectory lambdaTargetName
+  exe <- stackInDocker (ImageName "ghc-centos:qmuli") lambdaSrcDirectory lambdaTarget
   -- pack executable with js shim in .zip file
   packLambda exe
   return "lambda.zip"
@@ -24,5 +27,5 @@ build Build{..} = do
       packLambda :: FilePath -> IO ()
       packLambda source = do
         runner <- readFile "js/index.js"
-        writeFile "run.js" runner
-        callProcess "zip" $ [ "lambda.zip", "run.js" , source ]
+        writeFile "index.js" runner
+        callProcess "zip" $ [ "lambda.zip", "index.js" , source ]

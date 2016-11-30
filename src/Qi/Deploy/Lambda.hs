@@ -21,7 +21,7 @@ deploy
   :: T.Text
   -> T.Text
   -> IO ()
-deploy buildName appName = fromString <$> build (Build "." (T.unpack buildName)) >>=
+deploy buildName appName = fromString <$> build (buildConfig "." (T.unpack buildName)) >>=
   \ lambdaPackagePath -> sh $ liftIO . uploadToS3 . T.unpack $ toTextIgnore lambdaPackagePath
   where
       uploadToS3
