@@ -44,7 +44,7 @@ extra-package-dbs: []
   # enable: true
 
 # ghc-options:
-  # "*": -static -optc-static -optl-static -optl-pthread
+#  "*": -Wno-unused-do-bind
 
 # Control whether we use the GHC we find on the path
 # system-ghc: true

@@ -4,31 +4,24 @@
 
 module Qi.Deploy.Lambda (deploy) where
 
-import           Control.Lens                  hiding (view)
-import qualified Data.ByteString.Lazy          as LBS
-import qualified Data.Text                     as T
-import           Network.AWS                   hiding (send)
-import qualified Network.AWS.S3                as A
-import           Prelude                       hiding (log)
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Text            as T
+import           Prelude              hiding (FilePath, log)
 import           Qi.Deploy.Build
-import qualified Qi.Deploy.S3                  as S3
-import           System.Environment.Executable (getExecutablePath)
-import           System.IO                     (stdout)
-import           Text.Heredoc                  (there)
-import           Turtle                        hiding (stdout)
+import qualified Qi.Deploy.S3         as S3
+import           Turtle               (FilePath, fromString, liftIO, sh, toText)
 
 
-log :: (MonadIO m) => T.Text -> m ()
-log = liftIO . echo
-
+toTextIgnore :: FilePath -> T.Text
 toTextIgnore x = case toText x of
-  Right s  -> s
-  Left err -> ""
+  Right s -> s
+  Left _  -> ""
 
 deploy
-  :: Text
+  :: T.Text
+  -> T.Text
   -> IO ()
-deploy appName = fromString <$> build (Build "." (T.unpack appName)) >>=
+deploy buildName appName = fromString <$> build (Build "." (T.unpack buildName)) >>=
   \ lambdaPackagePath -> sh $ liftIO . uploadToS3 . T.unpack $ toTextIgnore lambdaPackagePath
   where
       uploadToS3

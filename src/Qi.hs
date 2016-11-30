@@ -22,9 +22,9 @@ import           Qi.Config.AWS.Lambda.Accessors       (getAllLambdas)
 import           Qi.Config.AWS.S3
 import qualified Qi.Config.AWS.S3.Event               as S3Event (parse)
 import           Qi.Config.CF                         as CF
+import qualified Qi.Deploy.CF                         as CF
 import qualified Qi.Deploy.Lambda                     as Lambda
 import qualified Qi.Deploy.S3                         as S3
-import qualified Qi.Deploy.CF                         as CF
 import           Qi.Program.Config.Interface          (ConfigProgram)
 import qualified Qi.Program.Config.Interpreters.Build as CB
 import           Qi.Program.Lambda.Interface          (LambdaProgram)
@@ -33,9 +33,10 @@ import qualified Qi.Program.Lambda.Interpreters.IO    as LIO
 
 withConfig
   :: Text
+  -> Text
   -> ConfigProgram ()
   -> IO ()
-withConfig appName configProgram = do
+withConfig buildName appName configProgram = do
 
   if invalid appName
     then
@@ -49,7 +50,7 @@ withConfig appName configProgram = do
         "cf":"deploy":[] -> do -- deploy CF template and the lambda package
           S3.createBucket appName
           S3.upload appName "cf.json" $ CF.render config
-          Lambda.deploy appName
+          Lambda.deploy buildName appName
 
         "cf":"create":[] -> do -- create CF stack
           CF.create appName

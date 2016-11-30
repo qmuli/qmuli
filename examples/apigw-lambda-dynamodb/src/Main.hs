@@ -51,8 +51,8 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    (name:rest) -> withArgs rest (pack name `withConfig` config)
-    []          -> putStrLn "Please provide a unique application name to deploy your Lambda"
+    (target:name:rest) -> withArgs rest (withConfig (pack target) (pack name) config)
+    []                -> putStrLn "Please provide a build target name and a unique application name to deploy your Lambda"
 
     where
       config :: ConfigProgram ()

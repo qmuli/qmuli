@@ -25,3 +25,6 @@ RUN mkdir -p /opt/stack/bin
 RUN curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C /opt/stack/bin '*/stack'
 ENV PATH /opt/stack/bin/:$PATH
 RUN stack setup $GHC_VERSION
+
+## Install git
+RUN yum install -y git
