@@ -18,6 +18,7 @@ import           Text.Heredoc                  (there)
 import           Turtle                        hiding (stdout)
 
 
+log :: (MonadIO m) => T.Text -> m ()
 log = liftIO . echo
 
 toTextIgnore x = case toText x of
@@ -27,34 +28,12 @@ toTextIgnore x = case toText x of
 deploy
   :: Text
   -> IO ()
-deploy appName = sh $ do
-  lambdaPackagePath <- liftIO $ build (Build "." (T.unpack appName))
-  liftIO . uploadToS3 . T.unpack $ toTextIgnore lambdaPackagePath
-
+deploy appName = fromString <$> build (Build "." (T.unpack appName)) >>=
+  \ lambdaPackagePath -> sh $ liftIO . uploadToS3 . T.unpack $ toTextIgnore lambdaPackagePath
   where
-    createLambdaPackage = do
-      mktree ".deploy/lambda"
-      cd ".deploy/lambda"
-
-      -- write the JS wrapper
-      output "index.js" $ pure [there|./js/index.js|]
-
-      -- copy the global executable to the delpoy destination
-      execPath <- liftIO getExecutablePath
-      cp (fromString execPath) . fromText $ T.concat ["./", appName]
-
-      log "zipping package..."
-      -- zip a package
-      shell "zip package.zip *" empty
-
-      path <- realpath "package.zip"
-      cd "../.."
-
-      return path
-
-    uploadToS3
-      :: String
-      -> IO ()
-    uploadToS3 path =
-      S3.upload appName "lambda.zip" =<< LBS.readFile path
+      uploadToS3
+        :: String
+        -> IO ()
+      uploadToS3 path =
+        S3.upload appName "lambda.zip" =<< LBS.readFile path
 
