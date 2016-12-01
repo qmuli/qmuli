@@ -21,7 +21,7 @@ exports.handler = function(event, context, callback) {
 
   console.log('input: \"', input, '\"')
 
-  const command = './' + appName + ' lbd ' + lbdName + ' \"' + input + '\"';
+  const command = './' + appName + ' foo bar lbd ' + lbdName + ' \"' + input + '\"';
   exec(command, {maxBuffer: maxBuffer}, (error, stdout, stderr) => {
     console.log('stdout: \"' + stdout + '\"');
     console.log('stderr: \"' + stderr + '\"');

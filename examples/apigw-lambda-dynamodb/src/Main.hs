@@ -5,7 +5,7 @@
 module Main where
 
 import           Control.Lens                    hiding (view, (.=))
-import           Control.Monad                   (forM, void, (<=<))
+import           Control.Monad                   (forM, void)
 import           Data.Aeson
 import qualified Data.HashMap.Strict             as SHM
 import           Data.Text                       (pack)
@@ -52,7 +52,7 @@ main = do
   args <- getArgs
   case args of
     (target:name:rest) -> withArgs rest (withConfig (pack target) (pack name) config)
-    []                -> putStrLn "Please provide a build target name and a unique application name to deploy your Lambda"
+    _                  -> putStrLn "Please provide a build target name and a unique application name to deploy your Lambda"
 
     where
       config :: ConfigProgram ()
