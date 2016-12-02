@@ -11,6 +11,8 @@ let formatError = (statusCode, message) => {
 
 exports.handler = function(event, context, callback) {
   const prefixedLambdaName = context.functionName;
+  // we extract the qmuli application name and the actual qmuli lambda name
+  // from the composite AWS lambda name (separated by '_')
   const appName = prefixedLambdaName.split('_', 1);
   const lbdName = prefixedLambdaName.split('_').slice(1);
   const input = JSON.stringify(event)
@@ -21,7 +23,9 @@ exports.handler = function(event, context, callback) {
 
   console.log('input: \"', input, '\"')
 
-  const command = './' + appName + ' foo bar lbd ' + lbdName + ' \"' + input + '\"';
+  // the executable built in the AWS environment using Docker will always
+  // be named 'lambda'
+  const command = './lambda ' + appName + ' lbd ' + lbdName + ' \"' + input + '\"';
   exec(command, {maxBuffer: maxBuffer}, (error, stdout, stderr) => {
     console.log('stdout: \"' + stdout + '\"');
     console.log('stderr: \"' + stderr + '\"');

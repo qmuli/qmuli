@@ -33,10 +33,9 @@ import qualified Qi.Program.Lambda.Interpreters.IO    as LIO
 
 withConfig
   :: Text
-  -> Text
   -> ConfigProgram ()
   -> IO ()
-withConfig buildName appName configProgram = do
+withConfig appName configProgram = do
 
   if invalid appName
     then
@@ -50,7 +49,7 @@ withConfig buildName appName configProgram = do
         "cf":"deploy":[] -> do -- deploy CF template and the lambda package
           S3.createBucket appName
           S3.upload appName "cf.json" $ CF.render config
-          Lambda.deploy buildName appName
+          Lambda.deploy appName
 
         "cf":"create":[] -> do -- create CF stack
           CF.create appName

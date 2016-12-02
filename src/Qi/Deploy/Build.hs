@@ -13,8 +13,8 @@ data Build = Build { lambdaSrcDirectory :: FilePath
                    , finalProgName      :: FilePath
                    }
 
-buildConfig :: FilePath -> String -> String -> Build
-buildConfig srcDir exeTarget finalName = Build srcDir (FullTarget "qmuli" exeTarget) finalName
+buildConfig :: FilePath -> String -> Build
+buildConfig srcDir exeTarget = Build srcDir (FullTarget "qmuli" exeTarget) "lambda"
 
 build :: Build -> IO FilePath
 build Build{..} = do
