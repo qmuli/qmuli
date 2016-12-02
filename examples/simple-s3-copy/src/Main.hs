@@ -23,8 +23,8 @@ main :: IO ()
 main =  do
   args <- getArgs
   case args of
-    (target:name:rest) -> withArgs rest (withConfig (pack target) (pack name) config)
-    _                  -> putStrLn "Please provide a build target name and a unique application name to deploy your Lambda"
+    (appName:rest) -> withArgs rest $ (pack appName) `withConfig` config
+    _              -> putStrLn "Please provide a unique application name for your qmulus"
 
     where
       config :: ConfigProgram ()
