@@ -37,7 +37,7 @@ import           Types
 
 -- Used the curl commands below to test-drive the endpoints (substitute your unique api stage url first):
 {-
-export API="https://gliqqtz1pi.execute-api.us-east-1.amazonaws.com/v1"
+export API="https://v01orroicc.execute-api.us-east-1.amazonaws.com/v1"
 curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"cup\", \"shape\": \"round\", \"size\": 3}" "$API/things/cup"
 curl -v -X GET "$API/things/cup"
 curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"chair\", \"shape\": \"square\", \"size\": 10}" "$API/things/chair"
