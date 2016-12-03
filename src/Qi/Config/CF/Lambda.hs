@@ -44,7 +44,7 @@ toResources config = foldMap toAllLambdaResources $ getAllLambdas config
               lbdCode
               "index.handler"
               (GetAtt Role.lambdaBasicExecutionIAMRoleResourceName "Arn")
-              NodeJS43
+              (Literal NodeJS43)
             & lfFunctionName ?~ (Literal lambdaName)
             & lfMemorySize ?~ Literal 1536
             & lfTimeout ?~ Literal 90

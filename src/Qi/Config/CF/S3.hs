@@ -9,7 +9,7 @@ import qualified Data.ByteString.Lazy           as LBS
 import qualified Data.HashMap.Strict            as SHM
 import           Data.Text                      (Text)
 import qualified Data.Text                      as T
-import           Stratosphere                   hiding (name)
+import           Stratosphere                   hiding (S3Bucket, name)
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.Lambda.Accessors
@@ -19,26 +19,26 @@ import           Qi.Config.AWS.S3.Accessors
 
 toResources config = Resources . map toS3BucketRes $ getAllBuckets config
   where
-    toS3BucketRes s3Bucket@S3Bucket{_s3bEventConfigs} = (
+    toS3BucketRes bucket@S3Bucket{_s3bEventConfigs} = (
       resource resName $
-        BucketProperties $
-        bucket
-        & bBucketName ?~ (Literal bucketName)
-        & bNotificationConfiguration ?~ lbdConfigs
+        S3BucketProperties $
+        s3Bucket
+        & sbBucketName ?~ (Literal bucketName)
+        & sbNotificationConfiguration ?~ lbdConfigs
       )
       & dependsOn ?~ reqs
 
       where
-        resName = getS3BucketCFResourceName s3Bucket
-        bucketName = getFullBucketName s3Bucket config
+        resName = getS3BucketCFResourceName bucket
+        bucketName = getFullBucketName bucket config
 
         reqs =
           map (\lec -> getLambdaCFResourceNameFromId (lec ^. lbdId) config ) _s3bEventConfigs
 
 
-        lbdConfigs = s3NotificationConfiguration
-          & sncLambdaConfigurations ?~ (map lbdC _s3bEventConfigs)
+        lbdConfigs = s3BucketNotificationConfiguration
+          & sbncLambdaConfigurations ?~ (map lbdC _s3bEventConfigs)
 
-        lbdC S3EventConfig{_event, _lbdId} = s3NotificationConfigurationLambdaConfiguration
+        lbdC S3EventConfig{_event, _lbdId} = s3BucketLambdaConfiguration
           (Literal . T.pack $ show _event)
           (GetAtt (getLambdaCFResourceNameFromId _lbdId config) "Arn")

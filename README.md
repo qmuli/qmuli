@@ -1,5 +1,7 @@
-Qmu.li
+Qmuli 
 ======
+pronounced as [**cumuli**: plural for heap, accumulation](http://www.merriam-webster.com/dictionary/cumuli?pronunciation&lang=en_us&dir=c&file=cumulu02)
+
 
 ###TL;DR: [Serverless AWS framework](https://serverless.com/) for [Haskell](https://www.haskell.org/)
 
@@ -7,7 +9,7 @@ Qmu.li
 Purpose
 -------
 
-Qmu.li is an experimental effort in creating a unified environment, in which one could specify both resource configuration **and** lambda 
+Qmuli is an experimental effort in creating a unified environment, in which one could specify both resource configuration **and** lambda 
 behavior of a cloud architecture built on AWS side-by-side in one language without the artificial boundary imposed by the current 
 generation of AWS tools.
 Advantages of such unification are numerous:

@@ -8,8 +8,8 @@ resolver: lts-7.10
 packages:
 - '.'
 - location:
-    git: https://github.com/ababkin/stratosphere.git
-    commit: 002208ba0a6e19174c6ae4bf581ade6701708e1a
+    git: https://github.com/frontrowed/stratosphere.git
+    commit: d2074bc21dc42477f9da51e26d9bb556bfe47cc5
 - 'system-extra'
 # - location:
     # git: https://github.com/lykahb/groundhog.git

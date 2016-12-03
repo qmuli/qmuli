@@ -30,7 +30,7 @@ toResources config = Resources [lbdRoleRes]
       & iamrPath ?~ "/"
 
     executePolicy =
-      iamPolicies
+      iamRolePolicy
       [ ("Version", "2012-10-17")
       , ("Statement", statement)
       ] $

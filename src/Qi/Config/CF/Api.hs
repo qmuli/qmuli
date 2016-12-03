@@ -34,8 +34,8 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
         apiResource = (
           resource apiResName $
             ApiGatewayRestApiProperties $
-            apiGatewayRestApi $
-              Literal (api ^. aName)
+            apiGatewayRestApi
+            & agraName ?~ Literal (api ^. aName)
           )
 
         deploymentResource :: Resource
@@ -90,26 +90,26 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
 
 
 
-
             methodResources = [ corsMethodResource ] ++ map toMethodResource (apir ^. arMethodConfigs)
 
             corsMethodResource =
                 resource name $
                   ApiGatewayMethodProperties $
                   apiGatewayMethod
-                    NONE
-                    OPTIONS
-                    (Ref apirResName)
-                    (Ref apiResName)
+                    (Literal OPTIONS)
+                    & agmeAuthorizationType ?~ Literal NONE
+                    & agmeResourceId ?~ (Ref apirResName)
+                    & agmeRestApiId ?~ (Ref apiResName)
                     & agmeIntegration ?~ integration
                     & agmeMethodResponses ?~ [ methodResponse ]
 
               where
                 name = getApiMethodCFResourceName apir Options
 
-                methodResponse = apiGatewayMethodResponse "200"
-                  & agmrResponseModels ?~ responseModels
-                  & agmrResponseParameters ?~ responseParams
+                methodResponse = apiGatewayMethodMethodResponse
+                  & agmmrResponseModels ?~ responseModels
+                  & agmmrResponseParameters ?~ responseParams
+                  & agmmrStatusCode ?~ "200"
 
                   where
                     responseModels = [(jsonContentType, "Empty")]
@@ -120,20 +120,22 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                       , ("method.response.header.Access-Control-Allow-Origin", Bool False)
                       ]
 
+
                 integration =
-                  apiGatewayIntegration MOCK
-                  & agiIntegrationHttpMethod ?~ POST -- looks like this should always be "POST"
-                  & agiPassthroughBehavior ?~ WHEN_NO_MATCH
-                  & agiRequestTemplates ?~ requestTemplates
-                  & agiIntegrationResponses ?~ [ integrationResponse ]
+                  apiGatewayMethodIntegration
+                  & agmiType ?~ Literal MOCK
+                  & agmiIntegrationHttpMethod ?~ Literal POST -- looks like this should always be "POST"
+                  & agmiPassthroughBehavior ?~ Literal WHEN_NO_MATCH
+                  & agmiRequestTemplates ?~ requestTemplates
+                  & agmiIntegrationResponses ?~ [ integrationResponse ]
 
                   where
                     requestTemplates = [ (jsonContentType, "{\"statusCode\": 200}") ]
 
-                    integrationResponse = apiGatewayIntegrationResponse
-                      & agirResponseTemplates ?~ responseTemplates
-                      & agirResponseParameters ?~ responseParams
-                      & agirStatusCode ?~ "200"
+                    integrationResponse = apiGatewayMethodIntegrationResponse
+                      & agmirResponseTemplates ?~ responseTemplates
+                      & agmirResponseParameters ?~ responseParams
+                      & agmirStatusCode ?~ "200"
 
                       where
                         responseTemplates = [ (jsonContentType, "") ]
@@ -148,12 +150,13 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                 resource name $
                   ApiGatewayMethodProperties $
                   apiGatewayMethod
-                    NONE
-                    (verb _verb)
-                    (Ref apirResName)
-                    (Ref apiResName)
+                    (Literal $ verb _verb)
+                    & agmeAuthorizationType ?~ Literal NONE
+                    & agmeResourceId ?~ (Ref apirResName)
+                    & agmeRestApiId ?~ (Ref apiResName)
                     & agmeIntegration ?~ integration
                     & agmeMethodResponses ?~ methodResponses
+
               )
               & dependsOn ?~ [
                     lbdPermResName
@@ -172,8 +175,10 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                 -- these are all possible response types (statuses) for this method
                 methodResponses = map methodResponse ["200", "400", "404", "500"]
                   where
-                    methodResponse status = apiGatewayMethodResponse status
-                      & agmrResponseParameters ?~ responseParams
+                    methodResponse status = apiGatewayMethodMethodResponse
+                      & agmmrResponseParameters ?~ responseParams
+                      & agmmrStatusCode ?~ status
+
 
                     responseParams = [
                         ("method.response.header.Access-Control-Allow-Headers", Bool False)
@@ -185,12 +190,13 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                 lbdPermResName = getLambdaPermissionCFResourceName $ getLambdaById _lbdId config
 
                 integration =
-                  apiGatewayIntegration AWS
-                  & agiIntegrationHttpMethod ?~ POST -- looks like this should always be "POST" no matter what the http verb was used on the endpoint
-                  & agiUri ?~ uri
-                  & agiPassthroughBehavior ?~ passthroughBehavior
-                  & agiRequestTemplates ?~ requestTemplates
-                  & agiIntegrationResponses ?~ integrationResponses
+                  apiGatewayMethodIntegration
+                  & agmiType ?~ Literal AWS
+                  & agmiIntegrationHttpMethod ?~ Literal POST -- looks like this should always be "POST" no matter what the http verb was used on the endpoint
+                  & agmiUri ?~ uri
+                  & agmiPassthroughBehavior ?~ passthroughBehavior
+                  & agmiRequestTemplates ?~ requestTemplates
+                  & agmiIntegrationResponses ?~ integrationResponses
 
                   where
                     uri = (Join "" [
@@ -213,7 +219,7 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
 
                     passthroughBehavior =
                       -- TODO: all the same for now. Need to figure out how it should differ for different verbs
-                      WHEN_NO_TEMPLATES
+                      Literal WHEN_NO_TEMPLATES
                       {- case _verb of -}
                         {- Get  -> WHEN_NO_TEMPLATES -}
                         {- Post -> WHEN_NO_TEMPLATES -}
@@ -226,19 +232,19 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                         , "500"
                         ]
 
-                    successIntegrationResponse = apiGatewayIntegrationResponse
-                      & agirResponseTemplates ?~ responseTemplates
-                      & agirStatusCode ?~ "200"
-                      & agirResponseParameters ?~ responseParams
+                    successIntegrationResponse = apiGatewayMethodIntegrationResponse
+                      & agmirResponseTemplates ?~ responseTemplates
+                      & agmirStatusCode ?~ "200"
+                      & agmirResponseParameters ?~ responseParams
 
                       where
                         responseTemplates = [ (jsonContentType, [there|./js/success_response_template.js|]) ]
 
-                    errorIntegrationResponse errorStatus = apiGatewayIntegrationResponse
-                      & agirResponseTemplates ?~ responseTemplates
-                      & agirStatusCode ?~ (Literal $ T.pack errorStatus)
-                      & agirSelectionPattern ?~ (Literal . T.pack $ "^\\[" ++ errorStatus ++ "\\].*")
-                      & agirResponseParameters ?~ responseParams
+                    errorIntegrationResponse errorStatus = apiGatewayMethodIntegrationResponse
+                      & agmirResponseTemplates ?~ responseTemplates
+                      & agmirStatusCode ?~ (Literal $ T.pack errorStatus)
+                      & agmirSelectionPattern ?~ (Literal . T.pack $ "^\\[" ++ errorStatus ++ "\\].*")
+                      & agmirResponseParameters ?~ responseParams
 
                       where
                         responseTemplates = [ (jsonContentType, [there|./js/error_response_template.js|]) ]
