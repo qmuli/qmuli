@@ -178,3 +178,20 @@ optimizations, correctness checking, generating artifacts like visual diagrams, 
 the IO.
 
 
+Contributors
+------------
+
+* Alex Babkin ([@ababkin](https://github.com/ababkin))
+* Arnaud Bailly ([@abailly](https://github.com/abailly))
+
+Acknowledgments
+---------------
+
+Big kudos to
+
+* David Reaver ([@jdreaver](https://github.com/jdreaver)), the creator and maintainer of the 
+[stratosphere](https://github.com/frontrowed/stratosphere) package
+* Brendan Hay ([@brendanhay](https://github.com/brendanhay)), the creator and maintainer of the
+[amazonka](https://github.com/brendanhay/amazonka) package
+
+as well as to wonderful Haskell community, without whom the task of creating Qmuli would be very hard to impossible.
