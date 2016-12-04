@@ -5,9 +5,10 @@
 module Main where
 
 import           Control.Lens                    hiding (view, (.=))
-import           Control.Monad                   (forM, void, (<=<))
+import           Control.Monad                   (forM, void)
 import           Data.Aeson
 import qualified Data.HashMap.Strict             as SHM
+import           Data.Text                       (pack)
 import           Network.AWS.DynamoDB            (AttributeValue,
                                                   attributeValue, avS)
 import           Network.AWS.DynamoDB.DeleteItem
@@ -31,12 +32,12 @@ import           Qi.Program.Lambda.Interface     (LambdaProgram,
                                                   putDdbRecord, scanDdbRecords)
 import           Qi.Util.Api
 
+import           System.Environment
 import           Types
 
-
--- Use the curl commands below to test-drive the endpoints (substitute your unique api stage url first):
+-- Used the curl commands below to test-drive the endpoints (substitute your unique api stage url first):
 {-
-export API="https://gliqqtz1pi.execute-api.us-east-1.amazonaws.com/v1"
+export API="https://v01orroicc.execute-api.us-east-1.amazonaws.com/v1"
 curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"cup\", \"shape\": \"round\", \"size\": 3}" "$API/things/cup"
 curl -v -X GET "$API/things/cup"
 curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"chair\", \"shape\": \"square\", \"size\": 10}" "$API/things/chair"
@@ -47,8 +48,11 @@ curl -v -X GET "$API/things"
 
 
 main :: IO ()
-main =
-  "apigw-lambda-dynamodb" `withConfig` config
+main = do
+  args <- getArgs
+  case args of
+    (appName:rest) -> withArgs rest $ (pack appName) `withConfig` config
+    _              -> putStrLn "Please provide a unique application name for your qmulus"
 
     where
       config :: ConfigProgram ()

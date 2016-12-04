@@ -8,6 +8,7 @@ module Main where
 import           Control.Lens
 import           Control.Monad               (void)
 
+import           Data.Text                   (pack)
 import           Qi                          (withConfig)
 import           Qi.Config.AWS.S3            (S3Event, s3Object, s3eObject,
                                               s3oBucketId, s3oKey)
@@ -16,16 +17,14 @@ import           Qi.Program.Config.Interface (ConfigProgram, s3Bucket,
                                               s3BucketLambda)
 import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
                                               putS3ObjectContent)
-
+import           System.Environment          (getArgs, withArgs)
 
 main :: IO ()
-main = do
-  -- Qmulus name must be globaly unique as the main deployment S3 bucket uses this name and
-  -- all underlying resource names use it as a prefix. To avoid collisions, rename this demo:
-  --
-  --   "myfancyuniquelynamedproject" `withConfig` config
-  --
-  "my-unique7657657-simple-s3-copy" `withConfig` config
+main =  do
+  args <- getArgs
+  case args of
+    (appName:rest) -> withArgs rest $ (pack appName) `withConfig` config
+    _              -> putStrLn "Please provide a unique application name for your qmulus"
 
     where
       config :: ConfigProgram ()

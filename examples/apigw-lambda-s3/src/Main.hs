@@ -3,11 +3,11 @@
 
 module Main where
 
-import           Control.Monad               (void)
 import           Data.Aeson
 import qualified Data.ByteString.Lazy        as LBS
+import           Data.Functor                (void)
+import           Data.Text                   (pack)
 import           Data.Text.Encoding          (decodeUtf8, encodeUtf8)
-
 import           Qi                          (withConfig)
 import           Qi.Config.AWS.Api           (ApiEvent (..),
                                               ApiVerb (Get, Post),
@@ -19,9 +19,9 @@ import           Qi.Program.Config.Interface (ConfigProgram, api,
                                               apiMethodLambda, apiResource,
                                               s3Bucket)
 import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
-                                              putS3ObjectContent, respond)
+                                              putS3ObjectContent)
 import           Qi.Util.Api
-
+import           System.Environment          (getArgs, withArgs)
 
 -- Use the two curl commands below to test-drive the two endpoints (substitute your unique api stage url first):
 --
@@ -30,18 +30,21 @@ import           Qi.Util.Api
 --
 
 main :: IO ()
-main =
-  "apigw-lambda-s3" `withConfig` config
+main = do
+  args <- getArgs
+  case args of
+    (appName:rest) -> withArgs rest $ (pack appName) `withConfig` config
+    _              -> putStrLn "Please provide a unique application name for your qmulus"
 
     where
       config :: ConfigProgram ()
       config = do
         bucketId  <- s3Bucket "things"
 
-        api "world" >>= \apiId ->
+        void $ api "world" >>= \apiId ->
           apiResource "things" apiId >>= \apiResourceId -> do
 
-            apiMethodLambda
+            void $ apiMethodLambda
               "createThing"
               Post
               apiResourceId
@@ -60,7 +63,7 @@ main =
         :: S3BucketId
         -> ApiEvent
         -> LambdaProgram ()
-      writeContentsLambda bucketId event@ApiEvent{_aeBody} = do
+      writeContentsLambda bucketId ApiEvent{_aeBody} = do
         putS3ObjectContent (s3Object bucketId) content
         successString "successfully added content"
 
@@ -68,6 +71,7 @@ main =
           content = case _aeBody of
             PlainTextBody t -> LBS.fromStrict $ encodeUtf8 t
             JsonBody v      -> encode v
+            _               -> error "failed to encode request body"
 
 
       readContentsLambda

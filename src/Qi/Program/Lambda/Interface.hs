@@ -7,7 +7,6 @@ module Qi.Program.Lambda.Interface where
 
 import           Control.Monad.Operational       (Program, singleton)
 import           Data.Aeson                      (Value)
-import qualified Data.ByteString                 as BS
 import qualified Data.ByteString.Lazy            as LBS
 import           Network.AWS.DynamoDB.DeleteItem
 import           Network.AWS.DynamoDB.GetItem
@@ -65,21 +64,28 @@ data LambdaInstruction a where
 
 -- S3
 
+getS3ObjectContent :: S3Object -> LambdaProgram LBS.ByteString
 getS3ObjectContent = singleton . GetS3ObjectContent
 
+putS3ObjectContent :: S3Object -> LBS.ByteString -> LambdaProgram ()
 putS3ObjectContent s3Obj = singleton . PutS3ObjectContent s3Obj
 
 
 -- DDB
 
+scanDdbRecords :: DdbTableId -> LambdaProgram ScanResponse
 scanDdbRecords = singleton . ScanDdbRecords
 
+getDdbRecord :: DdbTableId -> DdbAttrs -> LambdaProgram GetItemResponse
 getDdbRecord ddbTableId = singleton . GetDdbRecord ddbTableId
 
+putDdbRecord :: DdbTableId -> DdbAttrs -> LambdaProgram PutItemResponse
 putDdbRecord ddbTableId = singleton . PutDdbRecord ddbTableId
 
+deleteDdbRecord :: DdbTableId -> DdbAttrs -> LambdaProgram DeleteItemResponse
 deleteDdbRecord ddbTableId = singleton . DeleteDdbRecord ddbTableId
 
 -- Util
 
+respond :: Int -> Value -> LambdaProgram ()
 respond status = singleton . Respond status
