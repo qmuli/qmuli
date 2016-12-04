@@ -30,7 +30,7 @@ toResources config = Resources [lbdRoleRes]
       & iamrPath ?~ "/"
 
     executePolicy =
-      iamPolicies
+      iamRolePolicy
       [ ("Version", "2012-10-17")
       , ("Statement", statement)
       ] $
@@ -53,6 +53,7 @@ toResources config = Resources [lbdRoleRes]
           , "s3:PutObject"
 
           , "dynamodb:Scan"
+          , "dynamodb:Query"
           , "dynamodb:GetItem"
           , "dynamodb:PutItem"
           , "dynamodb:DeleteItem"

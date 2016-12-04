@@ -1,5 +1,7 @@
-Qmu.li
+Qmuli 
 ======
+pronounced as [**cumuli**: plural for heap, accumulation](http://www.merriam-webster.com/dictionary/cumuli?pronunciation&lang=en_us&dir=c&file=cumulu02)
+
 
 ###TL;DR: [Serverless AWS framework](https://serverless.com/) for [Haskell](https://www.haskell.org/)
 
@@ -7,7 +9,7 @@ Qmu.li
 Purpose
 -------
 
-Qmu.li is an experimental effort in creating a unified environment, in which one could specify both resource configuration **and** lambda 
+Qmuli is an experimental effort in creating a unified environment, in which one could specify both resource configuration **and** lambda 
 behavior of a cloud architecture built on AWS side-by-side in one language without the artificial boundary imposed by the current 
 generation of AWS tools.
 Advantages of such unification are numerous:
@@ -106,40 +108,13 @@ Note: see more involved [DynamoDB backed RESTful API example](https://github.com
 Getting started
 ---------------
 
-Qmulus needs to be built on an Amazon Linux AMI in order to be compatible with running it on a lambda.
+Thanks to [the recent addition of a dockerized Lambda build](https://github.com/qmuli/qmuli/pull/5/commits), a qmulus **now does not need** to be built on an Amazon Linux AMI in order to be compatible with running it on a lambda.
+One only needs a system with stack and docker installed in order to build everything necessary for the successful deploy.
 
-###Provision EC2 instance:
-
-- Go to EC2 console and click the "Launch instance" button
-- Choose "AWS Marketplace" and type in "Amazon Linux AMI HVM" into the search bar
-- From the search results, choose something that looks like "Amazon Linux AMI (HVM / 64-bit)"
-- Provision this instance as t2.small - this gives adequate building speed to do the initial build. Later it is ok to change it to the less 
-expensive t2.micro to do incremental builds
-
-
-###Prepare the instance
-
-install dependencies
-```sh
-sudo yum -y --enablerepo=epel install haskell-platform git make ncurses-devel patch gcc-c++
-```
-
-install stack
-```sh
-curl -sSL https://s3.amazonaws.com/download.fpcomplete.com/centos/7/fpco.repo | sudo tee /etc/yum.repos.d/fpco.repo
-sudo yum -y install stack
-stack setup
-```
-
-make your AWS keys available in the environment. Put the following lines in `~/.profile` or `~/.bashrc` file:
-```sh
-export AWS_ACCESS_KEY_ID=<YOUR KEY>
-export AWS_SECRET_ACCESS_KEY=<YOUR SECRET>
-```
 
 ###Clone and build the library and examples
 ```sh
-git clone https://github.com/qmuli/qmuli.git
+git clone --recursive -j8 https://github.com/qmuli/qmuli.git
 cd qmuli
 stack install
 ```
@@ -147,22 +122,22 @@ stack install
 ###Running an example
 The above example is available as the "simple-s3-copy" qmulus.
 
-The `simple-s3-copy cf deploy` command does the following:
+The `simple-s3-copy <my-unique-name> cf deploy` command does the following:
 
 - generates the CloudFormation (CF) json template
 - packages/zips up the executable to be used by lambda
-- uploads those to the qmulus S3 bucket (named identically with the qmulus)
+- uploads those to the qmulus S3 bucket (named with <my-unique-name>)
 
 After that is deployed, just create a new CF stack
 
-`simple-s3-copy cf create`
+`simple-s3-copy <same-unique-name-as-above> cf create`
 
 And voila, you should now have the example deployed and working.
 Try uploading a small file into the 'incoming' bucket, you should see the same file copied automatically to the 'outgoing' bucket.
 
 To destroy a stack use the following command
 
-`simple-s3-copy cf destroy`
+`simple-s3-copy <same-unique-name-as-above> cf destroy`
 
 
 Future work
@@ -170,9 +145,23 @@ Future work
 
 The idea is to use this project as an experiment platform to design a toolset that would allow very rapid and painless development for 
 serverless architectures, and of course, would leverage all the great stuff that Haskell has to offer. The plan is to add all the usual 
-AWS SaaS puzzle-pieces like ApiGateway, Dynamo, SQS, etc and make them easily composable. Furthermore, using free/operational monad based 
-DSLs would allow for various ways to statically analyze architecture + lambda behaviors and infer various properties that would allow for 
-optimizations, correctness checking, generating artifacts like visual diagrams, etc in addition to making code safer by not directly using 
-the IO.
+AWS SaaS puzzle-pieces like ApiGateway, Cognito, Dynamo, SQS, SNS, etc and make them easily composable. Furthermore, using free/operational monad based DSLs would allow for various ways to statically analyze architecture + lambda behaviors and infer various properties that would allow for optimizations, correctness checking, generating artifacts like visual diagrams, etc in addition to making code safer by not directly using the IO.
 
 
+Contributors
+------------
+
+* Alex Babkin ([@ababkin](https://github.com/ababkin))
+* Arnaud Bailly ([@abailly](https://github.com/abailly))
+
+Acknowledgments
+---------------
+
+Big kudos to
+
+* David Reaver ([@jdreaver](https://github.com/jdreaver)), the creator and maintainer of the 
+[stratosphere](https://github.com/frontrowed/stratosphere) package
+* Brendan Hay ([@brendanhay](https://github.com/brendanhay)), the creator and maintainer of the
+[amazonka](https://github.com/brendanhay/amazonka) package
+
+as well as to wonderful Haskell community, without whom the task of creating Qmuli would be very hard to impossible.

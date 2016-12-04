@@ -3,7 +3,7 @@ import           Test.Tasty.Hspec
 
 main :: IO ()
 main = do
-    test <- testSpec "stratosphere" spec
+    test <- testSpec "qmuli" spec
     Test.Tasty.defaultMain test
 
 spec :: Spec

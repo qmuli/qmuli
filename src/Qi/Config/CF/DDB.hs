@@ -36,15 +36,15 @@ toResources config = Resources . map toDdbTableRes $ getAllDdbTables config
 
 
         attributeDefinitions = [
-            dynamoDBAttributeDefinition
+            dynamoDBTableAttributeDefinition
               (Literal $ table^.dtHashAttrDef.daName)
-              (toAttrType $ table^.dtHashAttrDef.daType)
+              (Literal . toAttrType $ table^.dtHashAttrDef.daType)
           ]
         keySchema = [
-            dynamoDBKeySchema (Literal $ table^.dtHashAttrDef.daName) HASH
+            dynamoDBTableKeySchema (Literal $ table^.dtHashAttrDef.daName) $ Literal HASH
           ]
         provisionedThroughput =
-          dynamoDBProvisionedThroughput
+          dynamoDBTableProvisionedThroughput
             (Literal . Integer' $ table^.dtProvCap.dpcRead)
             (Literal . Integer' $ table^.dtProvCap.dpcWrite)
 
