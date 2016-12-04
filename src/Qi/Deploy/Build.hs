@@ -14,19 +14,21 @@ data Build = Build { lambdaSrcDirectory :: FilePath
                    }
 
 buildConfig :: FilePath -> String -> Build
-buildConfig srcDir exeTarget = Build srcDir (FullTarget "qmuli" exeTarget) "lambda"
+buildConfig srcDir exeTarget = Build srcDir (SimpleTarget exeTarget) "lambda"
 
 build :: Build -> IO FilePath
 build Build{..} = do
-  buildDocker
+  let (SimpleTarget exeTarget) = lambdaTarget
+      imageName = "ghc-centos:" ++ exeTarget
+  buildDocker imageName
   -- build executable with docker
-  exe <- stackInDocker (ImageName "ghc-centos:qmuli") lambdaSrcDirectory lambdaTarget
+  exe <- stackInDocker (ImageName imageName) lambdaSrcDirectory lambdaTarget
   -- pack executable with js shim in .zip file
   packLambda exe finalProgName
   return "lambda.zip"
     where
-      buildDocker :: IO ()
-      buildDocker = callProcess "docker" ["build", "-t", "ghc-centos:qmuli","ghc-centos" ]
+      buildDocker :: String -> IO ()
+      buildDocker imageName = callProcess "docker" ["build", "-t", imageName, "ghc-centos" ]
 
       executableByAll :: FileMode
       executableByAll = foldl unionFileModes nullFileMode [ ownerModes
