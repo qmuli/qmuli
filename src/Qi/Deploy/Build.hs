@@ -1,4 +1,6 @@
+{-# LANGUAGE QuasiQuotes     #-}
 {-# LANGUAGE RecordWildCards #-}
+
 module Qi.Deploy.Build(build, buildConfig, Build) where
 
 import           System.Build
@@ -7,6 +9,8 @@ import           System.Docker
 import           System.Posix.Files
 import           System.Posix.Types
 import           System.Process
+import           Text.Heredoc       (there)
+
 
 data Build = Build { lambdaSrcDirectory :: FilePath
                    , lambdaTarget       :: BuildTarget
@@ -38,8 +42,7 @@ build Build{..} = do
 
       packLambda :: FilePath -> FilePath -> IO ()
       packLambda source target = do
-        runner <- readFile "js/index.js"
-        writeFile "index.js" runner
+        writeFile "index.js" [there|./js/index.js|]
         copyFile source target
         target `setFileMode` executableByAll
         callProcess "zip" $ [ "lambda.zip", "index.js" , target ]
