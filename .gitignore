@@ -3,5 +3,7 @@
 .cidfile
 index.js
 lambda
-simple-s3-copy
+qmuli-apigw-lambda-dynamodb
+qmuli-apigw-lambda-s3
+qmuli-simple-s3-copy
 *.zip

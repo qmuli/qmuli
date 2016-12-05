@@ -27,16 +27,22 @@ render config = encodeTemplate $
     (toResources config)
     & description ?~ "Example"
     & formatVersion ?~ "2010-09-09"
+    & outputs ?~ toOutputs config
 
 toResources
   :: Config
   -> Resources
 toResources config = mconcat [
-      S3.toResources config
-    , Role.toResources config
-    , Lambda.toResources config
-    , Api.toResources config
-    , DDB.toResources config
-    ]
+    S3.toResources config
+  , Role.toResources config
+  , Lambda.toResources config
+  , Api.toResources config
+  , DDB.toResources config
+  ]
 
-
+toOutputs
+  :: Config
+  -> Outputs
+toOutputs config = mconcat [
+     Api.toOutputs config
+  ]
