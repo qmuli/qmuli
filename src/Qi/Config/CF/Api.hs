@@ -262,9 +262,9 @@ toOutputs config =
   where
 
     toApiOutput (_, api) =
-      output (T.concat [apiResName, "RootResourceId"])
+      output (T.concat [apiResName, "URL"])
         apiUrl
-        & description ?~ "RestApi RootResourceId"
+        & description ?~ "RestApi URL"
 
       where
         -- https://{restapi_id}.execute-api.{region}.amazonaws.com/{stage_name}/

@@ -20,7 +20,7 @@ import           Qi.Config.AWS.Api           (ApiEvent (..),
                                               aeParams, rpPath)
 import           Qi.Config.AWS.DDB           (DdbAttrDef (..), DdbAttrType (..),
                                               DdbProvCap (..))
-import           Qi.Program.Lambda.Interface (LambdaProgram, respond)
+import           Qi.Program.Lambda.Interface (LambdaProgram, output)
 
 
 
@@ -45,4 +45,10 @@ created = respond 201
 argumentsError = respond 400 . String . T.pack
 notFoundError = respond 404 . String . T.pack
 internalError = respond 500 . String . T.pack
+
+respond status content =
+  output . encode $ object [
+      ("status", Number $ fromIntegral status)
+    , ("body", content)
+    ]
 

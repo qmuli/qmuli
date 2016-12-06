@@ -1,0 +1,9 @@
+{
+  "RequestType": "Create",
+  "ResponseURL": "http://somewhere.com/something",
+  "StackId": "myStackId",
+  "RequestId": "myRequestId",
+  "ResourceType": "myResourceType",
+  "LogicalResourceId": "myLogicalResourceId",
+  "ResourceProperties": []
+}

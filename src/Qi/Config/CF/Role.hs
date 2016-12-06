@@ -57,6 +57,9 @@ toResources config = Resources [lbdRoleRes]
           , "dynamodb:GetItem"
           , "dynamodb:PutItem"
           , "dynamodb:DeleteItem"
+
+          , "cognito-idp:CreateUserPool"
+          , "cognito-idp:DeleteUserPool"
           ]
 
 

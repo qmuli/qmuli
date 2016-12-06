@@ -17,6 +17,7 @@ import           System.Environment                   (getArgs)
 
 import           Qi.Config.AWS
 import qualified Qi.Config.AWS.Api.Event              as ApiEvent (parse)
+import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.Lambda.Accessors       (getAllLambdas)
 import           Qi.Config.AWS.S3
@@ -86,10 +87,15 @@ withConfig appName configProgram = do
           :: Lambda
           -> String
           -> Either String (LambdaProgram ())
+
         parseLambdaEvent S3BucketLambda{_lbdS3BucketLambdaProgram} eventJson =
           _lbdS3BucketLambdaProgram <$> (parseEither (`S3Event.parse` config) =<< eitherDecode (LBS.pack eventJson))
+
         parseLambdaEvent ApiLambda{_lbdApiMethodLambdaProgram} eventJson =
           _lbdApiMethodLambdaProgram <$> (parseEither (`ApiEvent.parse` config) =<< eitherDecode (LBS.pack eventJson))
+
+        parseLambdaEvent CfCustomLambda{_lbdCFCustomLambdaProgram} eventJson =
+          _lbdCFCustomLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String CfEvent)
 
         lbdIO
           :: Lambda

@@ -7,18 +7,22 @@ module Qi.Program.Lambda.Interface where
 
 import           Control.Monad.Operational       (Program, singleton)
 import           Data.Aeson                      (Value)
+import           Data.ByteString.Lazy            (ByteString)
 import qualified Data.ByteString.Lazy            as LBS
 import           Data.Text                       (Text)
+import           Network.AWS                     hiding (Request, Response)
 import           Network.AWS.DynamoDB.DeleteItem
 import           Network.AWS.DynamoDB.GetItem
 import           Network.AWS.DynamoDB.PutItem
 import           Network.AWS.DynamoDB.Query
 import           Network.AWS.DynamoDB.Scan
-import           Qi.Config.Identifier            (DdbTableId)
+import           Network.HTTP.Client
 
 import           Qi.Config.AWS.Api
+import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.S3
+import           Qi.Config.Identifier            (DdbTableId)
 
 
 type LambdaProgram a = Program LambdaInstruction a
@@ -29,14 +33,28 @@ instance Show (ApiEvent -> LambdaProgram ()) where
 instance Show (S3Event -> LambdaProgram ()) where
   show _ = "..."
 
+instance Show (CfEvent -> LambdaProgram ()) where
+  show _ = "..."
+
 data LambdaInstruction a where
+
+  Http
+    :: Request
+    -> ManagerSettings
+    -> LambdaInstruction (Response ByteString)
+
+  AmazonkaSend
+    :: (AWSRequest a)
+    => a
+    -> LambdaInstruction (Rs a)
+
   GetS3ObjectContent
     :: S3Object
-    -> LambdaInstruction LBS.ByteString
+    -> LambdaInstruction ByteString
 
   PutS3ObjectContent
     :: S3Object
-    -> LBS.ByteString
+    -> ByteString
     -> LambdaInstruction ()
 
   ScanDdbRecords
@@ -64,10 +82,27 @@ data LambdaInstruction a where
     -> DdbAttrs
     -> LambdaInstruction DeleteItemResponse
 
-  Respond
-    :: Int
-    -> Value
+  Output
+    :: ByteString
     -> LambdaInstruction ()
+
+
+-- HTTP client
+
+http
+  :: Request
+  -> ManagerSettings
+  -> LambdaProgram (Response ByteString)
+http request =
+  singleton . Http request
+
+-- Amazonka
+
+amazonkaSend
+  :: (AWSRequest a)
+  => a
+  -> LambdaProgram (Rs a)
+amazonkaSend = singleton . AmazonkaSend
 
 
 -- S3
@@ -75,7 +110,7 @@ data LambdaInstruction a where
 getS3ObjectContent :: S3Object -> LambdaProgram LBS.ByteString
 getS3ObjectContent = singleton . GetS3ObjectContent
 
-putS3ObjectContent :: S3Object -> LBS.ByteString -> LambdaProgram ()
+putS3ObjectContent :: S3Object -> ByteString -> LambdaProgram ()
 putS3ObjectContent s3Obj = singleton . PutS3ObjectContent s3Obj
 
 
@@ -98,5 +133,5 @@ deleteDdbRecord ddbTableId = singleton . DeleteDdbRecord ddbTableId
 
 -- Util
 
-respond :: Int -> Value -> LambdaProgram ()
-respond status = singleton . Respond status
+output :: ByteString -> LambdaProgram ()
+output = singleton . Output
