@@ -1,5 +1,6 @@
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
@@ -14,14 +15,11 @@ import qualified Data.ByteString.Lazy.Char8                         as LBS
 import qualified Data.HashMap.Strict                                as SHM
 import           Data.Text                                          (Text)
 import qualified Data.Text                                          as T
-
 import           Network.AWS.CognitoIdentityProvider.CreateUserPool
 import           Network.AWS.CognitoIdentityProvider.DeleteUserPool
 import           Network.AWS.CognitoIdentityProvider.Types          (uptId)
-import           Network.HTTP.Client                                (Request (..),
-                                                                     RequestBody (..),
-                                                                     parseRequest_)
-import           Network.HTTP.Client.TLS                            (tlsManagerSettings)
+import           System.Environment                                 (getArgs,
+                                                                     withArgs)
 
 import           Qi                                                 (withConfig)
 import           Qi.Config.AWS.Api                                  (ApiEvent (..),
@@ -43,9 +41,7 @@ import           Qi.Program.Lambda.Interface                        (LambdaProgr
                                                                      output)
 import           Qi.Util.Api
 
-import           System.Environment                                 (getArgs,
-                                                                     withArgs)
-import           Types
+import           Custom
 
 
 
@@ -59,69 +55,47 @@ main = do
     where
       config :: ConfigProgram ()
       config = do
-        void $ customResourceLambda "cognitoIdentityPoolProvider" cognitoIdentityPoolProviderLambda
-
-      cognitoIdentityPoolProviderLambda
-        :: CfEvent
-        -> LambdaProgram ()
-      cognitoIdentityPoolProviderLambda event = do
-        let responseTemplate = Response{
-                rStatus             = CfSuccess
-              , rReason             = "undefined"
-              , rStackId            = event^.cfeStackId
-              , rRequestId          = event^.cfeRequestId
-              , rLogicalResourceId  = event^.cfeLogicalResourceId
-              , rPhysicalResourceId = "undefined"
-              , rData               = SHM.fromList []
-              }
+        void $ customResourceLambda "cognitoIdentityPoolProvider" cognitoUserPoolProviderLambda
 
 
-        response <- case event of
-          CfEventCreate{} -> do
+      cognitoUserPoolProviderLambda
+        :: CfEventHandler
+      cognitoUserPoolProviderLambda =
+        customResourceProviderLambda $
+          CustomResourceProvider createHandler updateHandler deleteHandler
+
+        where
+
+          createHandler responseTemplate = do
             resp <- amazonkaSend $ createUserPool "MyUserPool"
             case resp^.cuprsResponseStatus of
               200 ->
                 case (^.uptId) =<< resp^.cuprsUserPool of
                   Just upid ->
-                    return responseTemplate{rPhysicalResourceId = upid}
+                    return $ Right upid
                   Nothing ->
-                    return responseTemplate{
-                        rStatus = CfFailed
-                      , rReason = T.concat ["Error: No User Pool id was returned. Response was: ", T.pack $ show resp]
-                      }
+                    return . Left $ T.concat ["Error: No User Pool id was returned. Response was: ", T.pack $ show resp]
 
 
               unexpected -> do
                 -- TODO: need to log error here
-                return responseTemplate{
-                    rStatus = CfFailed
-                  , rReason = T.concat ["Error: unexpected response status: ", T.pack $ show unexpected, ", complete response: ", T.pack $ show resp]
-                  }
-          CfEventUpdate{} -> do
+                return . Left $ T.concat ["Error: unexpected response status: ", T.pack $ show unexpected, ", complete response: ", T.pack $ show resp]
+
             -- does nothing for now
-            return responseTemplate
-
-          CfEventDelete{} -> do
-            resp <- amazonkaSend . deleteUserPool $ event^.cfePhysicalResourceId
-            return responseTemplate
+          updateHandler responseTemplate crid = do
+            return $ Right crid
 
 
-        let parsedRequest       = parseRequest_ . T.unpack $ event^.cfeResponseURL
-            encodedResponse     = encode response
-            encodedResponseSize = LBS.length encodedResponse
-            request             = parsedRequest{
-                                      method          = "PUT"
-                                    , requestBody     = RequestBodyLBS encodedResponse
-                                    , requestHeaders  = [
-                                          ("content-type", "")
-                                        , ("content-length", BS.pack $ show encodedResponseSize)
-                                        ]
-                                    }
+          deleteHandler responseTemplate crid = do
+            resp <- amazonkaSend $ deleteUserPool crid
+            return $ Right crid
 
-        -- assume successfully written response to S3 object
-        responseResp <- http request tlsManagerSettings
 
-        respond 200 . String . T.pack $ show responseResp
+
+
+
+
+
 
 
 
