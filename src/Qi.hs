@@ -13,7 +13,8 @@ import           Data.Default                         (def)
 import qualified Data.HashMap.Strict                  as SHM
 import           Data.Text                            (Text)
 import qualified Data.Text                            as T
-import           System.Environment                   (getArgs)
+import           System.Environment                   (getArgs, withArgs)
+
 
 import           Qi.Config.AWS
 import qualified Qi.Config.AWS.Api.Event              as ApiEvent (parse)
@@ -33,10 +34,19 @@ import qualified Qi.Program.Lambda.Interpreters.IO    as LIO
 
 
 withConfig
+  :: ConfigProgram ()
+  -> IO ()
+withConfig configProgram = do
+  args <- getArgs
+  case args of
+    (appName:rest) -> withArgs rest $ withNameAndConfig (T.pack appName) configProgram
+    _              -> putStrLn "Please provide a unique application name for your qmulus"
+
+withNameAndConfig
   :: Text
   -> ConfigProgram ()
   -> IO ()
-withConfig appName configProgram = do
+withNameAndConfig appName configProgram = do
 
   if invalid appName
     then

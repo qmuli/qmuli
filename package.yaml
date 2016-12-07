@@ -32,6 +32,7 @@ dependencies:
   - stratosphere
   - amazonka
   - amazonka-cloudformation
+  - amazonka-cognito-identity
   - amazonka-cognito-idp
   - amazonka-core
   - amazonka-dynamodb
@@ -46,6 +47,7 @@ dependencies:
   - process
   - http-client
   - http-client-tls
+  - either
   # - groundhog
   # - groundhog-th
   # - groundhog-sqlite
@@ -63,7 +65,10 @@ library:
     - Qi.Config.Identifier
     - Qi.Program.Lambda.Interface
     - Qi.Program.Config.Interface
+    - Qi.Util
     - Qi.Util.Api
+    - Qi.Util.Cognito
+    - Qi.Util.CustomCFResource
   ghc-options: -Wall
 
 executables:

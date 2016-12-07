@@ -4,7 +4,7 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Custom where
+module Qi.Util.CustomCFResource where
 
 import           Control.Lens                hiding (view, (.=))
 import           Data.Aeson
@@ -23,7 +23,7 @@ import           Network.HTTP.Client.TLS     (tlsManagerSettings)
 import           Qi.Config.AWS.CF
 import           Qi.Program.Lambda.Interface (LambdaProgram, amazonkaSend, http,
                                               output)
-import           Qi.Util.Api
+import           Qi.Util                     (respond)
 
 
 type CfEventHandler = CfEvent -> LambdaProgram ()

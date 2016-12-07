@@ -60,6 +60,11 @@ toResources config = Resources [lbdRoleRes]
 
           , "cognito-idp:CreateUserPool"
           , "cognito-idp:DeleteUserPool"
+          , "cognito-idp:CreateUserPoolClient"
+          , "cognito-idp:CreateUserPoolClient"
+
+          , "cognito-identity:CreateIdentityPool"
+          , "cognito-identity:DeleteIdentityPool"
           ]
 
 
