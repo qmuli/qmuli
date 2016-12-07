@@ -20,7 +20,7 @@ import           Qi.Config.AWS.Api           (ApiEvent (..),
                                               aeParams, rpPath)
 import           Qi.Config.AWS.DDB           (DdbAttrDef (..), DdbAttrType (..),
                                               DdbProvCap (..))
-import           Qi.Program.Lambda.Interface (LambdaProgram, respond)
+import           Qi.Program.Lambda.Interface (LambdaProgram, output)
 
 
 
@@ -38,11 +38,5 @@ castToDdbAttrs
   -> Result AttributeValue
 castToDdbAttrs ddbConstructor = fromJSON <=< fmap (toJSON . ddbConstructor) . fromJSON
 
-success = respond 200
-successString s = respond 200 $ object [ ("message", String $ T.pack s) ]
-created = respond 201
 
-argumentsError = respond 400 . String . T.pack
-notFoundError = respond 404 . String . T.pack
-internalError = respond 500 . String . T.pack
 

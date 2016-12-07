@@ -13,10 +13,12 @@ import           Data.Default                         (def)
 import qualified Data.HashMap.Strict                  as SHM
 import           Data.Text                            (Text)
 import qualified Data.Text                            as T
-import           System.Environment                   (getArgs)
+import           System.Environment                   (getArgs, withArgs)
+
 
 import           Qi.Config.AWS
 import qualified Qi.Config.AWS.Api.Event              as ApiEvent (parse)
+import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.Lambda.Accessors       (getAllLambdas)
 import           Qi.Config.AWS.S3
@@ -32,10 +34,19 @@ import qualified Qi.Program.Lambda.Interpreters.IO    as LIO
 
 
 withConfig
+  :: ConfigProgram ()
+  -> IO ()
+withConfig configProgram = do
+  args <- getArgs
+  case args of
+    (appName:rest) -> withArgs rest $ withNameAndConfig (T.pack appName) configProgram
+    _              -> putStrLn "Please provide a unique application name for your qmulus"
+
+withNameAndConfig
   :: Text
   -> ConfigProgram ()
   -> IO ()
-withConfig appName configProgram = do
+withNameAndConfig appName configProgram = do
 
   if invalid appName
     then
@@ -86,10 +97,15 @@ withConfig appName configProgram = do
           :: Lambda
           -> String
           -> Either String (LambdaProgram ())
+
         parseLambdaEvent S3BucketLambda{_lbdS3BucketLambdaProgram} eventJson =
           _lbdS3BucketLambdaProgram <$> (parseEither (`S3Event.parse` config) =<< eitherDecode (LBS.pack eventJson))
+
         parseLambdaEvent ApiLambda{_lbdApiMethodLambdaProgram} eventJson =
           _lbdApiMethodLambdaProgram <$> (parseEither (`ApiEvent.parse` config) =<< eitherDecode (LBS.pack eventJson))
+
+        parseLambdaEvent CfCustomLambda{_lbdCFCustomLambdaProgram} eventJson =
+          _lbdCFCustomLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String CfEvent)
 
         lbdIO
           :: Lambda

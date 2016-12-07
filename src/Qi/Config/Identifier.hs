@@ -30,3 +30,7 @@ instance ParentResource ApiResourceId where
 newtype DdbTableId = DdbTableId Int deriving (Eq, Show)
 instance Hashable DdbTableId where
   s `hashWithSalt` (DdbTableId identifierHash) = s `hashWithSalt` identifierHash
+
+newtype CustomId = CustomId Int deriving (Eq, Show)
+instance Hashable CustomId where
+  s `hashWithSalt` (CustomId identifierHash) = s `hashWithSalt` identifierHash

@@ -36,6 +36,7 @@ toResources config = foldMap toAllLambdaResources $ getAllLambdas config
             principal = case lbd of
               S3BucketLambda{} -> "s3.amazonaws.com"
               ApiLambda{}      -> "apigateway.amazonaws.com"
+              CfCustomLambda{} -> "*" -- TODO: not sure whether we even need the permission for CF Custom Resource
 
         lambdaCFResource = (
           resource lbdResName $

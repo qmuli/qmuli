@@ -33,7 +33,7 @@ getS3BucketById
   -> S3Bucket
 getS3BucketById bid config =
   case SHM.lookup bid bucketMap of
-    Just lbd -> lbd
+    Just bucket -> bucket
     Nothing  -> error $ "Could not reference s3 bucket with id: " ++ show bid
   where
     bucketMap = config^.s3Config.s3Buckets.s3idxIdToS3Bucket
@@ -44,7 +44,7 @@ getS3BucketIdByName
   -> S3BucketId
 getS3BucketIdByName bucketName config =
   case SHM.lookup bucketName bucketNameToIdMap of
-    Just lbdId -> lbdId
+    Just bid -> bid
     Nothing  -> error $ "Could not find s3 bucket id with name: " ++ show bucketName
   where
     bucketNameToIdMap = config ^. s3Config . s3Buckets . s3idxNameToId

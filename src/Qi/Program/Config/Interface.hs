@@ -12,6 +12,7 @@ import           Data.Text                   (Text)
 
 import           Qi.Config.AWS               (Config)
 import           Qi.Config.AWS.Api
+import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
@@ -55,6 +56,11 @@ data ConfigInstruction a where
     -> (ApiEvent -> LambdaProgram ())
     -> ConfigInstruction LambdaId
 
+  RCustomResourceLambda
+    :: Text
+    -> (CfEvent -> LambdaProgram ())
+    -> ConfigInstruction LambdaId
+
 
 s3Bucket = singleton . RS3Bucket
 
@@ -72,4 +78,6 @@ apiResource
 apiResource name = singleton . RApiResource name
 
 apiMethodLambda name verb resourceId = singleton . RApiMethodLambda name verb resourceId
+
+customResourceLambda name = singleton . RCustomResourceLambda name
 

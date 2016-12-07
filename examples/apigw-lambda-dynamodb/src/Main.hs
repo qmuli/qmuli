@@ -30,9 +30,9 @@ import qualified Qi.Program.Config.Interface     as CI
 import           Qi.Program.Lambda.Interface     (LambdaProgram,
                                                   deleteDdbRecord, getDdbRecord,
                                                   putDdbRecord, scanDdbRecords)
+import           Qi.Util
 import           Qi.Util.Api
 
-import           System.Environment
 import           Types
 
 -- Used the curl commands below to test-drive the endpoints (substitute your unique api stage url first):
@@ -48,123 +48,118 @@ curl -v -X GET "$API/things"
 
 
 main :: IO ()
-main = do
-  args <- getArgs
-  case args of
-    (appName:rest) -> withArgs rest $ (pack appName) `withConfig` config
-    _              -> putStrLn "Please provide a unique application name for your qmulus"
+main = withConfig config
+  where
+    config :: ConfigProgram ()
+    config = do
+      thingsTable <- CI.ddbTable "things" (DdbAttrDef "Id" S) Nothing (DdbProvCap 1 1)
 
-    where
-      config :: ConfigProgram ()
-      config = do
-        thingsTable <- CI.ddbTable "things" (DdbAttrDef "Id" S) Nothing (DdbProvCap 1 1)
+      -- create a REST API
+      CI.api "world" >>= \api ->
+        -- create a "things" resource
+        CI.apiResource "things" api >>= \things -> do
+          -- create a GET method that is attached to the "scan" lambda
+          CI.apiMethodLambda "scanThings" Get
+            things $ scan thingsTable
 
-        -- create a REST API
-        CI.api "world" >>= \api ->
-          -- create a "things" resource
-          CI.apiResource "things" api >>= \things -> do
-            -- create a GET method that is attached to the "scan" lambda
-            CI.apiMethodLambda "scanThings" Get
-              things $ scan thingsTable
+          -- create a "thingId" slug resource under "things"
+          CI.apiResource "{thingId}" things >>= \thing -> do
 
-            -- create a "thingId" slug resource under "things"
-            CI.apiResource "{thingId}" things >>= \thing -> do
+            CI.apiMethodLambda "getThing" Get
+              thing $ get thingsTable
 
-              CI.apiMethodLambda "getThing" Get
-                thing $ get thingsTable
+            CI.apiMethodLambda "putThing" Post
+              thing $ put thingsTable
 
-              CI.apiMethodLambda "putThing" Post
-                thing $ put thingsTable
+            CI.apiMethodLambda "deleteThing" Delete
+              thing $ delete thingsTable
 
-              CI.apiMethodLambda "deleteThing" Delete
-                thing $ delete thingsTable
+      return ()
 
-        return ()
+    scan
+      :: DdbTableId
+      -> ApiEvent
+      -> LambdaProgram ()
+    scan ddbTableId event = do
+      res <- scanDdbRecords ddbTableId
+      case res^.srsResponseStatus of
+        200 -> do
+          let thingsResult :: Result [Thing] = forM (res^.srsItems) $ \ddbRecord ->
+                case SHM.lookup "Data" ddbRecord of
+                  Just thingAttrs -> do
+                    castFromDdbAttrs unDdbThing thingAttrs
 
-      scan
-        :: DdbTableId
-        -> ApiEvent
-        -> LambdaProgram ()
-      scan ddbTableId event = do
-        res <- scanDdbRecords ddbTableId
-        case res^.srsResponseStatus of
+                  Nothing ->
+                    Error $ "Error: could not extract thing data, DDB record was: " ++ show ddbRecord
+
+          case thingsResult of
+            Success things ->
+              success $ toJSON things
+            Error err ->
+              internalError $ "Parsing error: " ++ show err
+
+        unexpected ->
+          internalError $ "Error: unexpected response status: " ++ show unexpected
+
+
+
+
+    get
+      :: DdbTableId
+      -> ApiEvent
+      -> LambdaProgram ()
+    get ddbTableId event = do
+      withId event $ \tid -> do
+        let keys = SHM.fromList [
+                ("Id", attributeValue & avS .~ Just tid)
+              ]
+        res <- getDdbRecord ddbTableId keys
+        case res^.girsResponseStatus of
           200 -> do
-            let thingsResult :: Result [Thing] = forM (res^.srsItems) $ \ddbRecord ->
-                  case SHM.lookup "Data" ddbRecord of
-                    Just thingAttrs -> do
-                      castFromDdbAttrs unDdbThing thingAttrs
+            let item = res^.girsItem
+            if item == SHM.fromList []
+              then -- no found item by that key
+                notFoundError "no such thing found"
+              else
+                case SHM.lookup "Data" item of
+                  Just thingAttrs -> do
+                    case castFromDdbAttrs unDdbThing thingAttrs of
+                      Success (thing :: Thing)  ->
+                        success $ toJSON thing
+                      Error err                 ->
+                        internalError $ "Error: fromJson: " ++ err ++ ". Attrs were: " ++ show thingAttrs
 
-                    Nothing ->
-                      Error $ "Error: could not extract thing data, DDB record was: " ++ show ddbRecord
-
-            case thingsResult of
-              Success things ->
-                success $ toJSON things
-              Error err ->
-                internalError $ "Parsing error: " ++ show err
+                  Nothing ->
+                    internalError $ "Error: could not extract thing data, DDB record was: " ++ show item
 
           unexpected ->
             internalError $ "Error: unexpected response status: " ++ show unexpected
 
-
-
-
-      get
-        :: DdbTableId
-        -> ApiEvent
-        -> LambdaProgram ()
-      get ddbTableId event = do
-        withId event $ \tid -> do
-          let keys = SHM.fromList [
-                  ("Id", attributeValue & avS .~ Just tid)
+    put
+      :: DdbTableId
+      -> ApiEvent
+      -> LambdaProgram ()
+    put ddbTableId event = do
+      withId event $ \tid -> do
+        withThingAttributes event $ \thingAttrs -> do
+          let item = SHM.fromList [
+                  ("Id",    attributeValue & avS .~ Just tid)
+                , ("Data",  thingAttrs)
                 ]
-          res <- getDdbRecord ddbTableId keys
-          case res^.girsResponseStatus of
-            200 -> do
-              let item = res^.girsItem
-              if item == SHM.fromList []
-                then -- no found item by that key
-                  notFoundError "no such thing found"
-                else
-                  case SHM.lookup "Data" item of
-                    Just thingAttrs -> do
-                      case castFromDdbAttrs unDdbThing thingAttrs of
-                        Success (thing :: Thing)  ->
-                          success $ toJSON thing
-                        Error err                 ->
-                          internalError $ "Error: fromJson: " ++ err ++ ". Attrs were: " ++ show thingAttrs
 
-                    Nothing ->
-                      internalError $ "Error: could not extract thing data, DDB record was: " ++ show item
+          res <- putDdbRecord ddbTableId item
+          case res^.pirsResponseStatus of
+            200 -> do
+              successString "successfully put item"
 
             unexpected ->
               internalError $ "Error: unexpected response status: " ++ show unexpected
 
-      put
-        :: DdbTableId
-        -> ApiEvent
-        -> LambdaProgram ()
-      put ddbTableId event = do
-        withId event $ \tid -> do
-          withThingAttributes event $ \thingAttrs -> do
-            let item = SHM.fromList [
-                    ("Id",    attributeValue & avS .~ Just tid)
-                  , ("Data",  thingAttrs)
-                  ]
-
-            res <- putDdbRecord ddbTableId item
-            case res^.pirsResponseStatus of
-              200 -> do
-                successString "successfully put item"
-
-              unexpected ->
-                internalError $ "Error: unexpected response status: " ++ show unexpected
-
-      delete
-        :: DdbTableId
-        -> ApiEvent
-        -> LambdaProgram ()
-      delete ddbTableId event = do
+    delete
+      :: DdbTableId
+      -> ApiEvent
+      -> LambdaProgram ()
+    delete ddbTableId event = do
         withId event $ \tid -> do
           let keys = SHM.fromList [
                   ("Id", attributeValue & avS .~ Just tid)

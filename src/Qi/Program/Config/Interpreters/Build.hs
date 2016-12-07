@@ -17,6 +17,8 @@ import           Data.Text                   (Text)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.Api
 import           Qi.Config.AWS.Api.Accessors
+import           Qi.Config.AWS.CF
+import           Qi.Config.AWS.CF.Accessors
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.DDB.Accessors
 import           Qi.Config.AWS.Lambda
@@ -49,6 +51,8 @@ interpret program =  do
     (RApiMethodLambda name verb apiResourceId lbdProgramFunc) :>>= is -> do
       interpret . is =<< rApiMethodLambda name verb apiResourceId lbdProgramFunc
 
+    (RCustomResourceLambda name lbdProgramFunc) :>>= is -> do
+      interpret . is =<< rCustomResourceLambda name lbdProgramFunc
 
     Return _ ->
       return def
@@ -117,4 +121,15 @@ interpret program =  do
       return newLambdaId
 
 
+    rCustomResourceLambda name lbdProgramFunc = do
+
+      let newCustom = Custom newLambdaId
+          (newBucketId, cfConfigModifier) = insertCustom newCustom
+          newLambda = CfCustomLambda name lbdProgramFunc
+          newLambdaId = LambdaId $ hash newLambda
+
+      lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
+      cfConfig %= cfConfigModifier
+
+      return newLambdaId
 

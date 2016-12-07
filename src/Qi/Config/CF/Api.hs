@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
-module Qi.Config.CF.Api (toResources) where
+module Qi.Config.CF.Api (toResources, toOutputs) where
 
 import           Data.Aeson                     (Value (Bool), object)
 import qualified Data.ByteString.Lazy           as LBS
@@ -255,5 +255,25 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                       , ("method.response.header.Access-Control-Allow-Origin", "'*'")
                       ]
 
+
+toOutputs config =
+  Outputs . map toApiOutput $ getAllApis config
+
+  where
+
+    toApiOutput (_, api) =
+      output (T.concat [apiResName, "URL"])
+        apiUrl
+        & description ?~ "RestApi URL"
+
+      where
+        -- https://{restapi_id}.execute-api.{region}.amazonaws.com/{stage_name}/
+        apiUrl = Join "" [
+            "https://"
+          , Ref apiResName
+          , ".execute-api.us-east-1.amazonaws.com/v1"
+          ]
+
+        apiResName = getApiCFResourceName api
 
 

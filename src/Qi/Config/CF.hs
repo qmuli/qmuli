@@ -13,6 +13,7 @@ import           Stratosphere         hiding (name)
 
 import           Qi.Config.AWS
 import qualified Qi.Config.CF.Api     as Api
+import qualified Qi.Config.CF.CF      as CF
 import qualified Qi.Config.CF.DDB     as DDB
 import qualified Qi.Config.CF.Lambda  as Lambda
 import qualified Qi.Config.CF.Role    as Role
@@ -27,16 +28,23 @@ render config = encodeTemplate $
     (toResources config)
     & description ?~ "Example"
     & formatVersion ?~ "2010-09-09"
+    & outputs ?~ toOutputs config
 
 toResources
   :: Config
   -> Resources
 toResources config = mconcat [
-      S3.toResources config
-    , Role.toResources config
-    , Lambda.toResources config
-    , Api.toResources config
-    , DDB.toResources config
-    ]
+    S3.toResources config
+  , Role.toResources config
+  , Lambda.toResources config
+  , Api.toResources config
+  , DDB.toResources config
+  , CF.toResources config
+  ]
 
-
+toOutputs
+  :: Config
+  -> Outputs
+toOutputs config = mconcat [
+     Api.toOutputs config
+  ]

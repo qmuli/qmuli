@@ -12,6 +12,7 @@ import           Data.Text                   (Text)
 import           Stratosphere
 
 import           Qi.Config.AWS.Api           (ApiEvent)
+import           Qi.Config.AWS.CF            (CfEvent)
 import           Qi.Config.AWS.S3            (S3Event)
 import           Qi.Config.Identifier
 import           Qi.Program.Lambda.Interface (LambdaProgram)
@@ -19,10 +20,16 @@ import           Qi.Program.Lambda.Interface (LambdaProgram)
 data Lambda = S3BucketLambda {
     _lbdName                  :: Text
   , _lbdS3BucketLambdaProgram :: S3Event -> LambdaProgram ()
-  } | ApiLambda {
+  }
+  | ApiLambda {
     _lbdName                   :: Text
   , _lbdApiMethodLambdaProgram :: ApiEvent -> LambdaProgram ()
-  } deriving Show
+  }
+  | CfCustomLambda {
+    _lbdName                  :: Text
+  , _lbdCFCustomLambdaProgram :: CfEvent -> LambdaProgram ()
+  }
+  deriving Show
 
 makeLenses ''Lambda
 

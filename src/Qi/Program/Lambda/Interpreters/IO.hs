@@ -13,6 +13,7 @@ import           Control.Monad.Trans.Class    (lift)
 import           Control.Monad.Trans.Reader   (ReaderT, ask, runReaderT)
 import           Control.Monad.Trans.Resource (ResourceT)
 import           Data.Aeson                   (Value (..), encode, object)
+import           Data.ByteString.Lazy         (ByteString)
 import qualified Data.ByteString.Lazy         as LBS
 import qualified Data.Conduit                 as C
 import           Data.Conduit.Binary          (sinkLbs)
@@ -20,9 +21,10 @@ import           Data.Default                 (def)
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import qualified Data.Text.IO                 as T
-import           Network.AWS                  hiding (send)
+import           Network.AWS                  hiding (Request, Response, send)
 import           Network.AWS.DynamoDB         as A
 import qualified Network.AWS.S3               as A
+import           Network.HTTP.Client
 import           System.IO                    (stdout)
 
 import           Qi.Amazonka                  (currentRegion)
@@ -53,6 +55,14 @@ run program config = do
     interpret program = do
       case view program of
 
+-- Http
+        (Http request ms) :>>= is -> do
+          interpret . is =<< http request ms
+
+-- Amazonka
+        (AmazonkaSend cmd) :>>= is -> do
+          interpret . is =<< amazonkaSend cmd
+
 -- S3
         (GetS3ObjectContent s3Obj) :>>= is -> do
           interpret . is =<< getS3ObjectContent s3Obj
@@ -77,8 +87,8 @@ run program config = do
           interpret . is =<< deleteDdbRecord ddbTableId key
 
 -- Util
-        (Respond status content) :>>= is -> do
-          respond status content -- final output, no more program instructions
+        (Output content) :>>= is -> do
+          output content -- final output, no more program instructions
 
         Return _ ->
           return def
@@ -87,11 +97,27 @@ run program config = do
         {- say :: Show a => Text -> a -> QiAWS () -}
         {- say msg = liftIO . T.putStrLn . mappend msg . T.pack . show -}
 
+-- Http
+
+        http
+          :: Request
+          -> ManagerSettings
+          -> QiAWS (Response ByteString)
+        http request ms = liftIO $ do
+          manager <- newManager ms
+          httpLbs request manager
+
+-- Amazonka
+        amazonkaSend
+          :: (AWSRequest a)
+          => a
+          -> QiAWS (Rs a)
+        amazonkaSend = send
 
 -- S3
         getS3ObjectContent
           :: S3Object
-          -> QiAWS LBS.ByteString
+          -> QiAWS ByteString
         getS3ObjectContent s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key objKey} = do
           {- putStrLn $ "GetS3ObjectContent: " ++ show s3Obj -}
           {- config <- lift ask -}
@@ -109,7 +135,7 @@ run program config = do
 
         putS3ObjectContent
           :: S3Object
-          -> LBS.ByteString
+          -> ByteString
           -> QiAWS ()
         putS3ObjectContent s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key objKey} content = do
           {- putStrLn $ "PutS3ObjectContent: " ++ show s3Obj -}
@@ -182,15 +208,11 @@ run program config = do
 
 
 -- Util
-        respond
-          :: Int
-          -> Value
+        output
+          :: ByteString
           -> QiAWS ()
-        respond status content =
-          liftIO . LBS.putStr . encode $ object [
-              ("status", Number $ fromIntegral status)
-            , ("body", content)
-            ]
+        output content =
+          liftIO $ LBS.putStr content
 
 
 

@@ -31,10 +31,12 @@ dependencies:
   - lens
   - stratosphere
   - amazonka
-  - amazonka-core
-  - amazonka-s3
   - amazonka-cloudformation
+  - amazonka-cognito-identity
+  - amazonka-cognito-idp
+  - amazonka-core
   - amazonka-dynamodb
+  - amazonka-s3
   - conduit
   - conduit-extra
   - resourcet
@@ -43,6 +45,9 @@ dependencies:
   - heredoc
   - system-extra
   - process
+  - http-client
+  - http-client-tls
+  - either
   # - groundhog
   # - groundhog-th
   # - groundhog-sqlite
@@ -50,31 +55,52 @@ dependencies:
 library:
   source-dirs:
     - src
+  exposed-modules:
+    - Qi
+    - Qi.Config.AWS.Api
+    - Qi.Config.AWS.CF
+    - Qi.Config.AWS.DDB
+    - Qi.Config.AWS.Lambda
+    - Qi.Config.AWS.S3
+    - Qi.Config.Identifier
+    - Qi.Program.Lambda.Interface
+    - Qi.Program.Config.Interface
+    - Qi.Util
+    - Qi.Util.Api
+    - Qi.Util.Cognito
+    - Qi.Util.CustomCFResource
   ghc-options: -Wall
 
 executables:
-  simple-s3-copy:
+  qmuli-simple-s3-copy:
     main: Main.hs
     source-dirs: examples/simple-s3-copy/src
     dependencies:
       - base >= 4.8 && < 5
       - qmuli
     ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-  apigw-lambda-s3:
+  qmuli-apigw-lambda-s3:
     main: Main.hs
     source-dirs: examples/apigw-lambda-s3/src
     dependencies:
       - base >= 4.8 && < 5
       - qmuli
     ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-  apigw-lambda-dynamodb:
+  qmuli-apigw-lambda-dynamodb:
     main: Main.hs
     source-dirs: examples/apigw-lambda-dynamodb/src
     dependencies:
       - base >= 4.8 && < 5
       - qmuli
     ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-  # apigw-lambda-rds:
+  qmuli-cognito:
+    main: Main.hs
+    source-dirs: examples/cognito/src
+    dependencies:
+      - base >= 4.8 && < 5
+      - qmuli
+    ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  # qmuli-apigw-lambda-rds:
     # main: Main.hs
     # source-dirs: examples/apigw-lambda-rds/src
     # dependencies:
@@ -96,3 +122,5 @@ tests:
       - stratosphere
       - tasty
       - tasty-hspec
+      - heredoc
+        
