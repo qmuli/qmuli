@@ -66,38 +66,36 @@ and behavior) in a single file:
 
 ```haskell
 main :: IO ()
-main =
-  "simple-s3-copy" `withConfig` config
+main = withConfig config
+  where
+    config :: ConfigProgram ()
+    config = do
+      -- create an "input" s3 bucket
+      incoming <- s3Bucket "incoming"
 
-    where
-      config :: ConfigProgram ()
-      config = do
-        -- create an "input" s3 bucket
-        incoming <- s3Bucket "incoming"
+      -- create an "output" s3 bucket
+      outgoing <- s3Bucket "outgoing"
 
-        -- create an "output" s3 bucket
-        outgoing <- s3Bucket "outgoing"
+      -- create a lambda, which will copy an s3 object from "incoming" to "outgoing" buckets
+      -- upon an S3 "Put" event.
+      -- Attach the lambda to the "incoming" bucket such way so each time a file is uploaded to
+      -- the bucket, the lambda is called with the information about the newly uploaded file.
+      void $ s3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing)
 
-        -- create a lambda, which will copy an s3 object from "incoming" to "outgoing" buckets
-        -- upon an S3 "Put" event.
-        -- Attach the lambda to the "incoming" bucket such way so each time a file is uploaded to
-        -- the bucket, the lambda is called with the information about the newly uploaded file.
-        void $ s3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing)
+    copyContentsLambda
+      :: S3BucketId
+      -> S3Event
+      -> LambdaProgram ()
+    copyContentsLambda sinkBucketId event = do
 
-      copyContentsLambda
-        :: S3BucketId
-        -> S3Event
-        -> LambdaProgram ()
-      copyContentsLambda sinkBucketId event = do
+      let incomingS3Obj = event ^. s3eObject
+          outgoingS3Obj = s3oBucketId .~ sinkBucketId $ incomingS3Obj
 
-        let incomingS3Obj = event ^. s3eObject
-            outgoingS3Obj = s3oBucketId .~ sinkBucketId $ incomingS3Obj
-            
-        -- get the content of the newly uploaded file
-        content <- getS3ObjectContent incomingS3Obj
+      -- get the content of the newly uploaded file
+      content <- getS3ObjectContent incomingS3Obj
 
-        -- write the content into a new file in the "output" bucket
-        putS3ObjectContent outgoingS3Obj content
+      -- write the content into a new file in the "output" bucket
+      putS3ObjectContent outgoingS3Obj content
 ```
 
 Compiling this qmulus results in a multi-purpose executable binary, which can be used as a CLI tool for management tasks like provisioning
@@ -108,8 +106,9 @@ Note: see more involved [DynamoDB backed RESTful API example](https://github.com
 Getting started
 ---------------
 
-Thanks to [the recent addition of a dockerized Lambda build](https://github.com/qmuli/qmuli/pull/5/commits), a qmulus **now does not need** to be built on an Amazon Linux AMI in order to be compatible with running it on a lambda.
-One only needs a system with stack and docker installed in order to build everything necessary for the successful deploy.
+Thanks to [the recent addition of a dockerized Lambda build](https://github.com/qmuli/qmuli/pull/5/commits), a qmulus **now does not need** to be 
+built on an Amazon Linux AMI in order to be compatible with running it on a lambda. One only needs a system with `stack` and `docker` installed in 
+order to build everything necessary for a successful deployment.
 
 
 ###Clone and build the library and examples
@@ -122,7 +121,7 @@ stack install
 ###Running an example
 The above example is available as the "simple-s3-copy" qmulus.
 
-The `simple-s3-copy <my-unique-name> cf deploy` command does the following:
+The `simple-s3-copy <my-globally-unique-name> cf deploy` command does the following:
 
 - generates the CloudFormation (CF) json template
 - packages/zips up the executable to be used by lambda
@@ -130,14 +129,14 @@ The `simple-s3-copy <my-unique-name> cf deploy` command does the following:
 
 After that is deployed, just create a new CF stack
 
-`simple-s3-copy <same-unique-name-as-above> cf create`
+`simple-s3-copy <same-globally-unique-name-as-above> cf create`
 
 And voila, you should now have the example deployed and working.
 Try uploading a small file into the 'incoming' bucket, you should see the same file copied automatically to the 'outgoing' bucket.
 
 To destroy a stack use the following command
 
-`simple-s3-copy <same-unique-name-as-above> cf destroy`
+`simple-s3-copy <same-globally-unique-name-as-above> cf destroy`
 
 
 Future work
