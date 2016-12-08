@@ -7,8 +7,8 @@ module Main where
 
 import           Control.Lens
 import           Control.Monad               (void)
-
 import           Data.Text                   (pack)
+
 import           Qi                          (withConfig)
 import           Qi.Config.AWS.S3            (S3Event, s3Object, s3eObject,
                                               s3oBucketId, s3oKey)

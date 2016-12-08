@@ -18,7 +18,8 @@ import           Qi.Config.Identifier
 
 
 data RequestParams = RequestParams {
-    _rpPath :: HashMap Text Value
+    _rpPath    :: HashMap Text Value
+  , _rpHeaders :: HashMap Text Text
   } deriving Show
 
 data RequestBody =
@@ -33,12 +34,15 @@ data ApiEvent = ApiEvent {
   } deriving Show
 
 
-type ApiDeps = HashMap (Either ApiId ApiResourceId) [ApiResourceId]
+type ApiAuthorizerDeps = HashMap ApiId [ApiAuthorizerId]
+type ApiResourceDeps = HashMap (Either ApiId ApiResourceId) [ApiResourceId]
 
 data ApiConfig = ApiConfig {
-    _acApis         :: HashMap ApiId Api
-  , _acApiResources :: HashMap ApiResourceId ApiResource
-  , _acApiDeps      :: ApiDeps
+    _acApis              :: HashMap ApiId Api
+  , _acApiResources      :: HashMap ApiResourceId ApiResource
+  , _acApiResourceDeps   :: ApiResourceDeps
+  , _acApiAuthorizers    :: HashMap ApiAuthorizerId ApiAuthorizer
+  , _acApiAuthorizerDeps :: ApiAuthorizerDeps
   } deriving Show
 
 data Api = Api {
@@ -65,10 +69,16 @@ data ApiVerb
   deriving Show
 
 data ApiMethodConfig = ApiMethodConfig {
-    _verb  :: ApiVerb
-  , _lbdId :: LambdaId
+    amcVerb   :: ApiVerb
+  , amcAuthId :: Maybe ApiAuthorizerId
+  , amcLbdId  :: LambdaId
   } deriving Show
 
+data ApiAuthorizer = ApiAuthorizer {
+    _aaName      :: Text
+  , _aaCognitoId :: CustomId
+  , _aaApiId     :: ApiId
+  } deriving Show
 
 data ApiResource = ApiResource {
     _arName          :: Text
@@ -88,35 +98,26 @@ apiResource name parentId =
   }
 
 
+instance Hashable ApiAuthorizer where
+  hashWithSalt s ApiAuthorizer{_aaName} = s `hashWithSalt` (T.concat [_aaName, "ApiAuthorizer"])
+
 -- TODO: hash not only name of the resource but the full hierarchy path from the root Api
 instance Hashable ApiResource where
   hashWithSalt s ApiResource{_arName} = s `hashWithSalt` (T.concat [_arName, "ApiResource"])
 
 
-instance Monoid ApiConfig where
-  ApiConfig {
-      _acApis = as1
-    , _acApiResources = ars1
-    } `mappend`
-    ApiConfig {
-      _acApis = as2
-    , _acApiResources = ars2
-    } =
-    ApiConfig {
-      _acApis = as1 `mappend` as2
-    , _acApiResources = ars1 `mappend` ars2
-    }
-  mempty = def
-
 instance Default ApiConfig where
   def = ApiConfig {
-    _acApis         = SHM.empty
-  , _acApiResources = SHM.empty
-  , _acApiDeps      = SHM.empty
+    _acApis               = SHM.empty
+  , _acApiAuthorizers     = SHM.empty
+  , _acApiResources       = SHM.empty
+  , _acApiAuthorizerDeps  = SHM.empty
+  , _acApiResourceDeps    = SHM.empty
   }
 
 makeLenses ''ApiConfig
 makeLenses ''Api
+makeLenses ''ApiAuthorizer
 makeLenses ''ApiResource
 makeLenses ''ApiEvent
 makeLenses ''RequestParams

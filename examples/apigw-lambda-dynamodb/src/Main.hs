@@ -60,19 +60,19 @@ main = withConfig config
         CI.apiResource "things" api >>= \things -> do
           -- create a GET method that is attached to the "scan" lambda
           CI.apiMethodLambda "scanThings" Get
-            things $ scan thingsTable
+            things Nothing $ scan thingsTable
 
           -- create a "thingId" slug resource under "things"
           CI.apiResource "{thingId}" things >>= \thing -> do
 
             CI.apiMethodLambda "getThing" Get
-              thing $ get thingsTable
+              thing Nothing $ get thingsTable
 
             CI.apiMethodLambda "putThing" Post
-              thing $ put thingsTable
+              thing Nothing $ put thingsTable
 
             CI.apiMethodLambda "deleteThing" Delete
-              thing $ delete thingsTable
+              thing Nothing $ delete thingsTable
 
       return ()
 

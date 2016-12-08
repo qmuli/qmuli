@@ -34,6 +34,24 @@ getApiById aid config =
     aMap = config^.apiConfig.acApis
 
 
+getApiAuthorizerCFResourceName
+  :: ApiAuthorizer
+  -> Text
+getApiAuthorizerCFResourceName auth = T.concat [makeAlphaNumeric $ auth^.aaName, "ApiAuthorizer"]
+
+
+getApiAuthorizerById
+  :: ApiAuthorizerId
+  -> Config
+  -> ApiAuthorizer
+getApiAuthorizerById aaid config =
+  case SHM.lookup aaid aaMap of
+    Just ar -> ar
+    Nothing -> error $ "Could not reference api resource with id: " ++ show aaid
+  where
+    aaMap = config^.apiConfig.acApiAuthorizers
+
+
 getApiResourceCFResourceName
   :: ApiResource
   -> Text
@@ -47,7 +65,7 @@ getApiResourceById
 getApiResourceById arid config =
   case SHM.lookup arid arMap of
     Just ar -> ar
-    Nothing  -> error $ "Could not reference api resource with id: " ++ show arid
+    Nothing -> error $ "Could not reference api resource with id: " ++ show arid
   where
     arMap = config^.apiConfig.acApiResources
 
@@ -70,33 +88,43 @@ getAllApis
   -> [(ApiId, Api)]
 getAllApis config = SHM.toList $ config^.apiConfig.acApis
 
-
+getApiAuthorizers
+  :: ApiId
+  -> Config
+  -> [ApiAuthorizerId]
+getApiAuthorizers aid config = SHM.lookupDefault [] aid $ config^.apiConfig.acApiAuthorizerDeps
 
 getApiChildren
   :: Either ApiId ApiResourceId
   -> Config
   -> [ApiResourceId]
-getApiChildren rid config = SHM.lookupDefault [] rid $ config^.apiConfig.acApiDeps
+getApiChildren rid config = SHM.lookupDefault [] rid $ config^.apiConfig.acApiResourceDeps
 
 
 insertApi
   :: Api
   -> (ApiId, (ApiConfig -> ApiConfig))
-insertApi api = (aid, insertIdToApi . insertIdToApiDeps)
+insertApi api = (aid, insertIdToApi . insertIdToApiResourceDeps . insertIdToApiAuthorizerDeps)
   where
     insertIdToApi = acApis %~ SHM.insert aid api
-    insertIdToApiDeps = acApiDeps %~ SHM.insert (Left aid) []
-
+    insertIdToApiResourceDeps = acApiResourceDeps %~ SHM.insert (Left aid) []
+    insertIdToApiAuthorizerDeps = acApiAuthorizerDeps %~ SHM.insert aid []
     aid = ApiId $ hash api
-    aname = api ^. aName
+
+insertApiAuthorizer
+  :: ApiAuthorizer
+  -> (ApiAuthorizerId, (ApiConfig -> ApiConfig))
+insertApiAuthorizer apiAuthorizer = (aaid, insertIdToApiAuthorizer . insertIdToApiAuthorizerDeps)
+  where
+    insertIdToApiAuthorizer = acApiAuthorizers %~ SHM.insert aaid apiAuthorizer
+    insertIdToApiAuthorizerDeps = acApiAuthorizerDeps %~ SHM.unionWith (++) (SHM.singleton (apiAuthorizer^.aaApiId) [aaid])
+    aaid = ApiAuthorizerId $ hash apiAuthorizer
 
 insertApiResource
   :: ApiResource
   -> (ApiResourceId, (ApiConfig -> ApiConfig))
-insertApiResource apiResource = (arid, insertIdToApiResource . insertIdToApiDeps)
+insertApiResource apiResource = (arid, insertIdToApiResource . insertIdToApiResourceDeps)
   where
     insertIdToApiResource = acApiResources %~ SHM.insert arid apiResource
-    insertIdToApiDeps = acApiDeps %~ SHM.unionWith (++) (SHM.singleton (apiResource^.arParent) [arid])
-
+    insertIdToApiResourceDeps = acApiResourceDeps %~ SHM.unionWith (++) (SHM.singleton (apiResource^.arParent) [arid])
     arid = ApiResourceId $ hash apiResource
-    arname = apiResource^.arName

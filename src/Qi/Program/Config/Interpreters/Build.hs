@@ -45,14 +45,17 @@ interpret program =  do
     (RApi name) :>>= is -> do
       interpret . is =<< rApi name
 
+    (RApiAuthorizer name cognitoId apiId) :>>= is -> do
+      interpret . is =<< rApiAuthorizer name cognitoId apiId
+
     (RApiResource name parentId) :>>= is -> do
       interpret . is =<< rApiResource name parentId
 
-    (RApiMethodLambda name verb apiResourceId lbdProgramFunc) :>>= is -> do
-      interpret . is =<< rApiMethodLambda name verb apiResourceId lbdProgramFunc
+    (RApiMethodLambda name verb apiResourceId auth lbdProgramFunc) :>>= is -> do
+      interpret . is =<< rApiMethodLambda name verb apiResourceId auth lbdProgramFunc
 
-    (RCustomResourceLambda name lbdProgramFunc) :>>= is -> do
-      interpret . is =<< rCustomResourceLambda name lbdProgramFunc
+    (RCustomResource name lbdProgramFunc) :>>= is -> do
+      interpret . is =<< rCustomResource name lbdProgramFunc
 
     Return _ ->
       return def
@@ -97,6 +100,15 @@ interpret program =  do
       apiConfig %= apiConfigModifier
       return newApiId
 
+
+    rApiAuthorizer name cognitoId apiId = do
+      let newApiAuthorizer = ApiAuthorizer name cognitoId apiId
+          (newApiAuthorizerId, apiConfigModifier) = insertApiAuthorizer newApiAuthorizer
+
+      apiConfig %= apiConfigModifier
+      return newApiAuthorizerId
+
+
     rApiResource
       :: ParentResource a
       => Text
@@ -110,26 +122,32 @@ interpret program =  do
       return newApiResourceId
 
 
-    rApiMethodLambda name verb apiResourceId lbdProgramFunc = do
+    rApiMethodLambda name verb apiResourceId auth lbdProgramFunc = do
 
       let newLambda = ApiLambda name lbdProgramFunc
           newLambdaId = LambdaId $ hash newLambda
-          modifyApiResource = arMethodConfigs %~ ((ApiMethodConfig verb newLambdaId):)
+          modifyApiResource = arMethodConfigs %~ (apiMethodConfig:)
+          apiMethodConfig = ApiMethodConfig {
+              amcVerb = verb
+            , amcAuthId = auth
+            , amcLbdId = newLambdaId
+            }
 
       apiConfig.acApiResources %= SHM.adjust modifyApiResource apiResourceId
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
       return newLambdaId
 
 
-    rCustomResourceLambda name lbdProgramFunc = do
+    rCustomResource name lbdProgramFunc = do
 
       let newCustom = Custom newLambdaId
-          (newBucketId, cfConfigModifier) = insertCustom newCustom
+          (newCustomId, cfConfigModifier) = insertCustom newCustom
+
           newLambda = CfCustomLambda name lbdProgramFunc
           newLambdaId = LambdaId $ hash newLambda
 
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
       cfConfig %= cfConfigModifier
 
-      return newLambdaId
+      return newCustomId
 

@@ -1,8 +1,9 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
 
-module Qi.Config.CF.CF (toResources) where
+module Qi.Config.CF.CF (toResources, toOutputs) where
 
 import           Data.Aeson                     (Value (Array), object)
 import qualified Data.ByteString.Lazy           as LBS
@@ -28,4 +29,29 @@ toResources config = Resources . map toCustomRes $ getAllCustoms config
       where
         resName = getCustomCFResourceName custom config
         lbdResName = getLambdaCFResourceNameFromId (custom^.cLbdId) config
+
+
+toOutputs config =
+  Outputs . foldMap toCustomOutputs $ getAllCustoms config
+
+  where
+
+    toCustomOutputs custom = [
+        output (T.concat [customResName, "UserPoolId"])
+          upid
+          & description ?~ "UserPoolId"
+      , output (T.concat [customResName, "UserPoolClientId"])
+          upcid
+          & description ?~ "UserPoolClientId"
+      , output (T.concat [customResName, "IdentityPoolId"])
+          ipid
+          & description ?~ "IdentityPoolId"
+      ]
+
+      where
+        customResName = getCustomCFResourceName custom config
+
+        upid  = GetAtt customResName "UserPoolId"
+        upcid = GetAtt customResName "UserPoolClientId"
+        ipid  = GetAtt customResName "IdentityPoolId"
 
