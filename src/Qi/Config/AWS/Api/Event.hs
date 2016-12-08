@@ -22,7 +22,8 @@ parse (Object e) _ = ApiEvent <$> paramsParser <*> bodyParser
     paramsParser = do
       params  <- e .: "params"
       path    <- params .: "path"
-      return $ RequestParams path
+      headers <- params .: "header"
+      return $ RequestParams path headers
 
     bodyParser = jsonParser <|> plainTextParser <|> pure EmptyBody
     jsonParser = JsonBody <$> e .: "body-json"

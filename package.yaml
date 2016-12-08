@@ -48,6 +48,7 @@ dependencies:
   - http-client
   - http-client-tls
   - either
+  - jwt
   # - groundhog
   # - groundhog-th
   # - groundhog-sqlite
@@ -72,27 +73,27 @@ library:
   ghc-options: -Wall
 
 executables:
-  qmuli-simple-s3-copy:
-    main: Main.hs
-    source-dirs: examples/simple-s3-copy/src
-    dependencies:
-      - base >= 4.8 && < 5
-      - qmuli
-    ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-  qmuli-apigw-lambda-s3:
-    main: Main.hs
-    source-dirs: examples/apigw-lambda-s3/src
-    dependencies:
-      - base >= 4.8 && < 5
-      - qmuli
-    ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-  qmuli-apigw-lambda-dynamodb:
-    main: Main.hs
-    source-dirs: examples/apigw-lambda-dynamodb/src
-    dependencies:
-      - base >= 4.8 && < 5
-      - qmuli
-    ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  # qmuli-simple-s3-copy:
+    # main: Main.hs
+    # source-dirs: examples/simple-s3-copy/src
+    # dependencies:
+      # - base >= 4.8 && < 5
+      # - qmuli
+    # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  # qmuli-apigw-lambda-s3:
+    # main: Main.hs
+    # source-dirs: examples/apigw-lambda-s3/src
+    # dependencies:
+      # - base >= 4.8 && < 5
+      # - qmuli
+    # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  # qmuli-apigw-lambda-dynamodb:
+    # main: Main.hs
+    # source-dirs: examples/apigw-lambda-dynamodb/src
+    # dependencies:
+      # - base >= 4.8 && < 5
+      # - qmuli
+    # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
   qmuli-cognito:
     main: Main.hs
     source-dirs: examples/cognito/src

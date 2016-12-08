@@ -13,13 +13,14 @@ import qualified Data.Text                      as T
 import           Qi.Config.AWS
 import           Qi.Config.AWS.Api
 import           Qi.Config.AWS.Api.Accessors
+import           Qi.Config.AWS.CF.Accessors
 import           Qi.Config.AWS.Lambda.Accessors
 import           Qi.Config.Identifier
 import           Stratosphere                   hiding (Delete, name)
 import           Text.Heredoc
 
 
-toResources config = Resources $ foldMap toStagedApiResources $ getAllApis config
+toResources config = Resources . foldMap toStagedApiResources $ getAllApis config
 
   where
     jsonContentType = "application/json"
@@ -27,7 +28,9 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
     toStagedApiResources :: (ApiId, Api) -> [Resource]
     toStagedApiResources (aid, api) = deploymentResource:apiResources
       where
-        apiResources = [ apiResource ] ++ foldMap toApiChildResources (getApiChildren (Left aid) config)
+        apiResources = [ apiResource ]
+          ++ map toApiAuthorizers (getApiAuthorizers aid config)
+          ++ foldMap toApiChildResources (getApiChildren (Left aid) config)
 
         apiResName = getApiCFResourceName api
 
@@ -51,6 +54,37 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
           where
             name = getApiStageCFResourceName api
             deps = map (^. resName) apiResources
+
+
+        toApiAuthorizers :: ApiAuthorizerId -> Resource
+        toApiAuthorizers aaid = (
+          resource name $
+            ApiGatewayAuthorizerProperties $
+            apiGatewayAuthorizer
+              & agaProviderARNs ?~ [userPoolArn]
+              & agaRestApiId ?~ (Ref apiResName)
+              & agaName ?~ Literal (auth^.aaName)
+              & agaType ?~ "COGNITO_USER_POOLS"
+              & agaIdentitySource ?~ "method.request.header.Authorization"
+          )
+          {- & dependsOn ?~ [cognitoResName] -}
+
+          where
+            userPoolArn = Join "" [
+                "arn:aws:cognito-idp:"
+              , Ref "AWS::Region"
+              , ":"
+              , Ref "AWS::AccountId"
+              , ":userpool/"
+              , userPoolPhysicalId
+              ]
+            userPoolPhysicalId = GetAtt cognitoResName "UserPoolId"
+
+            name = getApiAuthorizerCFResourceName $ getApiAuthorizerById aaid config
+            auth = getApiAuthorizerById aaid config
+            cognito = getCustomById (auth^.aaCognitoId) config
+            cognitoResName = getCustomCFResourceName cognito config
+
 
 
         toApiChildResources :: ApiResourceId -> [Resource]
@@ -146,12 +180,12 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                           ]
 
 
-            toMethodResource ApiMethodConfig{_verb, _lbdId} = (
+            toMethodResource ApiMethodConfig{amcVerb, amcLbdId, amcAuthId} = (
                 resource name $
                   ApiGatewayMethodProperties $
+                  specAuth $
                   apiGatewayMethod
-                    (Literal $ verb _verb)
-                    & agmeAuthorizationType ?~ Literal NONE
+                    (Literal $ verb amcVerb)
                     & agmeResourceId ?~ (Ref apirResName)
                     & agmeRestApiId ?~ (Ref apiResName)
                     & agmeIntegration ?~ integration
@@ -163,7 +197,20 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                   ]
 
               where
-                name = getApiMethodCFResourceName apir _verb
+                specAuth res = case amcAuthId of
+                  Nothing ->
+                    res
+                    & agmeAuthorizationType ?~ Literal NONE
+
+                  Just authId ->
+                    let
+                      authResName = getApiAuthorizerCFResourceName $ getApiAuthorizerById authId config
+                    in
+                    res
+                    & agmeAuthorizationType ?~ Literal COGNITO_USER_POOLS
+                    & agmeAuthorizerId ?~ Ref authResName
+
+                name = getApiMethodCFResourceName apir amcVerb
 
                 verb Get     = GET
                 verb Post    = POST
@@ -175,6 +222,7 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                 -- these are all possible response types (statuses) for this method
                 methodResponses = map methodResponse ["200", "400", "404", "500"]
                   where
+
                     methodResponse status = apiGatewayMethodMethodResponse
                       & agmmrResponseParameters ?~ responseParams
                       & agmmrStatusCode ?~ status
@@ -186,8 +234,8 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                       , ("method.response.header.Access-Control-Allow-Origin", Bool False)
                       ]
 
-                lbdResName = getLambdaCFResourceNameFromId _lbdId config
-                lbdPermResName = getLambdaPermissionCFResourceName $ getLambdaById _lbdId config
+                lbdResName = getLambdaCFResourceNameFromId amcLbdId config
+                lbdPermResName = getLambdaPermissionCFResourceName $ getLambdaById amcLbdId config
 
                 integration =
                   apiGatewayMethodIntegration
@@ -209,7 +257,7 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                     requestTemplates =
                       -- TODO: all the same for now. Need to figure out how it should differ for different verbs
                       [ (jsonContentType, postTemplate) ]
-                      {- case _verb of -}
+                      {- case amcVerb of -}
                         {- Get  -> [ (jsonContentType, postTemplate) ] -}
                         {- Post -> [ (jsonContentType, postTemplate) ] -}
 
@@ -220,7 +268,7 @@ toResources config = Resources $ foldMap toStagedApiResources $ getAllApis confi
                     passthroughBehavior =
                       -- TODO: all the same for now. Need to figure out how it should differ for different verbs
                       Literal WHEN_NO_TEMPLATES
-                      {- case _verb of -}
+                      {- case amcVerb of -}
                         {- Get  -> WHEN_NO_TEMPLATES -}
                         {- Post -> WHEN_NO_TEMPLATES -}
 

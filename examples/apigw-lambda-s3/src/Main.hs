@@ -45,12 +45,14 @@ main = withConfig config
             "createThing"
             Post
             apiResourceId
+            Nothing
             $ writeContentsLambda bucketId
 
           apiMethodLambda
             "viewThing"
             Get
             apiResourceId
+            Nothing
             $ readContentsLambda bucketId
 
       return ()

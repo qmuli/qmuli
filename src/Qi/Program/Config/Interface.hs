@@ -43,6 +43,12 @@ data ConfigInstruction a where
     :: Text
     -> ConfigInstruction ApiId
 
+  RApiAuthorizer
+    :: Text
+    -> CustomId
+    -> ApiId
+    -> ConfigInstruction ApiAuthorizerId
+
   RApiResource
     :: ParentResource a
     => Text
@@ -53,13 +59,14 @@ data ConfigInstruction a where
     :: Text
     -> ApiVerb
     -> ApiResourceId
+    -> Maybe ApiAuthorizerId
     -> (ApiEvent -> LambdaProgram ())
     -> ConfigInstruction LambdaId
 
-  RCustomResourceLambda
+  RCustomResource
     :: Text
     -> (CfEvent -> LambdaProgram ())
-    -> ConfigInstruction LambdaId
+    -> ConfigInstruction CustomId
 
 
 s3Bucket = singleton . RS3Bucket
@@ -70,6 +77,9 @@ ddbTable name hashAttrDef rangeAttrDef = singleton . RDdbTable name hashAttrDef 
 
 api = singleton . RApi
 
+apiAuthorizer name cognitoId =
+  singleton . RApiAuthorizer name cognitoId
+
 apiResource
   :: ParentResource a
   => Text
@@ -77,7 +87,8 @@ apiResource
   -> ConfigProgram ApiResourceId
 apiResource name = singleton . RApiResource name
 
-apiMethodLambda name verb resourceId = singleton . RApiMethodLambda name verb resourceId
+apiMethodLambda name verb resourceId auth =
+  singleton . RApiMethodLambda name verb resourceId auth
 
-customResourceLambda name = singleton . RCustomResourceLambda name
+customResource name = singleton . RCustomResource name
 

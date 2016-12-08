@@ -46,5 +46,6 @@ toOutputs
   :: Config
   -> Outputs
 toOutputs config = mconcat [
-     Api.toOutputs config
+    Api.toOutputs config
+  , CF.toOutputs config
   ]

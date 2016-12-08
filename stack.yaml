@@ -9,8 +9,8 @@ resolver: nightly-2016-12-06
 packages:
 - '.'
 - location:
-    git: https://github.com/frontrowed/stratosphere.git
-    commit: d2074bc21dc42477f9da51e26d9bb556bfe47cc5
+    git: https://github.com/ababkin/stratosphere.git
+    commit: b5b2943a2b7c1267102b86ab48bcf3c931d0f0c3
 - 'system-extra'
 # - location:
     # git: https://github.com/lykahb/groundhog.git

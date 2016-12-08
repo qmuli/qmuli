@@ -9,9 +9,10 @@ import           Control.Lens                                             hiding
                                                                            (view,
                                                                            (.=))
 import           Control.Monad.Trans.Either                               (EitherT (..))
-import           Data.Aeson
+import           Data.Aeson                                               hiding (Result)
 import qualified Data.ByteString.Char8                                    as BS
 import qualified Data.ByteString.Lazy.Char8                               as LBS
+import qualified Data.HashMap.Strict                                      as SHM
 import           Data.Text                                                (Text)
 import qualified Data.Text                                                as T
 import           Network.AWS.CognitoIdentity.CreateIdentityPool
@@ -27,8 +28,6 @@ import           Network.AWS.CognitoIdentityProvider.Types                (Verif
                                                                            uptId)
 
 import           Qi.Config.AWS.CF
-import           Qi.Program.Config.Interface                              (ConfigProgram,
-                                                                           customResourceLambda)
 import           Qi.Program.Lambda.Interface                              (LambdaProgram,
                                                                            amazonkaSend,
                                                                            http,
@@ -47,23 +46,37 @@ cognitoPoolProviderLambda identityPoolName userPoolName userPoolClientName =
 
   where
 
-    createHandler responseTemplate = runEitherT $ do
+    createHandler = runEitherT $ do
       upid <- EitherT tryCreateUserPool
       cid  <- EitherT $ tryCreateUserPoolClient upid
       ipid <- EitherT $ tryCreateIdentityPool upid cid
-      return $ T.concat [upid, "|", ipid]
+      return $ Result {
+          rId = Just $ T.concat [upid, "|", ipid]
+        , rAttrs = SHM.fromList [
+              ("UserPoolId", String upid)
+            , ("UserPoolClientId", String cid)
+            , ("IdentityPoolId", String ipid)
+            ]
+        }
 
 
     -- does nothing for now
-    updateHandler responseTemplate crid = do
-      return $ Right crid
+    updateHandler ids = do
+      return $ Right $ Result {
+          rId = Just ids
+        , rAttrs = SHM.fromList []
+        }
 
 
-    deleteHandler responseTemplate ids = do
+    deleteHandler ids = do
       let [upid, ipid] = T.splitOn "|" ids
       runEitherT $ do
         EitherT $ tryDeleteUserPool upid
         EitherT $ tryDeleteIdentityPool ipid
+      return . Right $ Result {
+          rId = Just ids
+        , rAttrs = SHM.fromList []
+        }
 
 
 
@@ -119,7 +132,7 @@ cognitoPoolProviderLambda identityPoolName userPoolName userPoolClientName =
 
 
     tryDeleteIdentityPool ipid = do
-      -- for some reason no status is returned
+      -- for some reason no status is returned:
       -- https://hackage.haskell.org/package/amazonka-cognito-identity-1.4.4/docs/Network-AWS-CognitoIdentity-DeleteIdentityPool.html
       resp <- amazonkaSend $ deleteIdentityPool ipid
       return $ Right ipid

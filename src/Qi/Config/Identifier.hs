@@ -21,6 +21,10 @@ instance Hashable ApiId where
 instance ParentResource ApiId where
   toParentId = Left
 
+newtype ApiAuthorizerId = ApiAuthorizerId Int deriving (Eq, Show)
+instance Hashable ApiAuthorizerId where
+  s `hashWithSalt` (ApiAuthorizerId identifierHash) = s `hashWithSalt` identifierHash
+
 newtype ApiResourceId = ApiResourceId Int deriving (Eq, Show)
 instance Hashable ApiResourceId where
   s `hashWithSalt` (ApiResourceId identifierHash) = s `hashWithSalt` identifierHash
