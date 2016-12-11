@@ -49,6 +49,7 @@ dependencies:
   - http-client-tls
   - either
   - jwt
+  - lens-aeson
   # - groundhog
   # - groundhog-th
   # - groundhog-sqlite
@@ -64,12 +65,15 @@ library:
     - Qi.Config.AWS.Lambda
     - Qi.Config.AWS.S3
     - Qi.Config.Identifier
+    - Qi.Config.CF
+    - Qi.Config.AWS
     - Qi.Program.Lambda.Interface
     - Qi.Program.Config.Interface
     - Qi.Util
     - Qi.Util.Api
     - Qi.Util.Cognito
     - Qi.Util.CustomCFResource
+    - Qi.Program.Config.Interpreters.Build
   ghc-options: -Wall
 
 executables:

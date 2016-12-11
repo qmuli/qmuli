@@ -1,9 +1,9 @@
 {-# LANGUAGE QuasiQuotes     #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Qi.Deploy.Build(build, buildConfig, Build) where
+module Qi.Deploy.Build(build) where
 
-import           System.Build
+import           System.Build       (stackInDocker, BuildTarget(SimpleTarget))
 import           System.Directory
 import           System.Docker
 import           System.Posix.Files
@@ -12,23 +12,15 @@ import           System.Process
 import           Text.Heredoc       (there)
 
 
-data Build = Build { lambdaSrcDirectory :: FilePath
-                   , lambdaTarget       :: BuildTarget
-                   , finalProgName      :: FilePath
-                   }
+build :: FilePath -> String -> IO FilePath
+build srcDir exeTarget = do
+  let imageName = "ghc-centos:" ++ exeTarget
 
-buildConfig :: FilePath -> String -> Build
-buildConfig srcDir exeTarget = Build srcDir (SimpleTarget exeTarget) "lambda"
-
-build :: Build -> IO FilePath
-build Build{..} = do
-  let (SimpleTarget exeTarget) = lambdaTarget
-      imageName = "ghc-centos:" ++ exeTarget
   buildDocker imageName
   -- build executable with docker
-  exe <- stackInDocker (ImageName imageName) lambdaSrcDirectory lambdaTarget
+  exe <- stackInDocker (ImageName imageName) srcDir (SimpleTarget exeTarget)
   -- pack executable with js shim in .zip file
-  packLambda exe finalProgName
+  packLambda exe "lambda"
   return "lambda.zip"
     where
       buildDocker :: String -> IO ()
@@ -39,6 +31,8 @@ build Build{..} = do
                                                           , groupReadMode, groupExecuteMode
                                                           , otherReadMode, otherExecuteMode
                                                           ]
+
+      deployDir = ".deploy"
 
       packLambda :: FilePath -> FilePath -> IO ()
       packLambda source target = do
