@@ -7,7 +7,6 @@ module Qi.Config.AWS.S3 where
 import           Control.Lens
 import           Data.ByteString      (ByteString)
 import           Data.Default         (Default, def)
-import           Data.Hashable
 import           Data.HashMap.Strict  (HashMap)
 import qualified Data.HashMap.Strict  as SHM
 import           Data.Text            (Text)
@@ -61,21 +60,12 @@ instance Default S3Bucket where
   , _s3bEventConfigs = def
   }
 
-instance Hashable S3Bucket where
-  hashWithSalt s S3Bucket{_s3bName} = s `hashWithSalt` _s3bName
-
 
 data S3BucketIndex = S3BucketIndex {
     _s3idxIdToS3Bucket :: HashMap S3BucketId S3Bucket
   , _s3idxNameToId     :: HashMap Text S3BucketId
   } deriving Show
 
-instance Monoid S3BucketIndex where
-  mappend
-    S3BucketIndex { _s3idxIdToS3Bucket = idxa, _s3idxNameToId = idxb }
-    S3BucketIndex { _s3idxIdToS3Bucket = idxa2, _s3idxNameToId = idxb2 } =
-      S3BucketIndex { _s3idxIdToS3Bucket = idxa `mappend` idxa2, _s3idxNameToId = idxb `mappend` idxb2 }
-  mempty = def
 
 instance Default S3BucketIndex where
   def = S3BucketIndex {
@@ -87,11 +77,6 @@ instance Default S3BucketIndex where
 data S3Config = S3Config {
     _s3Buckets :: S3BucketIndex
   } deriving Show
-
-instance Monoid S3Config where
-  S3Config { _s3Buckets = b1 } `mappend` S3Config { _s3Buckets = b2 } =
-    S3Config { _s3Buckets = b1 `mappend` b2 }
-  mempty = def
 
 instance Default S3Config where
   def = S3Config {

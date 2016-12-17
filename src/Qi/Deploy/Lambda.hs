@@ -11,7 +11,7 @@ import           System.Environment.Executable (splitExecutablePath)
 import           Turtle                        (FilePath, fromString, liftIO,
                                                 sh, toText)
 
-import           Qi.Deploy.Build
+import           Qi.Deploy.Build               (build)
 import qualified Qi.Deploy.S3                  as S3
 
 
@@ -25,9 +25,10 @@ deploy
   -> IO ()
   -- Note: the executable built in the AWS environment using Docker will always be named 'lambda'
 deploy appName = do
+  -- get the current executable filename
   (_, execFilename) <- splitExecutablePath
 
-  lambdaPackagePath <- fromString <$> build (buildConfig "." execFilename)
+  lambdaPackagePath <- fromString <$> build "." execFilename
   sh . liftIO . uploadToS3 . T.unpack $ toTextIgnore lambdaPackagePath
 
   where

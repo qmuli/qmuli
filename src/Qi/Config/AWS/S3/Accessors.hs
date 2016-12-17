@@ -55,14 +55,3 @@ getAllBuckets
   -> [S3Bucket]
 getAllBuckets config = SHM.elems $ config ^. s3Config . s3Buckets . s3idxIdToS3Bucket
 
-
-
-insertBucket
-  :: S3Bucket
-  -> (S3BucketId, (S3Config -> S3Config))
-insertBucket bucket = (bid, insertNameToId . insertIdToS3Bucket)
-  where
-    insertIdToS3Bucket = s3Buckets . s3idxIdToS3Bucket %~ SHM.insert bid bucket
-    insertNameToId = s3Buckets . s3idxNameToId %~ SHM.insert bname bid
-    bid = S3BucketId $ hash bucket
-    bname = bucket ^. s3bName
