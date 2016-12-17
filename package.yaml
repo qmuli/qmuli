@@ -50,6 +50,8 @@ dependencies:
   - either
   - jwt
   - lens-aeson
+  - random
+  - MonadRandom
   # - groundhog
   # - groundhog-th
   # - groundhog-sqlite

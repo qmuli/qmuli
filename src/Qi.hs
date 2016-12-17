@@ -4,6 +4,7 @@
 module Qi where
 
 import           Control.Lens
+import           Control.Monad.Random
 import           Control.Monad.State.Strict           (runState)
 import           Data.Aeson
 import           Data.Aeson.Types
@@ -14,7 +15,7 @@ import qualified Data.HashMap.Strict                  as SHM
 import           Data.Text                            (Text)
 import qualified Data.Text                            as T
 import           System.Environment                   (getArgs, withArgs)
-
+import           System.Random
 
 import           Qi.Config.AWS
 import qualified Qi.Config.AWS.Api.Event              as ApiEvent (parse)
@@ -83,7 +84,7 @@ withNameAndConfig appName configProgram = do
   where
     invalid = not . all (\c -> isLower c || isDigit c || c == '-') . T.unpack
 
-    config = snd . (`runState` def{_namePrefix = appName}) $ CB.interpret configProgram
+    config = snd . (`runState` def{_namePrefix = appName}) . (`evalRandT` (mkStdGen 0)) . CB.unQiConfig $ CB.interpret configProgram
 
     lbdIOMap = SHM.fromList $ map toLbdIOPair $ getAllLambdas config
 

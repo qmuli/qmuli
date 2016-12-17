@@ -1,12 +1,17 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE OverloadedStrings          #-}
+
 
 module Qi.Program.Config.Interpreters.Build where
 
 import           Control.Lens                hiding (view)
 import           Control.Monad.Operational
+import           Control.Monad.Random
+import           Control.Monad.Random.Class  (MonadRandom)
+import           Control.Monad.State.Class   (MonadState)
 import           Control.Monad.State.Strict  (State)
 import           Data.Default                (def)
 import           Data.Hashable               (hash)
@@ -28,9 +33,18 @@ import           Qi.Config.Identifier
 import           Qi.Program.Config.Interface hiding (apiResource)
 
 
+newtype QiConfig a = QiConfig {unQiConfig :: RandT StdGen (State Config) a}
+  deriving (
+      Functor
+    , Applicative
+    , Monad
+    , MonadState Config
+    , MonadRandom
+    )
+
 interpret
   :: ConfigProgram ()
-  -> State Config ()
+  -> QiConfig ()
 interpret program =  do
   case view program of
     (RS3Bucket name) :>>= is -> do
@@ -62,17 +76,19 @@ interpret program =  do
 
   where
     rS3Bucket name = do
+      newS3BucketId <- getRandom
       let newBucket = def & s3bName .~ name
-          (newBucketId, s3ConfigModifier) = insertBucket newBucket
+          insertIdToS3Bucket = s3idxIdToS3Bucket %~ SHM.insert newS3BucketId newBucket
+          insertNameToId = s3idxNameToId %~ SHM.insert name newS3BucketId
 
-      s3Config %= s3ConfigModifier
-      return newBucketId
+      s3Config . s3Buckets %= insertNameToId . insertIdToS3Bucket
+      return newS3BucketId
+
 
     rS3BucketLambda name bucketId lbdProgramFunc = do
 
+      newLambdaId <- getRandom
       let newLambda = S3BucketLambda name lbdProgramFunc
-          newLambdaId = LambdaId $ hash newLambda
-
           modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll newLambdaId):)
 
       s3Config.s3Buckets.s3idxIdToS3Bucket %= SHM.adjust modifyBucket bucketId
@@ -81,31 +97,36 @@ interpret program =  do
 
 
     rDdbTable name hashAttrDef rangeAttrDef provCap = do
+      newDdbTableId <- DdbTableId <$> getRandom
       let newDdbTable = DdbTable {
           _dtName         = name
         , _dtHashAttrDef  = hashAttrDef
         , _dtRangeAttrDef = rangeAttrDef
         , _dtProvCap      = provCap
         }
-          (newDdbTableId, ddbConfigModifier) = insertDdbTable newDdbTable
 
-      ddbConfig %= ddbConfigModifier
+      ddbConfig . dcTables %= SHM.insert newDdbTableId newDdbTable
       return newDdbTableId
 
 
     rApi name = do
+      newApiId <- getRandom
       let newApi = def & aName .~ name
-          (newApiId, apiConfigModifier) = insertApi newApi
+          insertIdToApi = acApis %~ SHM.insert newApiId newApi
+          insertIdToApiResourceDeps = acApiResourceDeps %~ SHM.insert (Left newApiId) []
+          insertIdToApiAuthorizerDeps = acApiAuthorizerDeps %~ SHM.insert newApiId []
 
-      apiConfig %= apiConfigModifier
+      apiConfig %= insertIdToApi . insertIdToApiResourceDeps . insertIdToApiAuthorizerDeps
       return newApiId
 
 
     rApiAuthorizer name cognitoId apiId = do
+      newApiAuthorizerId <- getRandom
       let newApiAuthorizer = ApiAuthorizer name cognitoId apiId
-          (newApiAuthorizerId, apiConfigModifier) = insertApiAuthorizer newApiAuthorizer
+          insertIdToApiAuthorizer = acApiAuthorizers %~ SHM.insert newApiAuthorizerId newApiAuthorizer
+          insertIdToApiAuthorizerDeps = acApiAuthorizerDeps %~ SHM.unionWith (++) (SHM.singleton apiId [newApiAuthorizerId])
 
-      apiConfig %= apiConfigModifier
+      apiConfig %= insertIdToApiAuthorizer . insertIdToApiAuthorizerDeps
       return newApiAuthorizerId
 
 
@@ -113,19 +134,21 @@ interpret program =  do
       :: ParentResource a
       => Text
       -> a
-      -> State Config ApiResourceId
-    rApiResource name parentId = do
-      let newApiResource = apiResource name $ toParentId parentId
-          (newApiResourceId, apiConfigModifier) = insertApiResource newApiResource
+      -> QiConfig ApiResourceId
+    rApiResource name pid = do
+      newApiResourceId <- getRandom
+      let parentId = toParentId pid
+          newApiResource = apiResource name parentId
+          insertIdToApiResource = acApiResources %~ SHM.insert newApiResourceId newApiResource
+          insertIdToApiResourceDeps = acApiResourceDeps %~ SHM.unionWith (++) (SHM.singleton parentId [newApiResourceId])
 
-      apiConfig %= apiConfigModifier
+      apiConfig %= insertIdToApiResource . insertIdToApiResourceDeps
       return newApiResourceId
 
 
     rApiMethodLambda name verb apiResourceId auth lbdProgramFunc = do
-
+      newLambdaId <- getRandom
       let newLambda = ApiLambda name lbdProgramFunc
-          newLambdaId = LambdaId $ hash newLambda
           modifyApiResource = arMethodConfigs %~ (apiMethodConfig:)
           apiMethodConfig = ApiMethodConfig {
               amcVerb = verb
@@ -139,12 +162,11 @@ interpret program =  do
 
 
     rCustomResource name lbdProgramFunc = do
-
+      newLambdaId <- getRandom
       let newCustom = Custom newLambdaId
           (newCustomId, cfConfigModifier) = insertCustom newCustom
 
           newLambda = CfCustomLambda name lbdProgramFunc
-          newLambdaId = LambdaId $ hash newLambda
 
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
       cfConfig %= cfConfigModifier

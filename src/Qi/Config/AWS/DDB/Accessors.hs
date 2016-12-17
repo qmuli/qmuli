@@ -45,10 +45,3 @@ getDdbTableById tid config =
   where
     tableMap = config^.ddbConfig.dcTables
 
-insertDdbTable
-  :: DdbTable
-  -> (DdbTableId, (DdbConfig -> DdbConfig))
-insertDdbTable table = (tid, insertIdToDdbTable)
-  where
-    insertIdToDdbTable = dcTables %~ SHM.insert tid table
-    tid = DdbTableId $ hash table
