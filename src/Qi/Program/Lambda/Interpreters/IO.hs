@@ -1,18 +1,23 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 module Qi.Program.Lambda.Interpreters.IO (run) where
 
 import           Control.Lens                 hiding (view)
-import           Control.Monad.IO.Class       (liftIO)
+import           Control.Monad.Base           (MonadBase)
+import           Control.Monad.Catch          (MonadCatch, MonadThrow)
+import           Control.Monad.IO.Class       (MonadIO, liftIO)
 import           Control.Monad.Operational
+import           Control.Monad.Reader.Class   (MonadReader)
 import           Control.Monad.Trans.AWS      (AWST, runAWST, send)
 import           Control.Monad.Trans.Class    (lift)
 import           Control.Monad.Trans.Reader   (ReaderT, ask, runReaderT)
-import           Control.Monad.Trans.Resource (ResourceT)
+import           Control.Monad.Trans.Resource (MonadResource, ResourceT)
 import           Data.Aeson                   (Value (..), encode, object)
+import qualified Data.ByteString              as BS
 import           Data.ByteString.Lazy         (ByteString)
 import qualified Data.ByteString.Lazy         as LBS
 import qualified Data.Conduit                 as C
@@ -25,8 +30,6 @@ import           Network.AWS                  hiding (Request, Response, send)
 import           Network.AWS.DynamoDB         as A
 import qualified Network.AWS.S3               as A
 import           Network.HTTP.Client
-import           System.IO                    (stdout)
-
 import           Qi.Amazonka                  (currentRegion)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.DDB
@@ -37,8 +40,22 @@ import           Qi.Config.AWS.S3.Accessors
 import           Qi.Config.Identifier         (DdbTableId)
 import           Qi.Program.Lambda.Interface  (LambdaInstruction (..),
                                                LambdaProgram)
+import           System.IO                    (stdout)
 
-type QiAWS = AWST (ReaderT Config (ResourceT IO))
+newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
+  deriving (
+      Functor
+    , Applicative
+    , Monad
+    , MonadIO
+    , MonadCatch
+    , MonadThrow
+    , MonadResource
+    , MonadBase IO
+    , MonadReader Env
+    , MonadAWS
+    )
+
 
 run
   :: LambdaProgram ()
@@ -46,7 +63,7 @@ run
   -> IO ()
 run program config = do
   env <- newEnv Discover <&> set envRegion currentRegion
-  runResourceT . (`runReaderT` config) . runAWST env $ interpret program
+  runResourceT . runAWST env . unQiAWS $ interpret program
 
   where
     interpret
@@ -119,15 +136,24 @@ run program config = do
           :: S3Object
           -> QiAWS ByteString
         getS3ObjectContent s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key objKey} = do
-          {- putStrLn $ "GetS3ObjectContent: " ++ show s3Obj -}
-          {- config <- lift ask -}
-          {- say "Reading s3 object content..." "" -}
+          let bucketName = getFullBucketName bucket config
+              bucket = getS3BucketById _s3oBucketId config
+
           r <- send . A.getObject (A.BucketName bucketName) $ A.ObjectKey objKey
           sinkBody (r ^. A.gorsBody) sinkLbs
 
-          where
-            bucketName = getFullBucketName bucket config
-            bucket = getS3BucketById _s3oBucketId config
+        {- streamS3ObjectContent -}
+          {- :: MonadResource m -}
+          {- => S3Object -}
+          {- -> C.Sink BS.ByteString m () -}
+          {- -> QiAWS () -}
+        {- streamS3ObjectContent s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key objKey} sink = do -}
+          {- let bucketName = getFullBucketName bucket config -}
+              {- bucket = getS3BucketById _s3oBucketId config -}
+
+          {- r <- send . A.getObject (A.BucketName bucketName) $ A.ObjectKey objKey -}
+          {- sinkBody (r ^. A.gorsBody) sink -}
+
 
 -- TODO: add a streaming version that takes a sink and streams the rsBody into it
 -- sinkBody :: MonadResource m => RsBody -> Sink ByteString m a -> m a
@@ -138,9 +164,6 @@ run program config = do
           -> ByteString
           -> QiAWS ()
         putS3ObjectContent s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key objKey} content = do
-          {- putStrLn $ "PutS3ObjectContent: " ++ show s3Obj -}
-          {- config <- lift ask -}
-          {- say "Writing s3 object content..." "" -}
           r <- send . A.putObject (A.BucketName bucketName) (A.ObjectKey objKey) $ toBody content
           return ()
 

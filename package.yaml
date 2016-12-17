@@ -52,6 +52,8 @@ dependencies:
   - lens-aeson
   - random
   - MonadRandom
+  - exceptions
+  - transformers-base
   # - groundhog
   # - groundhog-th
   # - groundhog-sqlite
