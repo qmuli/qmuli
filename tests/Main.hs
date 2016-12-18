@@ -8,8 +8,9 @@ import           Test.Tasty.Hspec
 {- import           Text.Heredoc -}
 {- import           Qi.Config.AWS.CF -}
 
-import qualified Config.Api        as Api
+import qualified Config.ApiGw      as ApiGw
 import qualified Config.Identifier as Id
+import qualified Config.Template   as Template
 
 main :: IO ()
 main = do
@@ -18,8 +19,9 @@ main = do
 
   where
     specs = [
-        testSpec "Api"         Api.spec
+        testSpec "Template"    Template.spec
       , testSpec "Identifier"  Id.spec
+      , testSpec "ApiGw"       ApiGw.spec
       ]
 
 
