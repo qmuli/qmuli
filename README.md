@@ -127,14 +127,21 @@ The `simple-s3-copy <my-globally-unique-name> cf deploy` command does the follow
 - packages/zips up the executable to be used by lambda
 - uploads those to the qmulus S3 bucket (named with <my-unique-name>)
 
-After that is deployed, just create a new CF stack
+
+After that is deployed, just create a new CF stack:
 
 `simple-s3-copy <same-globally-unique-name-as-above> cf create`
 
 And voila, you should now have the example deployed and working.
 Try uploading a small file into the 'incoming' bucket, you should see the same file copied automatically to the 'outgoing' bucket.
 
-To destroy a stack use the following command
+
+To monitor the status of the stack and view the stack outputs:
+
+`simple-s3-copy <same-globally-unique-name-as-above> cf describe`
+
+
+To destroy a stack:
 
 `simple-s3-copy <same-globally-unique-name-as-above> cf destroy`
 

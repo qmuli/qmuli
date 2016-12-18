@@ -6,6 +6,7 @@ module Qi where
 import           Control.Lens
 import           Control.Monad.State.Strict           (runState)
 import           Data.Aeson
+import           Data.Aeson.Encode.Pretty             (encodePretty)
 import           Data.Aeson.Types
 import qualified Data.ByteString.Lazy.Char8           as LBS
 import           Data.Char                            (isDigit, isLower)
@@ -61,10 +62,14 @@ withNameAndConfig appName configProgram = do
           S3.upload appName "cf.json" $ CF.render config
           Lambda.deploy appName
 
-        "cf":"create":[] -> do -- create CF stack
+        "cf":"create":[] -> -- create CF stack
           CF.create appName
 
-        "cf":"destroy":[] -> do -- destroy CF stack
+        "cf":"describe":[] -> do -- describe CF stack
+          desc <- CF.describe appName
+          LBS.putStrLn $ encodePretty desc
+
+        "cf":"destroy":[] -> -- destroy CF stack
           CF.destroy appName
 
 

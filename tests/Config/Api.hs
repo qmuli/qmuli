@@ -34,13 +34,13 @@ configProgram = do
 spec :: Spec
 spec = parallel $
   describe "Api" $ do
-    it "contains Resources" $ do
+    it "contains Resources" $
       template `shouldContainKey` "Resources"
 
-    it "contains Outputs" $ do
+    it "contains Outputs" $
       template `shouldContainKey` "Outputs"
 
-    it "outputs api url" $ do
+    it "outputs api url" $
       outputs `shouldContainKey` "worldApiURL"
 
   where
