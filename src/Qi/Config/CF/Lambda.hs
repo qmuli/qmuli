@@ -48,7 +48,7 @@ toResources config = foldMap toAllLambdaResources $ getAllLambdas config
               (Literal NodeJS43)
             & lfFunctionName ?~ (Literal lambdaName)
             & lfMemorySize ?~ Literal 1536
-            & lfTimeout ?~ Literal 90
+            & lfTimeout ?~ Literal 300
           )
 
           where

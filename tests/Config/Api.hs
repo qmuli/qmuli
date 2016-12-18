@@ -15,8 +15,21 @@ import           Test.Tasty.Hspec
 
 import           Qi.Config.AWS                        (Config (..))
 import           Qi.Config.CF                         as CF
-import           Qi.Program.Config.Interface          (ConfigProgram, api, apiResource)
+import           Qi.Program.Config.Interface          (ConfigProgram, api,
+                                                       apiResource)
 import qualified Qi.Program.Config.Interpreters.Build as CB
+
+
+appName = "testName"
+
+configProgram :: ConfigProgram ()
+configProgram = do
+  -- create a REST API
+  api "world" >>= \world ->
+    -- create a "things" resource
+    apiResource "things" world >>= \things -> return ()
+  return ()
+
 
 spec :: Spec
 spec = parallel $
@@ -35,16 +48,11 @@ spec = parallel $
 
     template = fromJust (decode $ CF.render config)
 
-    configProgram :: ConfigProgram ()
-    configProgram = do
-      -- create a REST API
-      api "world" >>= \world ->
-        -- create a "things" resource
-        apiResource "things" world >>= \things -> return ()
-      return ()
-
-    appName = "testName"
-    config = snd . (`runState` def{_namePrefix = appName}) $ CB.interpret configProgram
+    config =
+        snd
+      . (`runState` def{_namePrefix = appName})
+      . CB.unQiConfig
+      $ CB.interpret configProgram
 
 shouldContainKey :: Value -> Text -> IO ()
 shouldContainKey value tag = ( isJust $ value ^? key tag ) `shouldBe` True

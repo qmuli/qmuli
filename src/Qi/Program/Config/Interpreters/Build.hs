@@ -8,13 +8,11 @@
 module Qi.Program.Config.Interpreters.Build where
 
 import           Control.Lens                hiding (view)
-import           Control.Monad.Operational
-import           Control.Monad.Random
-import           Control.Monad.Random.Class  (MonadRandom)
+import           Control.Monad.Operational   (ProgramViewT ((:>>=), Return),
+                                              view)
 import           Control.Monad.State.Class   (MonadState)
 import           Control.Monad.State.Strict  (State)
 import           Data.Default                (def)
-import           Data.Hashable               (hash)
 import qualified Data.HashMap.Strict         as SHM
 import           Data.Monoid                 ((<>))
 import           Data.Text                   (Text)
@@ -33,13 +31,12 @@ import           Qi.Config.Identifier
 import           Qi.Program.Config.Interface hiding (apiResource)
 
 
-newtype QiConfig a = QiConfig {unQiConfig :: RandT StdGen (State Config) a}
+newtype QiConfig a = QiConfig {unQiConfig :: State Config a}
   deriving (
       Functor
     , Applicative
     , Monad
     , MonadState Config
-    , MonadRandom
     )
 
 interpret
@@ -76,7 +73,7 @@ interpret program =  do
 
   where
     rS3Bucket name = do
-      newS3BucketId <- getRandom
+      newS3BucketId <- getNextId
       let newBucket = def & s3bName .~ name
           insertIdToS3Bucket = s3idxIdToS3Bucket %~ SHM.insert newS3BucketId newBucket
           insertNameToId = s3idxNameToId %~ SHM.insert name newS3BucketId
@@ -87,7 +84,7 @@ interpret program =  do
 
     rS3BucketLambda name bucketId lbdProgramFunc = do
 
-      newLambdaId <- getRandom
+      newLambdaId <- getNextId
       let newLambda = S3BucketLambda name lbdProgramFunc
           modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll newLambdaId):)
 
@@ -97,7 +94,7 @@ interpret program =  do
 
 
     rDdbTable name hashAttrDef rangeAttrDef provCap = do
-      newDdbTableId <- DdbTableId <$> getRandom
+      newDdbTableId <- getNextId
       let newDdbTable = DdbTable {
           _dtName         = name
         , _dtHashAttrDef  = hashAttrDef
@@ -110,7 +107,7 @@ interpret program =  do
 
 
     rApi name = do
-      newApiId <- getRandom
+      newApiId <- getNextId
       let newApi = def & aName .~ name
           insertIdToApi = acApis %~ SHM.insert newApiId newApi
           insertIdToApiResourceDeps = acApiResourceDeps %~ SHM.insert (Left newApiId) []
@@ -121,7 +118,7 @@ interpret program =  do
 
 
     rApiAuthorizer name cognitoId apiId = do
-      newApiAuthorizerId <- getRandom
+      newApiAuthorizerId <- getNextId
       let newApiAuthorizer = ApiAuthorizer name cognitoId apiId
           insertIdToApiAuthorizer = acApiAuthorizers %~ SHM.insert newApiAuthorizerId newApiAuthorizer
           insertIdToApiAuthorizerDeps = acApiAuthorizerDeps %~ SHM.unionWith (++) (SHM.singleton apiId [newApiAuthorizerId])
@@ -136,7 +133,7 @@ interpret program =  do
       -> a
       -> QiConfig ApiResourceId
     rApiResource name pid = do
-      newApiResourceId <- getRandom
+      newApiResourceId <- getNextId
       let parentId = toParentId pid
           newApiResource = apiResource name parentId
           insertIdToApiResource = acApiResources %~ SHM.insert newApiResourceId newApiResource
@@ -147,7 +144,7 @@ interpret program =  do
 
 
     rApiMethodLambda name verb apiResourceId auth lbdProgramFunc = do
-      newLambdaId <- getRandom
+      newLambdaId <- getNextId
       let newLambda = ApiLambda name lbdProgramFunc
           modifyApiResource = arMethodConfigs %~ (apiMethodConfig:)
           apiMethodConfig = ApiMethodConfig {
@@ -162,7 +159,7 @@ interpret program =  do
 
 
     rCustomResource name lbdProgramFunc = do
-      newLambdaId <- getRandom
+      newLambdaId <- getNextId
       let newCustom = Custom newLambdaId
           (newCustomId, cfConfigModifier) = insertCustom newCustom
 

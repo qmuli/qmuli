@@ -50,8 +50,8 @@ dependencies:
   - either
   - jwt
   - lens-aeson
-  - random
-  - MonadRandom
+  - exceptions
+  - transformers-base
   # - groundhog
   # - groundhog-th
   # - groundhog-sqlite
@@ -86,6 +86,13 @@ executables:
       # - base >= 4.8 && < 5
       # - qmuli
     # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  qmuli-fold-s3-content:
+    main: Main.hs
+    source-dirs: examples/fold-s3-content/src
+    dependencies:
+      - base >= 4.8 && < 5
+      - qmuli
+    ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
   # qmuli-apigw-lambda-s3:
     # main: Main.hs
     # source-dirs: examples/apigw-lambda-s3/src
@@ -100,13 +107,13 @@ executables:
       # - base >= 4.8 && < 5
       # - qmuli
     # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-  qmuli-cognito:
-    main: Main.hs
-    source-dirs: examples/cognito/src
-    dependencies:
-      - base >= 4.8 && < 5
-      - qmuli
-    ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  # qmuli-cognito:
+    # main: Main.hs
+    # source-dirs: examples/cognito/src
+    # dependencies:
+      # - base >= 4.8 && < 5
+      # - qmuli
+    # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
   # qmuli-apigw-lambda-rds:
     # main: Main.hs
     # source-dirs: examples/apigw-lambda-rds/src
