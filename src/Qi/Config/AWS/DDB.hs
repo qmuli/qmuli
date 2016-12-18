@@ -25,13 +25,11 @@ data DdbAttrDef = DdbAttrDef {
     _daName :: Text
   , _daType :: DdbAttrType
   }
-  deriving Show
 
 data DdbProvCap = DdbProvCap {
     _dpcRead  :: Integer
   , _dpcWrite :: Integer
   }
-  deriving Show
 
 data DdbTable = DdbTable {
     _dtName         :: Text
@@ -39,12 +37,11 @@ data DdbTable = DdbTable {
   , _dtRangeAttrDef :: Maybe DdbAttrDef
   , _dtProvCap      :: DdbProvCap
   }
-  deriving Show
 
 
 data DdbConfig = DdbConfig {
     _dcTables :: HashMap DdbTableId DdbTable
-  } deriving Show
+  }
 
 
 instance Default DdbConfig where

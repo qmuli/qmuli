@@ -18,7 +18,7 @@ import           Network.AWS.DynamoDB.Query
 import           Network.AWS.DynamoDB.Scan
 import           Network.HTTP.Client
 
-import           Qi.Config.AWS.Api
+import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.S3
@@ -26,15 +26,6 @@ import           Qi.Config.Identifier            (DdbTableId)
 
 
 type LambdaProgram a = Program LambdaInstruction a
-
-instance Show (ApiEvent -> LambdaProgram ()) where
-  show _ = "..."
-
-instance Show (S3Event -> LambdaProgram ()) where
-  show _ = "..."
-
-instance Show (CfEvent -> LambdaProgram ()) where
-  show _ = "..."
 
 data LambdaInstruction a where
 

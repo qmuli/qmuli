@@ -13,8 +13,8 @@ import           Stratosphere                   hiding (name)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.Lambda.Accessors
+import           Qi.Config.AWS.Lambda.Profile   (lpMemorySize, lpTimeoutSeconds)
 import qualified Qi.Config.CF.Role              as Role
-
 
 toResources config = foldMap toAllLambdaResources $ getAllLambdas config
   where
@@ -47,12 +47,15 @@ toResources config = foldMap toAllLambdaResources $ getAllLambdas config
               (GetAtt Role.lambdaBasicExecutionIAMRoleResourceName "Arn")
               (Literal NodeJS43)
             & lfFunctionName ?~ (Literal lambdaName)
-            & lfMemorySize ?~ Literal 1536
-            & lfTimeout ?~ Literal 300
+            & lfMemorySize ?~ Literal memorySize
+            & lfTimeout ?~ Literal timeOut
           )
 
           where
             lambdaName = getFullLambdaName lbd config
+
+            memorySize = fromIntegral . fromEnum $ lbd^.lbdProfile.lpMemorySize
+            timeOut = fromIntegral $ lbd^.lbdProfile.lpTimeoutSeconds
 
             lbdCode :: LambdaFunctionCode
             lbdCode = lambdaFunctionCode

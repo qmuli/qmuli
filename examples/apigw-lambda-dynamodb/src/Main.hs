@@ -7,6 +7,7 @@ module Main where
 import           Control.Lens                    hiding (view, (.=))
 import           Control.Monad                   (forM, void)
 import           Data.Aeson
+import           Data.Default                    (def)
 import qualified Data.HashMap.Strict             as SHM
 import           Data.Text                       (pack)
 import           Network.AWS.DynamoDB            (AttributeValue,
@@ -17,7 +18,7 @@ import           Network.AWS.DynamoDB.PutItem
 import           Network.AWS.DynamoDB.Scan
 
 import           Qi                              (withConfig)
-import           Qi.Config.AWS.Api               (ApiEvent (..),
+import           Qi.Config.AWS.ApiGw             (ApiMethodEvent (..),
                                                   ApiVerb (Delete, Get, Post),
                                                   RequestBody (..), aeBody,
                                                   aeParams, rpPath)
@@ -31,7 +32,7 @@ import           Qi.Program.Lambda.Interface     (LambdaProgram,
                                                   deleteDdbRecord, getDdbRecord,
                                                   putDdbRecord, scanDdbRecords)
 import           Qi.Util
-import           Qi.Util.Api
+import           Qi.Util.ApiGw
 
 import           Types
 
@@ -60,25 +61,25 @@ main = withConfig config
         CI.apiResource "things" api >>= \things -> do
           -- create a GET method that is attached to the "scan" lambda
           CI.apiMethodLambda "scanThings" Get
-            things Nothing $ scan thingsTable
+            things def (scan thingsTable) def
 
           -- create a "thingId" slug resource under "things"
           CI.apiResource "{thingId}" things >>= \thing -> do
 
             CI.apiMethodLambda "getThing" Get
-              thing Nothing $ get thingsTable
+              thing def (get thingsTable) def
 
             CI.apiMethodLambda "putThing" Post
-              thing Nothing $ put thingsTable
+              thing def (put thingsTable) def
 
             CI.apiMethodLambda "deleteThing" Delete
-              thing Nothing $ delete thingsTable
+              thing def (delete thingsTable) def
 
       return ()
 
     scan
       :: DdbTableId
-      -> ApiEvent
+      -> ApiMethodEvent
       -> LambdaProgram ()
     scan ddbTableId event = do
       res <- scanDdbRecords ddbTableId
@@ -106,7 +107,7 @@ main = withConfig config
 
     get
       :: DdbTableId
-      -> ApiEvent
+      -> ApiMethodEvent
       -> LambdaProgram ()
     get ddbTableId event = do
       withId event $ \tid -> do
@@ -137,7 +138,7 @@ main = withConfig config
 
     put
       :: DdbTableId
-      -> ApiEvent
+      -> ApiMethodEvent
       -> LambdaProgram ()
     put ddbTableId event = do
       withId event $ \tid -> do
@@ -157,7 +158,7 @@ main = withConfig config
 
     delete
       :: DdbTableId
-      -> ApiEvent
+      -> ApiMethodEvent
       -> LambdaProgram ()
     delete ddbTableId event = do
         withId event $ \tid -> do
@@ -175,7 +176,7 @@ main = withConfig config
 
 
 withThingAttributes
-  :: ApiEvent
+  :: ApiMethodEvent
   -> (AttributeValue -> LambdaProgram ())
   -> LambdaProgram ()
 withThingAttributes event f = case event^.aeBody of

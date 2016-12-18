@@ -12,7 +12,7 @@ import           Data.Default              (Default, def)
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 
-import           Qi.Config.AWS.Api         (ApiConfig)
+import           Qi.Config.AWS.ApiGw       (ApiGwConfig)
 import           Qi.Config.AWS.CF          (CfConfig)
 import           Qi.Config.AWS.DDB         (DdbConfig)
 import           Qi.Config.AWS.Lambda      (LambdaConfig)
@@ -21,21 +21,21 @@ import           Qi.Config.Identifier      (FromInt (..))
 
 
 data Config = Config {
-    _namePrefix :: Text
-  , _nextId     :: Int
-  , _s3Config   :: S3Config
-  , _apiConfig  :: ApiConfig
-  , _lbdConfig  :: LambdaConfig
-  , _ddbConfig  :: DdbConfig
-  , _cfConfig   :: CfConfig
-} deriving Show
+    _namePrefix  :: Text
+  , _nextId      :: Int
+  , _s3Config    :: S3Config
+  , _apiGwConfig :: ApiGwConfig
+  , _lbdConfig   :: LambdaConfig
+  , _ddbConfig   :: DdbConfig
+  , _cfConfig    :: CfConfig
+}
 
 instance Default Config where
   def = Config {
       _namePrefix = "qmuli"
-    , _nextId     = 0
+    , _nextId     = 0  -- global autoincrement id state
     , _s3Config   = def
-    , _apiConfig  = def
+    , _apiGwConfig  = def
     , _lbdConfig  = def
     , _ddbConfig  = def
     , _cfConfig   = def
@@ -43,6 +43,8 @@ instance Default Config where
 
 makeLenses ''Config
 
+-- get a resource-specific identifier based on the next autoincremented numeric id
+-- while keeping the autoincrement state in the global Config
 getNextId
   :: (MonadState Config m, FromInt a)
   => m a
@@ -51,7 +53,10 @@ getNextId = do
   nextId += 1
   return $ fromInt nid
 
+underscoreNamePrefixWith :: Text -> Config -> Text
 underscoreNamePrefixWith = namePrefixWith "_"
+
+dotNamePrefixWith :: Text -> Config -> Text
 dotNamePrefixWith = namePrefixWith "."
 
 namePrefixWith

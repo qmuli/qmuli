@@ -22,7 +22,6 @@ import           Qi.Config.Identifier
 
 
 data CfRequestType = CfCreate | CfUpdate | CfDelete
-  deriving Show
 
 instance FromJSON CfRequestType where
   parseJSON (String s)  | s == "Create" = pure CfCreate
@@ -56,7 +55,7 @@ data CfEvent = CfEventCreate {
   , _cfePhysicalResourceId :: Text
   , _cfeResourceProperties :: Object
   }
-  deriving (Show, Generic)
+  deriving Generic
 
 
 instance FromJSON CfEvent where
@@ -69,7 +68,7 @@ instance FromJSON CfEvent where
 
 data Custom = Custom {
     _cLbdId :: LambdaId
-  } deriving Show
+  }
 
 instance Hashable Custom where
   hashWithSalt s Custom{_cLbdId = LambdaId lid} = s `hashWithSalt` (show lid ++ "custom")
@@ -77,7 +76,7 @@ instance Hashable Custom where
 
 data CfConfig = CfConfig {
     _cfcCustoms :: HashMap CustomId Custom
-  } deriving Show
+  }
 
 instance Default CfConfig where
   def = CfConfig {

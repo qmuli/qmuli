@@ -17,7 +17,7 @@ import qualified Data.Text                            as T
 import           System.Environment                   (getArgs, withArgs)
 
 import           Qi.Config.AWS
-import qualified Qi.Config.AWS.Api.Event              as ApiEvent (parse)
+import qualified Qi.Config.AWS.ApiGw.Event            as ApiEvent (parse)
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.Lambda.Accessors       (getAllLambdas)
@@ -46,8 +46,7 @@ withNameAndConfig
   :: Text
   -> ConfigProgram ()
   -> IO ()
-withNameAndConfig appName configProgram = do
-
+withNameAndConfig appName configProgram =
   if invalid appName
     then
       putStrLn $ "Invalid qmulus name: '" ++ T.unpack appName ++ "', the name should only contain alphanumeric lower case characters or a hyphen"
@@ -74,7 +73,7 @@ withNameAndConfig appName configProgram = do
 
 
         -- execute the lambda on the event
-        "lbd":lbdName:event:_ -> do
+        "lbd":lbdName:event:_ ->
           case SHM.lookup (T.pack lbdName) lbdIOMap of
             Nothing ->
               putStrLn $ "No lambda with name '" ++ lbdName ++ "' was found"

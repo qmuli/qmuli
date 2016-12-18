@@ -6,19 +6,22 @@
 module Main where
 
 import           Control.Lens
-import           Control.Monad               (void)
-import qualified Data.ByteString             as BS
-import qualified Data.ByteString.Lazy.Char8  as LBS
-import           Data.Text                   (pack)
+import           Control.Monad                (void)
+import qualified Data.ByteString              as BS
+import qualified Data.ByteString.Lazy.Char8   as LBS
+import           Data.Default                 (def)
 
-import           Qi                          (withConfig)
-import           Qi.Config.AWS.S3            (S3Event, s3Object, s3eObject,
-                                              s3oBucketId, s3oKey)
-import           Qi.Config.Identifier        (S3BucketId)
-import           Qi.Program.Config.Interface (ConfigProgram, s3Bucket,
-                                              s3BucketLambda)
-import           Qi.Program.Lambda.Interface (LambdaProgram,
-                                              foldStreamFromS3Object, output)
+import           Qi                           (withConfig)
+import           Qi.Config.AWS.Lambda.Profile (LambdaMemorySize (..),
+                                               lpMemorySize, lpTimeoutSeconds)
+import           Qi.Config.AWS.S3             (S3Event, s3Object, s3eObject,
+                                               s3oBucketId, s3oKey)
+import           Qi.Config.Identifier         (S3BucketId)
+import           Qi.Program.Config.Interface  (ConfigProgram, s3Bucket,
+                                               s3BucketLambda)
+import           Qi.Program.Lambda.Interface  (LambdaProgram,
+                                               foldStreamFromS3Object, output)
+
 
 main :: IO ()
 main = withConfig config
@@ -26,7 +29,12 @@ main = withConfig config
     config :: ConfigProgram ()
     config = do
       incoming <- s3Bucket "incoming"
-      void $ s3BucketLambda "foldS3ObjectContent" incoming foldS3ObjectContent
+
+      let lbdProfile = def
+                        & lpMemorySize .~ M128
+                        & lpTimeoutSeconds .~ 300
+
+      void $ s3BucketLambda "foldS3ObjectContent" incoming foldS3ObjectContent lbdProfile
 
     foldS3ObjectContent
       :: S3Event
