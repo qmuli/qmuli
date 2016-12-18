@@ -12,7 +12,8 @@ import           Control.Lens                 hiding (view)
 import           Control.Monad.Base           (MonadBase)
 import           Control.Monad.Catch          (MonadCatch, MonadThrow)
 import           Control.Monad.IO.Class       (MonadIO, liftIO)
-import           Control.Monad.Operational
+import           Control.Monad.Operational    (ProgramViewT ((:>>=), Return),
+                                               view)
 import           Control.Monad.Reader.Class   (MonadReader)
 import           Control.Monad.Trans.AWS      (AWST, runAWST, send)
 import           Control.Monad.Trans.Class    (lift)
@@ -33,7 +34,8 @@ import           Network.AWS                  hiding (Request, Response, send)
 import           Network.AWS.Data.Body        (fuseStream)
 import           Network.AWS.DynamoDB         as A
 import qualified Network.AWS.S3               as A
-import           Network.HTTP.Client
+import           Network.HTTP.Client          (ManagerSettings, Request,
+                                               Response, httpLbs, newManager)
 import           Qi.Amazonka                  (currentRegion)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.DDB
