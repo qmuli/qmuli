@@ -53,16 +53,14 @@ dependencies:
   - lens-aeson
   - exceptions
   - transformers-base
-  # - groundhog
-  # - groundhog-th
-  # - groundhog-sqlite
+
 
 library:
   source-dirs:
     - src
   exposed-modules:
     - Qi
-    - Qi.Config.AWS.Api
+    - Qi.Config.AWS.ApiGw
     - Qi.Config.AWS.CF
     - Qi.Config.AWS.DDB
     - Qi.Config.AWS.Lambda
@@ -73,10 +71,12 @@ library:
     - Qi.Program.Lambda.Interface
     - Qi.Program.Config.Interface
     - Qi.Util
-    - Qi.Util.Api
+    - Qi.Util.ApiGw
     - Qi.Util.Cognito
     - Qi.Util.CustomCFResource
     - Qi.Program.Config.Interpreters.Build
+    - Qi.Config.AWS.Lambda.Profile
+    - Qi.Config.AWS.ApiGw.ApiMethod.Profile
   ghc-options: -Wall
 
 executables:
@@ -108,23 +108,14 @@ executables:
       # - base >= 4.8 && < 5
       # - qmuli
     # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-  qmuli-cognito:
-    main: Main.hs
-    source-dirs: examples/cognito/src
-    dependencies:
-      - base >= 4.8 && < 5
-      - qmuli
-    ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-  # qmuli-apigw-lambda-rds:
+  # qmuli-cognito:
     # main: Main.hs
-    # source-dirs: examples/apigw-lambda-rds/src
+    # source-dirs: examples/cognito/src
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-      # - groundhog
-      # - groundhog-th
-      # - groundhog-sqlite
-    # ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
+    # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+
 
 tests:
   tasty:

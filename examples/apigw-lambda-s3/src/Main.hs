@@ -5,12 +5,12 @@ module Main where
 
 import           Data.Aeson
 import qualified Data.ByteString.Lazy        as LBS
+import           Data.Default                (def)
 import           Data.Functor                (void)
-import           Data.Text                   (pack)
 import           Data.Text.Encoding          (decodeUtf8, encodeUtf8)
 
 import           Qi                          (withConfig)
-import           Qi.Config.AWS.Api           (ApiEvent (..),
+import           Qi.Config.AWS.ApiGw         (ApiMethodEvent (..),
                                               ApiVerb (Get, Post),
                                               RequestBody (JsonBody, PlainTextBody))
 import           Qi.Config.AWS.S3            (S3Key (S3Key),
@@ -22,7 +22,6 @@ import           Qi.Program.Config.Interface (ConfigProgram, api,
 import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
                                               putS3ObjectContent)
 import           Qi.Util
-import           Qi.Util.Api
 
 
 -- Use the two curl commands below to test-drive the two endpoints (substitute your unique api stage url first):
@@ -43,26 +42,22 @@ main = withConfig config
 
           void $ apiMethodLambda
             "createThing"
-            Post
-            apiResourceId
-            Nothing
-            $ writeContentsLambda bucketId
+            Post apiResourceId def
+            (writeContentsLambda bucketId) def
 
           apiMethodLambda
             "viewThing"
-            Get
-            apiResourceId
-            Nothing
-            $ readContentsLambda bucketId
+            Get apiResourceId def
+            (readContentsLambda bucketId) def
 
       return ()
 
 
     writeContentsLambda
       :: S3BucketId
-      -> ApiEvent
+      -> ApiMethodEvent
       -> LambdaProgram ()
-    writeContentsLambda bucketId ApiEvent{_aeBody} = do
+    writeContentsLambda bucketId ApiMethodEvent{_aeBody} = do
       putS3ObjectContent (s3Object bucketId) content
       successString "successfully added content"
 
@@ -75,7 +70,7 @@ main = withConfig config
 
     readContentsLambda
       :: S3BucketId
-      -> ApiEvent
+      -> ApiMethodEvent
       -> LambdaProgram ()
     readContentsLambda bucketId _ = do
       content <- getS3ObjectContent $ s3Object bucketId

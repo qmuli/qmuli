@@ -4,15 +4,11 @@
 
 module Qi.Config.CF (render) where
 
-import           Data.Aeson           (Value (Array), object)
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.HashMap.Strict  as SHM
-import           Data.Text            (Text)
-import qualified Data.Text            as T
 import           Stratosphere         hiding (name)
 
 import           Qi.Config.AWS
-import qualified Qi.Config.CF.Api     as Api
+import qualified Qi.Config.CF.ApiGw   as ApiGw
 import qualified Qi.Config.CF.CF      as CF
 import qualified Qi.Config.CF.DDB     as DDB
 import qualified Qi.Config.CF.Lambda  as Lambda
@@ -37,7 +33,7 @@ toResources config = mconcat [
     S3.toResources config
   , Role.toResources config
   , Lambda.toResources config
-  , Api.toResources config
+  , ApiGw.toResources config
   , DDB.toResources config
   , CF.toResources config
   ]
@@ -46,6 +42,6 @@ toOutputs
   :: Config
   -> Outputs
 toOutputs config = mconcat [
-    Api.toOutputs config
+    ApiGw.toOutputs config
   , CF.toOutputs config
   ]

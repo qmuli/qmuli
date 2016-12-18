@@ -70,6 +70,8 @@ main = withConfig config
   where
     config :: ConfigProgram ()
     config = do
+
+
       -- create an "input" s3 bucket
       incoming <- s3Bucket "incoming"
 
@@ -80,7 +82,11 @@ main = withConfig config
       -- upon an S3 "Put" event.
       -- Attach the lambda to the "incoming" bucket such way so each time a file is uploaded to
       -- the bucket, the lambda is called with the information about the newly uploaded file.
-      void $ s3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing)
+      -- The lambda creation function takes the Lambda name, s3BucketId to attach to, lambda 
+      -- function itself and a lambda profile, that specifies attributes like memory size and
+      -- timeout, and has meaningful defaults for those.
+      void $ s3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing) $
+        def & lpMemorySize .~ M1536
 
     copyContentsLambda
       :: S3BucketId
@@ -96,6 +102,7 @@ main = withConfig config
 
       -- write the content into a new file in the "output" bucket
       putS3ObjectContent outgoingS3Obj content
+
 ```
 
 Compiling this qmulus results in a multi-purpose executable binary, which can be used as a CLI tool for management tasks like provisioning
@@ -107,7 +114,7 @@ Getting started
 ---------------
 
 Thanks to [the recent addition of a dockerized Lambda build](https://github.com/qmuli/qmuli/pull/5/commits), a qmulus **now does not need** to be 
-built on an Amazon Linux AMI in order to be compatible with running it on a lambda. One only needs a system with `stack` and `docker` installed in 
+built on an Amazon Linux AMI in order to be compatible with running it on AWS Lambda. One only needs a system with `stack` and `docker` installed in 
 order to build everything necessary for a successful deployment.
 
 

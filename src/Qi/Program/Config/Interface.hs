@@ -4,19 +4,21 @@
 
 module Qi.Program.Config.Interface where
 
-import           Control.Monad.Operational   (Program, singleton)
-import           Control.Monad.State.Strict  (State)
-import           Data.ByteString             (ByteString)
-import           Data.Default                (Default, def)
-import           Data.Text                   (Text)
+import           Control.Monad.Operational             (Program, singleton)
+import           Control.Monad.State.Strict            (State)
+import           Data.ByteString                       (ByteString)
+import           Data.Default                          (Default, def)
+import           Data.Text                             (Text)
 
-import           Qi.Config.AWS               (Config)
-import           Qi.Config.AWS.Api
+import           Qi.Config.AWS                         (Config)
+import           Qi.Config.AWS.ApiGw
+import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ApiMethodProfile)
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.DDB
+import           Qi.Config.AWS.Lambda.Profile          (LambdaProfile)
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
-import           Qi.Program.Lambda.Interface (LambdaProgram)
+import           Qi.Program.Lambda.Interface           (LambdaProgram)
 
 
 type ConfigProgram a = Program ConfigInstruction a
@@ -30,6 +32,7 @@ data ConfigInstruction a where
     :: Text
     -> S3BucketId
     -> (S3Event -> LambdaProgram ())
+    -> LambdaProfile
     -> ConfigInstruction LambdaId
 
   RDdbTable
@@ -59,19 +62,21 @@ data ConfigInstruction a where
     :: Text
     -> ApiVerb
     -> ApiResourceId
-    -> Maybe ApiAuthorizerId
-    -> (ApiEvent -> LambdaProgram ())
+    -> ApiMethodProfile
+    -> (ApiMethodEvent -> LambdaProgram ())
+    -> LambdaProfile
     -> ConfigInstruction LambdaId
 
   RCustomResource
     :: Text
     -> (CfEvent -> LambdaProgram ())
+    -> LambdaProfile
     -> ConfigInstruction CustomId
 
 
 s3Bucket = singleton . RS3Bucket
 
-s3BucketLambda name s3BucketId = singleton . RS3BucketLambda name s3BucketId
+s3BucketLambda name s3BucketId lbd = singleton . RS3BucketLambda name s3BucketId lbd
 
 ddbTable name hashAttrDef rangeAttrDef = singleton . RDdbTable name hashAttrDef rangeAttrDef
 
@@ -87,8 +92,8 @@ apiResource
   -> ConfigProgram ApiResourceId
 apiResource name = singleton . RApiResource name
 
-apiMethodLambda name verb resourceId auth =
-  singleton . RApiMethodLambda name verb resourceId auth
+apiMethodLambda name verb resourceId methodProfile lbd =
+  singleton . RApiMethodLambda name verb resourceId methodProfile lbd
 
-customResource name = singleton . RCustomResource name
+customResource name lbd = singleton . RCustomResource name lbd
 

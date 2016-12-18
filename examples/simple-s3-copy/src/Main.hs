@@ -6,23 +6,29 @@
 module Main where
 
 import           Control.Lens
-import           Control.Monad               (void)
-import           Data.Text                   (pack)
+import           Control.Monad                (void)
+import           Data.Default                 (def)
+import           Data.Text                    (pack)
 
-import           Qi                          (withConfig)
-import           Qi.Config.AWS.S3            (S3Event, s3Object, s3eObject,
-                                              s3oBucketId, s3oKey)
-import           Qi.Config.Identifier        (S3BucketId)
-import           Qi.Program.Config.Interface (ConfigProgram, s3Bucket,
-                                              s3BucketLambda)
-import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
-                                              putS3ObjectContent)
+import           Qi                           (withConfig)
+import           Qi.Config.AWS.Lambda.Profile (LambdaMemorySize (..),
+                                               lpMemorySize)
+import           Qi.Config.AWS.S3             (S3Event, s3Object, s3eObject,
+                                               s3oBucketId, s3oKey)
+import           Qi.Config.Identifier         (S3BucketId)
+import           Qi.Program.Config.Interface  (ConfigProgram, s3Bucket,
+                                               s3BucketLambda)
+import           Qi.Program.Lambda.Interface  (LambdaProgram,
+                                               getS3ObjectContent,
+                                               putS3ObjectContent)
 
 main :: IO ()
 main = withConfig config
   where
     config :: ConfigProgram ()
     config = do
+
+
       -- create an "input" s3 bucket
       incoming <- s3Bucket "incoming"
 
@@ -33,7 +39,11 @@ main = withConfig config
       -- upon an S3 "Put" event.
       -- Attach the lambda to the "incoming" bucket such way so each time a file is uploaded to
       -- the bucket, the lambda is called with the information about the newly uploaded file.
-      void $ s3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing)
+      -- The lambda creation function takes the Lambda name, s3BucketId to attach to, lambda 
+      -- function itself and a lambda profile, that specifies attributes like memory size and
+      -- timeout, and has meaningful defaults for those.
+      void $ s3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing) $
+        def & lpMemorySize .~ M1536
 
     copyContentsLambda
       :: S3BucketId

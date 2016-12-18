@@ -32,7 +32,7 @@ import           Qi.Program.Lambda.Interface                              (Lambd
                                                                            amazonkaSend,
                                                                            http,
                                                                            output)
-import           Qi.Util.Api
+import           Qi.Util.ApiGw
 import           Qi.Util.CustomCFResource
 
 cognitoPoolProviderLambda

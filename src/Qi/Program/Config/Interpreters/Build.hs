@@ -7,19 +7,19 @@
 
 module Qi.Program.Config.Interpreters.Build where
 
-import           Control.Lens                hiding (view)
-import           Control.Monad.Operational   (ProgramViewT ((:>>=), Return),
-                                              view)
-import           Control.Monad.State.Class   (MonadState)
-import           Control.Monad.State.Strict  (State)
-import           Data.Default                (def)
-import qualified Data.HashMap.Strict         as SHM
-import           Data.Monoid                 ((<>))
-import           Data.Text                   (Text)
+import           Control.Lens                  hiding (view)
+import           Control.Monad.Operational     (ProgramViewT ((:>>=), Return),
+                                                view)
+import           Control.Monad.State.Class     (MonadState)
+import           Control.Monad.State.Strict    (State)
+import           Data.Default                  (def)
+import qualified Data.HashMap.Strict           as SHM
+import           Data.Monoid                   ((<>))
+import           Data.Text                     (Text)
 
 import           Qi.Config.AWS
-import           Qi.Config.AWS.Api
-import           Qi.Config.AWS.Api.Accessors
+import           Qi.Config.AWS.ApiGw
+import           Qi.Config.AWS.ApiGw.Accessors
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.CF.Accessors
 import           Qi.Config.AWS.DDB
@@ -28,8 +28,7 @@ import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
 import           Qi.Config.AWS.S3.Accessors
 import           Qi.Config.Identifier
-import           Qi.Program.Config.Interface hiding (apiResource)
-
+import           Qi.Program.Config.Interface   hiding (apiResource)
 
 newtype QiConfig a = QiConfig {unQiConfig :: State Config a}
   deriving (
@@ -47,8 +46,8 @@ interpret program =  do
     (RS3Bucket name) :>>= is -> do
       interpret . is =<< rS3Bucket name
 
-    (RS3BucketLambda name bucketId lbdProgramFunc) :>>= is -> do
-      interpret . is =<< rS3BucketLambda name bucketId lbdProgramFunc
+    (RS3BucketLambda name bucketId lbdProgramFunc profile) :>>= is -> do
+      interpret . is =<< rS3BucketLambda name bucketId lbdProgramFunc profile
 
     (RDdbTable name hashAttrDef rangeAttrDef provCap) :>>= is -> do
       interpret . is =<< rDdbTable name hashAttrDef rangeAttrDef provCap
@@ -62,11 +61,11 @@ interpret program =  do
     (RApiResource name parentId) :>>= is -> do
       interpret . is =<< rApiResource name parentId
 
-    (RApiMethodLambda name verb apiResourceId auth lbdProgramFunc) :>>= is -> do
-      interpret . is =<< rApiMethodLambda name verb apiResourceId auth lbdProgramFunc
+    (RApiMethodLambda name verb apiResourceId methodProfile lbdProgramFunc lbdProfile) :>>= is -> do
+      interpret . is =<< rApiMethodLambda name verb apiResourceId methodProfile lbdProgramFunc lbdProfile
 
-    (RCustomResource name lbdProgramFunc) :>>= is -> do
-      interpret . is =<< rCustomResource name lbdProgramFunc
+    (RCustomResource name lbdProgramFunc profile) :>>= is -> do
+      interpret . is =<< rCustomResource name lbdProgramFunc profile
 
     Return _ ->
       return def
@@ -82,10 +81,10 @@ interpret program =  do
       return newS3BucketId
 
 
-    rS3BucketLambda name bucketId lbdProgramFunc = do
+    rS3BucketLambda name bucketId lbdProgramFunc profile = do
 
       newLambdaId <- getNextId
-      let newLambda = S3BucketLambda name lbdProgramFunc
+      let newLambda = S3BucketLambda name profile lbdProgramFunc
           modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll newLambdaId):)
 
       s3Config.s3Buckets.s3idxIdToS3Bucket %= SHM.adjust modifyBucket bucketId
@@ -113,7 +112,7 @@ interpret program =  do
           insertIdToApiResourceDeps = acApiResourceDeps %~ SHM.insert (Left newApiId) []
           insertIdToApiAuthorizerDeps = acApiAuthorizerDeps %~ SHM.insert newApiId []
 
-      apiConfig %= insertIdToApi . insertIdToApiResourceDeps . insertIdToApiAuthorizerDeps
+      apiGwConfig %= insertIdToApi . insertIdToApiResourceDeps . insertIdToApiAuthorizerDeps
       return newApiId
 
 
@@ -123,7 +122,7 @@ interpret program =  do
           insertIdToApiAuthorizer = acApiAuthorizers %~ SHM.insert newApiAuthorizerId newApiAuthorizer
           insertIdToApiAuthorizerDeps = acApiAuthorizerDeps %~ SHM.unionWith (++) (SHM.singleton apiId [newApiAuthorizerId])
 
-      apiConfig %= insertIdToApiAuthorizer . insertIdToApiAuthorizerDeps
+      apiGwConfig %= insertIdToApiAuthorizer . insertIdToApiAuthorizerDeps
       return newApiAuthorizerId
 
 
@@ -139,31 +138,31 @@ interpret program =  do
           insertIdToApiResource = acApiResources %~ SHM.insert newApiResourceId newApiResource
           insertIdToApiResourceDeps = acApiResourceDeps %~ SHM.unionWith (++) (SHM.singleton parentId [newApiResourceId])
 
-      apiConfig %= insertIdToApiResource . insertIdToApiResourceDeps
+      apiGwConfig %= insertIdToApiResource . insertIdToApiResourceDeps
       return newApiResourceId
 
 
-    rApiMethodLambda name verb apiResourceId auth lbdProgramFunc = do
+    rApiMethodLambda name verb apiResourceId lbdProfile lbdProgramFunc profile = do
       newLambdaId <- getNextId
-      let newLambda = ApiLambda name lbdProgramFunc
+      let newLambda = ApiLambda name profile lbdProgramFunc
           modifyApiResource = arMethodConfigs %~ (apiMethodConfig:)
           apiMethodConfig = ApiMethodConfig {
               amcVerb = verb
-            , amcAuthId = auth
+            , amcProfile = lbdProfile
             , amcLbdId = newLambdaId
             }
 
-      apiConfig.acApiResources %= SHM.adjust modifyApiResource apiResourceId
+      apiGwConfig.acApiResources %= SHM.adjust modifyApiResource apiResourceId
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
       return newLambdaId
 
 
-    rCustomResource name lbdProgramFunc = do
+    rCustomResource name lbdProgramFunc profile = do
       newLambdaId <- getNextId
       let newCustom = Custom newLambdaId
           (newCustomId, cfConfigModifier) = insertCustom newCustom
 
-          newLambda = CfCustomLambda name lbdProgramFunc
+          newLambda = CfCustomLambda name profile lbdProgramFunc
 
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
       cfConfig %= cfConfigModifier
