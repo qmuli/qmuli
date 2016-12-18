@@ -1,8 +1,10 @@
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RankNTypes                 #-}
 
 module Qi.Program.Lambda.Interpreters.IO (run) where
 
@@ -22,11 +24,13 @@ import           Data.ByteString.Lazy         (ByteString)
 import qualified Data.ByteString.Lazy         as LBS
 import qualified Data.Conduit                 as C
 import           Data.Conduit.Binary          (sinkLbs)
+import qualified Data.Conduit.List            as CL
 import           Data.Default                 (def)
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import qualified Data.Text.IO                 as T
 import           Network.AWS                  hiding (Request, Response, send)
+import           Network.AWS.Data.Body        (fuseStream)
 import           Network.AWS.DynamoDB         as A
 import qualified Network.AWS.S3               as A
 import           Network.HTTP.Client
@@ -69,42 +73,45 @@ run program config = do
     interpret
       :: LambdaProgram ()
       -> QiAWS ()
-    interpret program = do
+    interpret program =
       case view program of
 
 -- Http
-        (Http request ms) :>>= is -> do
+        (Http request ms) :>>= is ->
           interpret . is =<< http request ms
 
 -- Amazonka
-        (AmazonkaSend cmd) :>>= is -> do
+        (AmazonkaSend cmd) :>>= is ->
           interpret . is =<< amazonkaSend cmd
 
 -- S3
-        (GetS3ObjectContent s3Obj) :>>= is -> do
+        (GetS3ObjectContent s3Obj) :>>= is ->
           interpret . is =<< getS3ObjectContent s3Obj
 
-        (PutS3ObjectContent s3Obj content) :>>= is -> do
+        (FoldStreamFromS3Object s3Obj folder zero) :>>= is ->
+          interpret . is =<< foldStreamFromS3Object s3Obj folder zero
+
+        (PutS3ObjectContent s3Obj content) :>>= is ->
           interpret . is =<< putS3ObjectContent s3Obj content
 
 -- DDB
-        (ScanDdbRecords ddbTableId) :>>= is -> do
+        (ScanDdbRecords ddbTableId) :>>= is ->
           interpret . is =<< scanDdbRecords ddbTableId
 
-        (QueryDdbRecords ddbTableId keyCond expAttrs) :>>= is -> do
+        (QueryDdbRecords ddbTableId keyCond expAttrs) :>>= is ->
           interpret . is =<< queryDdbRecords ddbTableId keyCond expAttrs
 
-        (GetDdbRecord ddbTableId keys) :>>= is -> do
+        (GetDdbRecord ddbTableId keys) :>>= is ->
           interpret . is =<< getDdbRecord ddbTableId keys
 
-        (PutDdbRecord ddbTableId item) :>>= is -> do
+        (PutDdbRecord ddbTableId item) :>>= is ->
           interpret . is =<< putDdbRecord ddbTableId item
 
-        (DeleteDdbRecord ddbTableId key) :>>= is -> do
+        (DeleteDdbRecord ddbTableId key) :>>= is ->
           interpret . is =<< deleteDdbRecord ddbTableId key
 
 -- Util
-        (Output content) :>>= is -> do
+        (Output content) :>>= is ->
           output content -- final output, no more program instructions
 
         Return _ ->
@@ -135,28 +142,52 @@ run program config = do
         getS3ObjectContent
           :: S3Object
           -> QiAWS ByteString
-        getS3ObjectContent s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key objKey} = do
+        getS3ObjectContent S3Object{_s3oBucketId, _s3oKey = S3Key objKey} = do
           let bucketName = getFullBucketName bucket config
               bucket = getS3BucketById _s3oBucketId config
 
           r <- send . A.getObject (A.BucketName bucketName) $ A.ObjectKey objKey
           sinkBody (r ^. A.gorsBody) sinkLbs
 
-        {- streamS3ObjectContent -}
-          {- :: MonadResource m -}
-          {- => S3Object -}
-          {- -> C.Sink BS.ByteString m () -}
+        foldStreamFromS3Object
+          :: S3Object
+          -> (a -> BS.ByteString -> a)
+          -> a
+          -> QiAWS a
+        foldStreamFromS3Object S3Object{_s3oBucketId, _s3oKey = S3Key objKey} folder zero = do
+          let bucketName = getFullBucketName bucket config
+              bucket = getS3BucketById _s3oBucketId config
+
+          r <- send . A.getObject (A.BucketName bucketName) $ A.ObjectKey objKey
+          sinkBody (r ^. A.gorsBody) $ CL.fold folder zero
+
+
+        -- TODO: come up with a way to stream one S3 object into another one while transforming it in some way
+
+        {- streamS3Objects -}
+          {- :: S3Object -}
+          {- -> S3Object -}
+          {- -> (BS.ByteString -> BS.ByteString) -}
           {- -> QiAWS () -}
-        {- streamS3ObjectContent s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key objKey} sink = do -}
-          {- let bucketName = getFullBucketName bucket config -}
-              {- bucket = getS3BucketById _s3oBucketId config -}
+        {- streamS3Objects -}
+          {- fromS3Obj@S3Object{_s3oKey = S3Key fromObjKey} -}
+          {- toS3Obj@S3Object{_s3oKey = S3Key toObjKey} -}
+          {- f = do -}
+            {- let fromBucketName = getFullBucketName fromBucket config -}
+                {- fromBucket = getS3BucketById (fromS3Obj^.s3oBucketId) config -}
 
-          {- r <- send . A.getObject (A.BucketName bucketName) $ A.ObjectKey objKey -}
-          {- sinkBody (r ^. A.gorsBody) sink -}
+                {- toBucketName = getFullBucketName toBucket config -}
+                {- toBucket = getS3BucketById (toS3Obj^.s3oBucketId) config -}
+
+            {- rr <- send . A.getObject (A.BucketName fromBucketName) $ A.ObjectKey fromObjKey -}
+
+            {- let xformedBody = fuseStream (rr ^. A.gorsBody) $ CL.map f -}
+                {- src = xformedBody^.streamBody -}
 
 
--- TODO: add a streaming version that takes a sink and streams the rsBody into it
--- sinkBody :: MonadResource m => RsBody -> Sink ByteString m a -> m a
+            {- wr <- send . A.putObject (A.BucketName toBucketName) (A.ObjectKey toObjKey) $ toBody xformedBody -}
+
+            {- return () -}
 
 
         putS3ObjectContent

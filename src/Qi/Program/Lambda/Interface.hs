@@ -7,7 +7,7 @@ module Qi.Program.Lambda.Interface where
 
 import           Control.Monad.Operational       (Program, singleton)
 import           Data.Aeson                      (Value)
-import           Data.ByteString.Lazy            (ByteString)
+import           Data.ByteString                 (ByteString)
 import qualified Data.ByteString.Lazy            as LBS
 import           Data.Text                       (Text)
 import           Network.AWS                     hiding (Request, Response)
@@ -41,7 +41,7 @@ data LambdaInstruction a where
   Http
     :: Request
     -> ManagerSettings
-    -> LambdaInstruction (Response ByteString)
+    -> LambdaInstruction (Response LBS.ByteString)
 
   AmazonkaSend
     :: (AWSRequest a)
@@ -50,11 +50,17 @@ data LambdaInstruction a where
 
   GetS3ObjectContent
     :: S3Object
-    -> LambdaInstruction ByteString
+    -> LambdaInstruction LBS.ByteString
+
+  FoldStreamFromS3Object
+    :: S3Object
+    -> (a -> ByteString -> a)
+    -> a
+    -> LambdaInstruction a
 
   PutS3ObjectContent
     :: S3Object
-    -> ByteString
+    -> LBS.ByteString
     -> LambdaInstruction ()
 
   ScanDdbRecords
@@ -83,7 +89,7 @@ data LambdaInstruction a where
     -> LambdaInstruction DeleteItemResponse
 
   Output
-    :: ByteString
+    :: LBS.ByteString
     -> LambdaInstruction ()
 
 
@@ -92,7 +98,7 @@ data LambdaInstruction a where
 http
   :: Request
   -> ManagerSettings
-  -> LambdaProgram (Response ByteString)
+  -> LambdaProgram (Response LBS.ByteString)
 http request =
   singleton . Http request
 
@@ -107,31 +113,59 @@ amazonkaSend = singleton . AmazonkaSend
 
 -- S3
 
-getS3ObjectContent :: S3Object -> LambdaProgram LBS.ByteString
+getS3ObjectContent
+  :: S3Object
+  -> LambdaProgram LBS.ByteString
 getS3ObjectContent = singleton . GetS3ObjectContent
 
-putS3ObjectContent :: S3Object -> ByteString -> LambdaProgram ()
+foldStreamFromS3Object
+  :: S3Object
+  -> (a -> ByteString -> a)
+  -> a
+  -> LambdaProgram a
+foldStreamFromS3Object s3Obj folder = singleton . FoldStreamFromS3Object s3Obj folder
+
+putS3ObjectContent
+  :: S3Object
+  -> LBS.ByteString
+  -> LambdaProgram ()
 putS3ObjectContent s3Obj = singleton . PutS3ObjectContent s3Obj
 
 
 -- DDB
 
-scanDdbRecords :: DdbTableId -> LambdaProgram ScanResponse
+scanDdbRecords
+  :: DdbTableId
+  -> LambdaProgram ScanResponse
 scanDdbRecords = singleton . ScanDdbRecords
 
-queryDdbRecords :: DdbTableId -> Maybe Text -> DdbAttrs -> LambdaProgram QueryResponse
+queryDdbRecords
+  :: DdbTableId
+  -> Maybe Text
+  -> DdbAttrs
+  -> LambdaProgram QueryResponse
 queryDdbRecords ddbTableId keyCond = singleton . QueryDdbRecords ddbTableId keyCond
 
-getDdbRecord :: DdbTableId -> DdbAttrs -> LambdaProgram GetItemResponse
+getDdbRecord
+  :: DdbTableId
+  -> DdbAttrs
+  -> LambdaProgram GetItemResponse
 getDdbRecord ddbTableId = singleton . GetDdbRecord ddbTableId
 
-putDdbRecord :: DdbTableId -> DdbAttrs -> LambdaProgram PutItemResponse
+putDdbRecord :: DdbTableId
+  -> DdbAttrs
+  -> LambdaProgram PutItemResponse
 putDdbRecord ddbTableId = singleton . PutDdbRecord ddbTableId
 
-deleteDdbRecord :: DdbTableId -> DdbAttrs -> LambdaProgram DeleteItemResponse
+deleteDdbRecord
+  :: DdbTableId
+  -> DdbAttrs
+  -> LambdaProgram DeleteItemResponse
 deleteDdbRecord ddbTableId = singleton . DeleteDdbRecord ddbTableId
 
 -- Util
 
-output :: ByteString -> LambdaProgram ()
+output
+  :: LBS.ByteString
+  -> LambdaProgram ()
 output = singleton . Output
