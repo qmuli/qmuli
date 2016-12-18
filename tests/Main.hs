@@ -2,20 +2,26 @@
 
 module Main where
 
-import           Data.Aeson
-import qualified Data.HashMap.Strict as SHM
-import qualified Test.Tasty
+{- import qualified Data.HashMap.Strict as SHM -}
+import           Test.Tasty
 import           Test.Tasty.Hspec
 {- import           Text.Heredoc -}
+{- import           Qi.Config.AWS.CF -}
 
-import           Qi.Config.AWS.CF
-
-import qualified Config.Api          as Api
+import qualified Config.Api        as Api
+import qualified Config.Identifier as Id
 
 main :: IO ()
 main = do
-  test <- testSpec "qmuli" Api.spec
-  Test.Tasty.defaultMain test
+  tree <- sequence specs
+  defaultMain $ testGroup "Qmuli" tree
+
+  where
+    specs = [
+        testSpec "Api"         Api.spec
+      , testSpec "Identifier"  Id.spec
+      ]
+
 
 {- decode json `shouldBe` Just createEvent -}
 

@@ -50,8 +50,6 @@ dependencies:
   - either
   - jwt
   - lens-aeson
-  - random
-  - MonadRandom
   - exceptions
   - transformers-base
   # - groundhog
