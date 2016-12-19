@@ -22,7 +22,6 @@ getApiAuthorizerLogicalName
   -> Text
 getApiAuthorizerLogicalName auth = T.concat [makeAlphaNumeric $ auth^.aaName, "ApiAuthorizer"]
 
-
 getApiAuthorizerById
   :: ApiAuthorizerId
   -> Config

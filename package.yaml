@@ -129,4 +129,5 @@ tests:
       - tasty
       - tasty-hspec
       - heredoc
+      - vector
         

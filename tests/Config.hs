@@ -22,7 +22,7 @@ import           Qi.Program.Config.Interpreters.Build (interpret, unQiConfig)
 import           Util
 
 
-appName = "testName"
+appName = "testApp"
 
 getResources :: Value -> Value
 getResources = getValueUnderKey "Resources"
@@ -40,8 +40,4 @@ getConfig cp = snd
 
 
 
-getValueUnderKey
-  :: Text
-  -> Value
-  -> Value
-getValueUnderKey k t = fromJust $ t ^? key k
+
