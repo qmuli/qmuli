@@ -31,7 +31,7 @@ toResources config = Resources . map toDdbTableRes $ getAllDdbTables config
         & ddbtTableName ?~ (Literal tableName)
 
       where
-        resName = getDdbTableCFResourceName table
+        resName = getDdbTableLogicalName table
         tableName = getFullDdbTableName table config
 
 

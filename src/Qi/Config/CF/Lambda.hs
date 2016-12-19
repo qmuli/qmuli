@@ -19,13 +19,13 @@ import qualified Qi.Config.CF.Role              as Role
 toResources config = foldMap toAllLambdaResources $ getAllLambdas config
   where
     toAllLambdaResources :: Lambda -> Resources
-    toAllLambdaResources lbd = Resources $ [lambdaPermissionCFResource, lambdaCFResource]
+    toAllLambdaResources lbd = Resources $ [lambdaPermissionLogical, lambdaLogical]
 
       where
-        lbdResName = getLambdaCFResourceName lbd
-        lbdPermResName = getLambdaPermissionCFResourceName lbd
+        lbdResName = getLambdaLogicalName lbd
+        lbdPermResName = getLambdaPermissionLogicalName lbd
 
-        lambdaPermissionCFResource =
+        lambdaPermissionLogical =
           resource lbdPermResName $
             LambdaPermissionProperties $
             lambdaPermission
@@ -38,7 +38,7 @@ toResources config = foldMap toAllLambdaResources $ getAllLambdas config
               ApiLambda{}      -> "apigateway.amazonaws.com"
               CfCustomLambda{} -> "*" -- TODO: not sure whether we even need the permission for CF Custom Resource
 
-        lambdaCFResource = (
+        lambdaLogical = (
           resource lbdResName $
             LambdaFunctionProperties $
             lambdaFunction

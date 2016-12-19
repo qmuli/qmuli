@@ -12,16 +12,16 @@ import qualified Data.Text                      as T
 import           Qi.Config.AWS
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.Lambda           (Lambda, lbdName, lcLambdas)
-import           Qi.Config.AWS.Lambda.Accessors (getLambdaCFResourceNameFromId)
+import           Qi.Config.AWS.Lambda.Accessors (getLambdaLogicalNameFromId)
 import           Qi.Config.Identifier
 
 
-getCustomCFResourceName
+getCustomLogicalName
   :: Custom
   -> Config
   -> Text
-getCustomCFResourceName custom config =
-  T.concat [ getLambdaCFResourceNameFromId (custom ^. cLbdId) config, "CustomResource"]
+getCustomLogicalName custom config =
+  T.concat [ getLambdaLogicalNameFromId (custom ^. cLbdId) config, "CustomResource"]
 
 
 getCustomById

@@ -13,23 +13,23 @@ import           Qi.Config.AWS.Lambda (Lambda, lbdName, lcLambdas)
 import           Qi.Config.Identifier
 
 
-getLambdaCFResourceNameFromId
+getLambdaLogicalNameFromId
   :: LambdaId
   -> Config
   -> Text
-getLambdaCFResourceNameFromId lid config =
-  getLambdaCFResourceName $ getLambdaById lid config
+getLambdaLogicalNameFromId lid config =
+  getLambdaLogicalName $ getLambdaById lid config
 
-getLambdaCFResourceName
+getLambdaLogicalName
   :: Lambda
   -> Text
-getLambdaCFResourceName lbd =
+getLambdaLogicalName lbd =
   T.concat [lbd ^. lbdName, "Lambda"]
 
-getLambdaPermissionCFResourceName
+getLambdaPermissionLogicalName
   :: Lambda
   -> Text
-getLambdaPermissionCFResourceName lbd =  T.concat [lbd ^. lbdName, "LambdaPermission"]
+getLambdaPermissionLogicalName lbd =  T.concat [lbd ^. lbdName, "LambdaPermission"]
 
 
 getFullLambdaName
