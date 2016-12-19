@@ -27,8 +27,8 @@ toResources config = Resources . map toCustomRes $ getAllCustoms config
           (GetAtt lbdResName "Arn")
 
       where
-        resName = getCustomCFResourceName custom config
-        lbdResName = getLambdaCFResourceNameFromId (custom^.cLbdId) config
+        resName = getCustomLogicalName custom config
+        lbdResName = getLambdaLogicalNameFromId (custom^.cLbdId) config
 
 
 toOutputs config =
@@ -49,7 +49,7 @@ toOutputs config =
       ]
 
       where
-        customResName = getCustomCFResourceName custom config
+        customResName = getCustomLogicalName custom config
 
         upid  = GetAtt customResName "UserPoolId"
         upcid = GetAtt customResName "UserPoolClientId"

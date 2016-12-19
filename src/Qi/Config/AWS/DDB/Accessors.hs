@@ -15,10 +15,10 @@ import           Qi.Config.Identifier
 
 
 
-getDdbTableCFResourceName
+getDdbTableLogicalName
   :: DdbTable
   -> Text
-getDdbTableCFResourceName table =  T.concat [table^.dtName, "DynamoDBTable"]
+getDdbTableLogicalName table =  T.concat [table^.dtName, "DynamoDBTable"]
 
 getFullDdbTableName
   :: DdbTable

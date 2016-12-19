@@ -5,19 +5,25 @@
 
 module Qi.Config.CF.ApiGw (toResources, toOutputs) where
 
-import           Data.Aeson                            (Value (Bool), object)
-import qualified Data.ByteString.Lazy                  as LBS
-import qualified Data.HashMap.Strict                   as SHM
-import           Data.Text                             (Text)
-import qualified Data.Text                             as T
+import           Data.Aeson                                  (Value (Bool),
+                                                              object)
+import qualified Data.ByteString.Lazy                        as LBS
+import qualified Data.HashMap.Strict                         as SHM
+import           Data.Text                                   (Text)
+import qualified Data.Text                                   as T
 import           Qi.Config.AWS
 import           Qi.Config.AWS.ApiGw
-import           Qi.Config.AWS.ApiGw.Accessors
-import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ampAuthId)
+import           Qi.Config.AWS.ApiGw.Api.Accessors
+import           Qi.Config.AWS.ApiGw.ApiAuthorizer.Accessors
+import           Qi.Config.AWS.ApiGw.ApiDeployment.Accessors
+import           Qi.Config.AWS.ApiGw.ApiMethod.Accessors
+import           Qi.Config.AWS.ApiGw.ApiMethod.Profile       (ampAuthId)
+import           Qi.Config.AWS.ApiGw.ApiResource.Accessors
 import           Qi.Config.AWS.CF.Accessors
 import           Qi.Config.AWS.Lambda.Accessors
 import           Qi.Config.Identifier
-import           Stratosphere                          hiding (Delete, name)
+import           Stratosphere                                hiding (Delete,
+                                                              name)
 import           Text.Heredoc
 
 toResources config = Resources . foldMap toStagedApiResources $ getAllApis config
@@ -32,7 +38,7 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
           ++ map toApiAuthorizers (getApiAuthorizers aid config)
           ++ foldMap toApiChildResources (getApiChildren (Left aid) config)
 
-        apiResName = getApiCFResourceName api
+        apiResName = getApiLogicalName api
 
         apiResource = (
           resource apiResName $
@@ -52,7 +58,7 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
           & dependsOn ?~ deps
 
           where
-            name = getApiStageCFResourceName api
+            name = getApiStageLogicalName api
             deps = map (^. resName) apiResources
 
 
@@ -80,10 +86,10 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
               ]
             userPoolPhysicalId = GetAtt cognitoResName "UserPoolId"
 
-            name = getApiAuthorizerCFResourceName $ getApiAuthorizerById aaid config
+            name = getApiAuthorizerLogicalName $ getApiAuthorizerById aaid config
             auth = getApiAuthorizerById aaid config
             cognito = getCustomById (auth^.aaCognitoId) config
-            cognitoResName = getCustomCFResourceName cognito config
+            cognitoResName = getCustomLogicalName cognito config
 
 
 
@@ -95,7 +101,7 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
 
           where
             apir = getApiResourceById arid config
-            apirResName = getApiResourceCFResourceName apir
+            apirResName = getApiResourceLogicalName apir
 
             apirResource =
               case apir of
@@ -113,7 +119,7 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
 
                 ApiResource{_arParent = Right arid'} ->
                   let
-                    apirParentResName = getApiResourceCFResourceName $ getApiResourceById arid' config
+                    apirParentResName = getApiResourceLogicalName $ getApiResourceById arid' config
                   in
                     resource apirResName $
                       ApiGatewayResourceProperties $
@@ -138,7 +144,7 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
                     & agmeMethodResponses ?~ [ methodResponse ]
 
               where
-                name = getApiMethodCFResourceName apir Options
+                name = getApiMethodLogicalName apir Options
 
                 methodResponse = apiGatewayMethodMethodResponse
                   & agmmrResponseModels ?~ responseModels
@@ -204,13 +210,13 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
 
                   Just authId ->
                     let
-                      authResName = getApiAuthorizerCFResourceName $ getApiAuthorizerById authId config
+                      authResName = getApiAuthorizerLogicalName $ getApiAuthorizerById authId config
                     in
                     res
                     & agmeAuthorizationType ?~ Literal COGNITO_USER_POOLS
                     & agmeAuthorizerId ?~ Ref authResName
 
-                name = getApiMethodCFResourceName apir amcVerb
+                name = getApiMethodLogicalName apir amcVerb
 
                 verb Get     = GET
                 verb Post    = POST
@@ -234,8 +240,8 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
                       , ("method.response.header.Access-Control-Allow-Origin", Bool False)
                       ]
 
-                lbdResName = getLambdaCFResourceNameFromId amcLbdId config
-                lbdPermResName = getLambdaPermissionCFResourceName $ getLambdaById amcLbdId config
+                lbdResName = getLambdaLogicalNameFromId amcLbdId config
+                lbdPermResName = getLambdaPermissionLogicalName $ getLambdaById amcLbdId config
 
                 integration =
                   apiGatewayMethodIntegration
@@ -324,6 +330,6 @@ toOutputs config =
           , ".execute-api.us-east-1.amazonaws.com/v1"
           ]
 
-        apiResName = getApiCFResourceName api
+        apiResName = getApiLogicalName api
 
 

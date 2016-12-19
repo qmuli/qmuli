@@ -29,11 +29,11 @@ toResources config = Resources . map toS3BucketRes $ getAllBuckets config
       & dependsOn ?~ reqs
 
       where
-        resName = getS3BucketCFResourceName bucket
+        resName = getS3BucketLogicalName bucket
         bucketName = getFullBucketName bucket config
 
         reqs =
-          map (\lec -> getLambdaCFResourceNameFromId (lec ^. lbdId) config ) _s3bEventConfigs
+          map (\lec -> getLambdaLogicalNameFromId (lec ^. lbdId) config ) _s3bEventConfigs
 
 
         lbdConfigs = s3BucketNotificationConfiguration
@@ -41,4 +41,4 @@ toResources config = Resources . map toS3BucketRes $ getAllBuckets config
 
         lbdC S3EventConfig{_event, _lbdId} = s3BucketLambdaConfiguration
           (Literal . T.pack $ show _event)
-          (GetAtt (getLambdaCFResourceNameFromId _lbdId config) "Arn")
+          (GetAtt (getLambdaLogicalNameFromId _lbdId config) "Arn")

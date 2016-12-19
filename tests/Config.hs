@@ -2,6 +2,7 @@
 
 module Config (
     getTemplate
+  , getResources
   , getOutputs
   , getConfig
   , appName) where
@@ -12,6 +13,7 @@ import           Data.Aeson                           (Value, decode)
 import           Data.Aeson.Lens                      (key)
 import           Data.Default                         (def)
 import           Data.Maybe                           (fromJust, isJust)
+import           Data.Text                            (Text)
 
 import           Qi.Config.AWS                        (Config (..))
 import           Qi.Config.CF                         (render)
@@ -22,8 +24,11 @@ import           Util
 
 appName = "testName"
 
+getResources :: Value -> Value
+getResources = getValueUnderKey "Resources"
+
 getOutputs :: Value -> Value
-getOutputs t = fromJust $ t ^? key "Outputs"
+getOutputs = getValueUnderKey "Outputs"
 
 getTemplate :: Config -> Value
 getTemplate cfg = fromJust (decode $ render cfg)
@@ -32,3 +37,11 @@ getConfig cp = snd
   . (`runState` def{_namePrefix = appName})
   . unQiConfig
   $ interpret cp
+
+
+
+getValueUnderKey
+  :: Text
+  -> Value
+  -> Value
+getValueUnderKey k t = fromJust $ t ^? key k

@@ -9,24 +9,35 @@ import           Test.Tasty.Hspec
 import           Qi.Program.Config.Interface (ConfigProgram, api, apiResource)
 
 import           Config                      (getConfig, getOutputs,
-                                              getTemplate)
+                                              getResources, getTemplate)
 import           Util
 
 
 configProgram :: ConfigProgram ()
 configProgram = do
   api "world" >>= \world ->
-    apiResource "things" world >>= \things -> return ()
-  return ()
+    apiResource "things" world >>= \things ->
+      return ()
+
 
 
 spec :: Spec
 spec = parallel $
   describe "Api" $ do
-    it "outputs api url" $
-      outputs `shouldContainKey` "worldApiURL"
+    context "Outputs" $
+      it "has the Api URL" $
+        outputs `shouldContainKey` "worldApiURL"
+
+    context "Template" $ do
+      it "has the expected Api resource under the correct logical name" $
+        resources `shouldContainKey` "worldApi"
+
+      it "has the expected ApiResource resource under the correct logical name" $
+        resources `shouldContainKey` "thingsApiResource"
 
   where
-    outputs = getOutputs . getTemplate $ getConfig configProgram
+    outputs = getOutputs template
+    resources = getResources template
 
+    template = getTemplate $ getConfig configProgram
 

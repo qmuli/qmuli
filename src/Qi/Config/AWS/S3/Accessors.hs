@@ -15,10 +15,10 @@ import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
 
 
-getS3BucketCFResourceName
+getS3BucketLogicalName
   :: S3Bucket
   -> Text
-getS3BucketCFResourceName bucket =  T.concat [bucket ^. s3bName, "S3Bucket"]
+getS3BucketLogicalName bucket =  T.concat [bucket ^. s3bName, "S3Bucket"]
 
 getFullBucketName
   :: S3Bucket
