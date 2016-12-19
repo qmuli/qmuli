@@ -2,6 +2,8 @@ Qmuli
 ======
 pronounced as [**cumuli**: plural for heap, accumulation](http://www.merriam-webster.com/dictionary/cumuli?pronunciation&lang=en_us&dir=c&file=cumulu02)
 
+![CircleCI Status](https://circleci.com/gh/qmuli/qmuli.svg?style=shield&circle-token=:circle-token)
+
 
 ###TL;DR: [Serverless AWS framework](https://serverless.com/) for [Haskell](https://www.haskell.org/)
 

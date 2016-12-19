@@ -15,7 +15,8 @@ import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ApiMethodProfile)
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.DDB
-import           Qi.Config.AWS.Lambda.Profile          (LambdaProfile)
+{- import           Qi.Config.AWS.Lambda.Profile          (LambdaProfile) -}
+import           Qi.Config.AWS.Lambda                  (LambdaProfile)
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
 import           Qi.Program.Lambda.Interface           (LambdaProgram)
