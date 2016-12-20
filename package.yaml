@@ -33,6 +33,7 @@ dependencies:
   - stratosphere
   - amazonka
   - amazonka-cloudformation
+  - amazonka-cloudwatch-logs
   - amazonka-cognito-identity
   - amazonka-cognito-idp
   - amazonka-core
@@ -53,6 +54,7 @@ dependencies:
   - lens-aeson
   - exceptions
   - transformers-base
+  - time >= 1.6 && < 1.7
 
 
 library:
@@ -79,13 +81,13 @@ library:
   ghc-options: -Wall
 
 executables:
-  # qmuli-simple-s3-copy:
-    # main: Main.hs
-    # source-dirs: examples/simple-s3-copy/src
-    # dependencies:
-      # - base >= 4.8 && < 5
-      # - qmuli
-    # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  qmuli-simple-s3-copy:
+    main: Main.hs
+    source-dirs: examples/simple-s3-copy/src
+    dependencies:
+      - base >= 4.8 && < 5
+      - qmuli
+    ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
   # qmuli-fold-s3-content:
     # main: Main.hs
     # source-dirs: examples/fold-s3-content/src

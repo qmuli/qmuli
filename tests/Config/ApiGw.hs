@@ -52,7 +52,7 @@ spec :: Spec
 spec = describe "Template" $ do
     let template = getTemplate $ getConfig configProgram
     it "saves test template" $
-      LBS.writeFile "tests/artefacts/apigw_test_template.json" $ encodePretty template
+      LBS.writeFile "tests/artifacts/apigw_test_template.json" $ encodePretty template
 
     context "Outputs" $ do
       let outputs = getOutputs template

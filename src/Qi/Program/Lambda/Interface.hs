@@ -79,6 +79,10 @@ data LambdaInstruction a where
     -> DdbAttrs
     -> LambdaInstruction DeleteItemResponse
 
+  Say
+    :: Text
+    -> LambdaInstruction ()
+
   Output
     :: LBS.ByteString
     -> LambdaInstruction ()
@@ -155,6 +159,11 @@ deleteDdbRecord
 deleteDdbRecord ddbTableId = singleton . DeleteDdbRecord ddbTableId
 
 -- Util
+
+say
+  :: Text
+  -> LambdaProgram ()
+say = singleton . Say
 
 output
   :: LBS.ByteString

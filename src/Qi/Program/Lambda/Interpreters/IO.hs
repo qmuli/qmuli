@@ -3,12 +3,14 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE OverloadedLists            #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
 
 module Qi.Program.Lambda.Interpreters.IO (run) where
 
 import           Control.Lens                 hiding (view)
+import           Control.Monad                (void)
 import           Control.Monad.Base           (MonadBase)
 import           Control.Monad.Catch          (MonadCatch, MonadThrow)
 import           Control.Monad.IO.Class       (MonadIO, liftIO)
@@ -17,25 +19,29 @@ import           Control.Monad.Operational    (ProgramViewT ((:>>=), Return),
 import           Control.Monad.Reader.Class   (MonadReader)
 import           Control.Monad.Trans.AWS      (AWST, runAWST, send)
 import           Control.Monad.Trans.Class    (lift)
-import           Control.Monad.Trans.Reader   (ReaderT, ask, runReaderT)
+import           Control.Monad.Trans.Reader   (ReaderT, ask, asks, runReaderT)
 import           Control.Monad.Trans.Resource (MonadResource, ResourceT)
 import           Data.Aeson                   (Value (..), encode, object)
 import qualified Data.ByteString              as BS
-import           Data.ByteString.Lazy         (ByteString)
-import qualified Data.ByteString.Lazy         as LBS
+import           Data.ByteString.Lazy.Char8   (ByteString)
+import qualified Data.ByteString.Lazy.Char8   as LBS
 import qualified Data.Conduit                 as C
 import           Data.Conduit.Binary          (sinkLbs)
 import qualified Data.Conduit.List            as CL
 import           Data.Default                 (def)
+import           Data.Ratio                   (numerator)
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import qualified Data.Text.IO                 as T
+import           Data.Time.Clock.POSIX        (getPOSIXTime)
 import           Network.AWS                  hiding (Request, Response, send)
+import           Network.AWS.CloudWatchLogs
 import           Network.AWS.Data.Body        (fuseStream)
-import           Network.AWS.DynamoDB         as A
-import qualified Network.AWS.S3               as A
+import           Network.AWS.DynamoDB
+import           Network.AWS.S3
 import           Network.HTTP.Client          (ManagerSettings, Request,
                                                Response, httpLbs, newManager)
+
 import           Qi.Amazonka                  (currentRegion)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.DDB
@@ -48,28 +54,33 @@ import           Qi.Program.Lambda.Interface  (LambdaInstruction (..),
                                                LambdaProgram)
 import           System.IO                    (stdout)
 
-newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
-  deriving (
-      Functor
-    , Applicative
-    , Monad
-    , MonadIO
-    , MonadCatch
-    , MonadThrow
-    , MonadResource
-    , MonadBase IO
-    , MonadReader Env
-    , MonadAWS
-    )
 
+-- This would have been nice, but the monad stack needs another ReaderT and one
+-- seemingly cannot flatten two ReaderT-s in a similar fashion
+{- newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a} -}
+  {- deriving ( -}
+      {- Functor -}
+    {- , Applicative -}
+    {- , Monad -}
+    {- , MonadIO -}
+    {- , MonadCatch -}
+    {- , MonadThrow -}
+    {- , MonadResource -}
+    {- , MonadBase IO -}
+    {- , MonadReader Env -}
+    {- , MonadAWS -}
+    {- ) -}
+
+type QiAWS a = AWST (ReaderT (Text, Config) (ResourceT IO)) a
 
 run
-  :: LambdaProgram ()
+  :: Text
   -> Config
+  -> LambdaProgram ()
   -> IO ()
-run program config = do
+run lbdName config program = do
   env <- newEnv Discover <&> set envRegion currentRegion
-  runResourceT . runAWST env . unQiAWS $ interpret program
+  runResourceT . (`runReaderT` (lbdName, config)) . runAWST env $ interpret program
 
   where
     interpret
@@ -113,15 +124,22 @@ run program config = do
           interpret . is =<< deleteDdbRecord ddbTableId key
 
 -- Util
+        (Say text) :>>= is ->
+          interpret . is =<< say text
+
         (Output content) :>>= is ->
           output content -- final output, no more program instructions
 
-        Return _ ->
+        Return _ -> do
+          -- if it gets this far, just return success to keep the js shim happy
+          output . encode $ object [
+              ("status", Number 200)
+            , ("body", object [("message", "lambda had executed successfully")])
+            ]
           return def
 
       where
-        {- say :: Show a => Text -> a -> QiAWS () -}
-        {- say msg = liftIO . T.putStrLn . mappend msg . T.pack . show -}
+
 
 -- Http
 
@@ -148,8 +166,8 @@ run program config = do
           let bucketName = getFullBucketName bucket config
               bucket = getS3BucketById _s3oBucketId config
 
-          r <- send . A.getObject (A.BucketName bucketName) $ A.ObjectKey objKey
-          sinkBody (r ^. A.gorsBody) sinkLbs
+          r <- send . getObject (BucketName bucketName) $ ObjectKey objKey
+          sinkBody (r ^. gorsBody) sinkLbs
 
         foldStreamFromS3Object
           :: S3Object
@@ -160,8 +178,8 @@ run program config = do
           let bucketName = getFullBucketName bucket config
               bucket = getS3BucketById _s3oBucketId config
 
-          r <- send . A.getObject (A.BucketName bucketName) $ A.ObjectKey objKey
-          sinkBody (r ^. A.gorsBody) $ CL.fold folder zero
+          r <- send . getObject (BucketName bucketName) $ ObjectKey objKey
+          sinkBody (r ^. gorsBody) $ CL.fold folder zero
 
 
         -- TODO: come up with a way to stream one S3 object into another one while transforming it in some way
@@ -181,13 +199,13 @@ run program config = do
                 {- toBucketName = getFullBucketName toBucket config -}
                 {- toBucket = getS3BucketById (toS3Obj^.s3oBucketId) config -}
 
-            {- rr <- send . A.getObject (A.BucketName fromBucketName) $ A.ObjectKey fromObjKey -}
+            {- rr <- send . getObject (BucketName fromBucketName) $ ObjectKey fromObjKey -}
 
-            {- let xformedBody = fuseStream (rr ^. A.gorsBody) $ CL.map f -}
+            {- let xformedBody = fuseStream (rr ^. gorsBody) $ CL.map f -}
                 {- src = xformedBody^.streamBody -}
 
 
-            {- wr <- send . A.putObject (A.BucketName toBucketName) (A.ObjectKey toObjKey) $ toBody xformedBody -}
+            {- wr <- send . putObject (BucketName toBucketName) (ObjectKey toObjKey) $ toBody xformedBody -}
 
             {- return () -}
 
@@ -197,7 +215,7 @@ run program config = do
           -> ByteString
           -> QiAWS ()
         putS3ObjectContent s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key objKey} content = do
-          r <- send . A.putObject (A.BucketName bucketName) (A.ObjectKey objKey) $ toBody content
+          r <- send . putObject (BucketName bucketName) (ObjectKey objKey) $ toBody content
           return ()
 
           where
@@ -210,7 +228,7 @@ run program config = do
           :: DdbTableId
           -> QiAWS ScanResponse
         scanDdbRecords ddbTableId = do
-          send $ A.scan tableName
+          send $ scan tableName
 
           where
             tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config
@@ -222,7 +240,7 @@ run program config = do
           -> DdbAttrs
           -> QiAWS QueryResponse
         queryDdbRecords ddbTableId keyCond expAttrs = do
-          send $ A.query tableName
+          send $ query tableName
             & qKeyConditionExpression .~ keyCond
             & qExpressionAttributeValues .~ expAttrs
 
@@ -235,7 +253,7 @@ run program config = do
           -> DdbAttrs
           -> QiAWS GetItemResponse
         getDdbRecord ddbTableId keys = do
-          send $ A.getItem tableName & giKey .~ keys
+          send $ getItem tableName & giKey .~ keys
 
           where
             tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config
@@ -246,7 +264,7 @@ run program config = do
           -> DdbAttrs
           -> QiAWS PutItemResponse
         putDdbRecord ddbTableId item = do
-          send $ A.putItem tableName & piItem .~ item
+          send $ putItem tableName & piItem .~ item
 
           where
             tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config
@@ -257,13 +275,39 @@ run program config = do
           -> DdbAttrs
           -> QiAWS DeleteItemResponse
         deleteDdbRecord ddbTableId key = do
-          send $ A.deleteItem tableName & diKey .~ key
+          send $ deleteItem tableName & diKey .~ key
 
           where
             tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config
 
 
 -- Util
+        say
+          :: Text
+          -> QiAWS ()
+        say text = do
+          (lbdName, config) <- lift ask
+
+          -- get current UTC epoch time in milliseconds
+          ts <- liftIO $ fromIntegral . round . (* 1000) <$> getPOSIXTime
+          let fullLbdName = underscoreNamePrefixWith lbdName config
+              lambdaLogGroup = T.concat ["/aws/lambda/", fullLbdName]
+              logEvent = inputLogEvent ts text
+
+          dr <- send $ describeLogStreams lambdaLogGroup
+          case dr ^. dlsrsLogStreams of
+            logStream:_ -> do
+              case logStream^.lsLogStreamName of
+                Just streamName -> do
+                  void . send $ putLogEvents lambdaLogGroup streamName [logEvent]
+                                  & pleSequenceToken .~ (logStream^.lsUploadSequenceToken)
+
+                Nothing ->
+                  fail "no stream name was returned"
+            [] ->
+              fail "describeLogStreams returned no streams"
+
+
         output
           :: ByteString
           -> QiAWS ()

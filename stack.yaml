@@ -27,6 +27,7 @@ packages:
 extra-deps:
 - amazonka-1.4.5
 - amazonka-cloudformation-1.4.5
+- amazonka-cloudwatch-logs-1.4.5
 - amazonka-core-1.4.5
 - amazonka-s3-1.4.5
 - amazonka-dynamodb-1.4.5
