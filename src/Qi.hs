@@ -94,7 +94,9 @@ withNameAndConfig appName configProgram =
         toLbdIOPair
           :: Lambda
           -> (Text, String -> IO ())
-        toLbdIOPair lbd = (lbd ^. lbdName, lbdIO lbd)
+        toLbdIOPair lbd = (name, lbdIO name lbd)
+          where
+            name = lbd^.lbdName
 
         parseLambdaEvent
           :: Lambda
@@ -111,13 +113,14 @@ withNameAndConfig appName configProgram =
           _lbdCFCustomLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String CfEvent)
 
         lbdIO
-          :: Lambda
+          :: Text
+          -> Lambda
           -> String
           -> IO ()
-        lbdIO lbd eventJson =
+        lbdIO name lbd eventJson =
           either
             (\err -> fail $ concat ["Could not parse event: ", show eventJson, ", error was: ", err])
-            (`LIO.run` config)
+            (LIO.run name config)
             (parseLambdaEvent lbd eventJson)
 
 
