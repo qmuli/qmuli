@@ -13,7 +13,6 @@ import           Stratosphere                   hiding (name)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.Lambda.Accessors
-import           Qi.Config.AWS.Lambda.Profile   (lpMemorySize, lpTimeoutSeconds)
 import qualified Qi.Config.CF.Role              as Role
 
 toResources config = foldMap toAllLambdaResources $ getAllLambdas config

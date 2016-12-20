@@ -70,7 +70,7 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
               & agaProviderARNs ?~ [userPoolArn]
               & agaRestApiId ?~ (Ref apiResName)
               & agaName ?~ Literal (auth^.aaName)
-              & agaType ?~ "COGNITO_USER_POOLS"
+              & agaType ?~ Literal COGNITO_USER_POOLS_AUTH
               & agaIdentitySource ?~ "method.request.header.Authorization"
           )
           {- & dependsOn ?~ [cognitoResName] -}

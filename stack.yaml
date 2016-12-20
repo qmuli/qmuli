@@ -2,15 +2,17 @@
 # For more information, see: http://docs.haskellstack.org/en/stable/yaml_configuration/
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
-# resolver: lts-7.10
-resolver: nightly-2016-12-06
+resolver: lts-7.14
 
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
+# - location:
+    # git: https://github.com/frontrowed/stratosphere.git
+    # commit: 5ab219a4e34a543f03db6e59b70b9c5de6827520
 - location:
     git: https://github.com/ababkin/stratosphere.git
-    commit: b5b2943a2b7c1267102b86ab48bcf3c931d0f0c3
+    commit: 598330b6276ca4d6fb9f8bfd66f089324402ae7e
 - 'system-extra'
 # - location:
     # git: https://github.com/lykahb/groundhog.git
@@ -30,12 +32,14 @@ extra-deps:
 - amazonka-dynamodb-1.4.5
 - amazonka-cognito-identity-1.4.5
 - amazonka-cognito-idp-1.4.5
-- turtle-1.3.0
 - managed-1.0.5
 - aeson-0.11.2.1
 - http-conduit-2.2.3
 - http-client-0.5.4
 - http-client-tls-0.3.3
+- turtle-1.3.0
+- stratosphere-0.3.1
+- optparse-applicative-0.13.0.0
 
 # Override default flag values for local packages and extra-deps
 flags: {}

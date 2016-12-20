@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Qi.Config.AWS.ApiGw.Event where
+module Qi.Config.AWS.ApiGw.ApiMethod.Event where
 
 import           Control.Applicative ((<$>), (<*>), (<|>))
 import           Data.Aeson

@@ -60,14 +60,15 @@ library:
     - src
   exposed-modules:
     - Qi
+    - Qi.Config.AWS
     - Qi.Config.AWS.ApiGw
     - Qi.Config.AWS.CF
     - Qi.Config.AWS.DDB
     - Qi.Config.AWS.Lambda
+    - Qi.Config.AWS.ApiGw.ApiMethod.Profile
     - Qi.Config.AWS.S3
-    - Qi.Config.Identifier
     - Qi.Config.CF
-    - Qi.Config.AWS
+    - Qi.Config.Identifier
     - Qi.Program.Lambda.Interface
     - Qi.Program.Config.Interface
     - Qi.Util
@@ -75,8 +76,6 @@ library:
     - Qi.Util.Cognito
     - Qi.Util.CustomCFResource
     - Qi.Program.Config.Interpreters.Build
-    - Qi.Config.AWS.Lambda.Profile
-    - Qi.Config.AWS.ApiGw.ApiMethod.Profile
   ghc-options: -Wall
 
 executables:
