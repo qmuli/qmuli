@@ -64,5 +64,5 @@ namePrefixWith
   -> Text
   -> Config
   -> Text
-namePrefixWith sep name config = T.concat [config ^. namePrefix, sep, name]
+namePrefixWith sep name config = T.concat [config^.namePrefix, sep, name]
 
