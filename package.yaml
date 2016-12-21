@@ -55,6 +55,8 @@ dependencies:
   - exceptions
   - transformers-base
   - time >= 1.6 && < 1.7
+  - binary >= 0.8 && < 0.9
+  - stm >= 2.3 && < 2.5
 
 
 library:

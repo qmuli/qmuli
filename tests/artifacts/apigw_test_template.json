@@ -140,6 +140,7 @@
                                 "Action": [
                                     "logs:CreateLogGroup",
                                     "logs:CreateLogStream",
+                                    "logs:DescribeLogStreams",
                                     "logs:PutLogEvents",
                                     "s3:GetObject",
                                     "s3:PutObject",
