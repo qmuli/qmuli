@@ -79,17 +79,18 @@ library:
     - Qi.Util.ApiGw
     - Qi.Util.Cognito
     - Qi.Util.CustomCFResource
+    - Qi.Util.DDB
     - Qi.Program.Config.Interpreters.Build
   ghc-options: -Wall
 
 executables:
-  qmuli-simple-s3-copy:
-    main: Main.hs
-    source-dirs: examples/simple-s3-copy/src
-    dependencies:
-      - base >= 4.8 && < 5
-      - qmuli
-    ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  # qmuli-simple-s3-copy:
+    # main: Main.hs
+    # source-dirs: examples/simple-s3-copy/src
+    # dependencies:
+      # - base >= 4.8 && < 5
+      # - qmuli
+    # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
   # qmuli-fold-s3-content:
     # main: Main.hs
     # source-dirs: examples/fold-s3-content/src
@@ -104,13 +105,13 @@ executables:
       # - base >= 4.8 && < 5
       # - qmuli
     # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-  # qmuli-apigw-lambda-dynamodb:
-    # main: Main.hs
-    # source-dirs: examples/apigw-lambda-dynamodb/src
-    # dependencies:
-      # - base >= 4.8 && < 5
-      # - qmuli
-    # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  qmuli-apigw-lambda-dynamodb:
+    main: Main.hs
+    source-dirs: examples/apigw-lambda-dynamodb/src
+    dependencies:
+      - base >= 4.8 && < 5
+      - qmuli
+    ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
   # qmuli-cognito:
     # main: Main.hs
     # source-dirs: examples/cognito/src

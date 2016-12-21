@@ -21,24 +21,27 @@ import           Qi.Config.AWS.ApiGw         (ApiMethodEvent (..),
 import           Qi.Config.AWS.DDB           (DdbAttrDef (..), DdbAttrType (..),
                                               DdbProvCap (..))
 import           Qi.Program.Lambda.Interface (LambdaProgram, output)
+import           Qi.Util
 
 
 
-castFromDdbAttrs
-  :: (FromJSON a, ToJSON b, FromJSON c)
-  => (a -> b)
-  -> AttributeValue
-  -> Result c
-castFromDdbAttrs ddbDeconstructor = fromJSON <=< fmap (toJSON . ddbDeconstructor) . fromJSON . toJSON
+withPathParam name event f = case SHM.lookup name $ event^.aeParams.rpPath of
+  Just (String x) -> f x
+  Just unexpected ->
+    argumentsError $ "unexpected path parameter: " ++ show unexpected
+  Nothing ->
+    argumentsError "expected path parameter 'thingId' was not found"
 
-castToDdbAttrs
-  :: (FromJSON a, ToJSON b)
-  => (a -> b)
-  -> Value
-  -> Result AttributeValue
-castToDdbAttrs ddbConstructor = fromJSON <=< fmap (toJSON . ddbConstructor) . fromJSON
-
-
-
-
-
+withDeserializedBody
+  :: FromJSON a
+  => ApiMethodEvent
+  -> (a -> LambdaProgram ())
+  -> LambdaProgram ()
+withDeserializedBody event f = case event^.aeBody of
+  JsonBody jb ->
+    result
+      (internalError . ("Error: fromJson: " ++))
+      f
+      $ fromJSON jb
+  unexpected  ->
+    argumentsError $ "Unexpected request body: " ++ show unexpected
