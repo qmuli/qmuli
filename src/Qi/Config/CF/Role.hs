@@ -4,7 +4,7 @@
 
 module Qi.Config.CF.Role (
     toResources
-  , lambdaBasicExecutionIAMRoleResourceName
+  , lambdaBasicExecutionIAMRoleLogicalName
   ) where
 
 import           Data.Aeson    (Value (Array), object)
@@ -14,15 +14,15 @@ import           Stratosphere  hiding (name)
 import           Qi.Config.AWS
 
 
-lambdaBasicExecutionIAMRoleResourceName :: Text
-lambdaBasicExecutionIAMRoleResourceName = "lambdaBasicExecutionIAMRole"
+lambdaBasicExecutionIAMRoleLogicalName :: Text
+lambdaBasicExecutionIAMRoleLogicalName = "lambdaBasicExecutionIAMRole"
 
 toResources
   :: Config
   -> Resources
 toResources config = Resources [lbdRoleRes]
   where
-    lbdRoleRes = resource lambdaBasicExecutionIAMRoleResourceName $
+    lbdRoleRes = resource lambdaBasicExecutionIAMRoleLogicalName $
       IAMRoleProperties $
       iamRole rolePolicyDocumentObject
       & iamrPolicies ?~ [ executePolicy ]

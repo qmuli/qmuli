@@ -32,8 +32,13 @@ toResources config = Resources . map toS3BucketRes $ getAllBuckets config
         resName = getS3BucketLogicalName bucket
         bucketName = getFullBucketName bucket config
 
-        reqs =
-          map (\lec -> getLambdaLogicalNameFromId (lec ^. lbdId) config ) _s3bEventConfigs
+        reqs = concat $
+          map (\lec ->  let
+                          lbd = getLambdaById (lec^.lbdId) config
+                        in
+                        [ getLambdaPermissionLogicalName lbd
+                        , getLambdaLogicalName lbd
+                        ]) _s3bEventConfigs
 
 
         lbdConfigs = s3BucketNotificationConfiguration

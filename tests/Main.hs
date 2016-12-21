@@ -8,9 +8,10 @@ import           Test.Tasty.Hspec
 {- import           Text.Heredoc -}
 {- import           Qi.Config.AWS.CF -}
 
-import qualified Config.ApiGw      as ApiGw
-import qualified Config.Identifier as Id
-import qualified Config.Template   as Template
+import qualified Config.ApiGw.Simple              as ApiGw.Simple
+import qualified Config.ApiGw.UserPoolsAuthorizer as ApiGw.UserPoolsAuthorizer
+import qualified Config.Identifier                as Id
+import qualified Config.Template                  as Template
 
 main :: IO ()
 main = do
@@ -21,7 +22,8 @@ main = do
     specs = [
         testSpec "Template"    Template.spec
       , testSpec "Identifier"  Id.spec
-      , testSpec "ApiGw"       ApiGw.spec
+      , testSpec "ApiGw Simple"               ApiGw.Simple.spec
+      , testSpec "ApiGw UserPools Authorizer" ApiGw.UserPoolsAuthorizer.spec
       ]
 
 

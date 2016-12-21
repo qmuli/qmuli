@@ -16,9 +16,30 @@
                 }
             }
         },
+        "cognitoPoolProviderLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "MemorySize": "128",
+                "Runtime": "nodejs4.3",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "lambdaBasicExecutionIAMRole",
+                        "Arn"
+                    ]
+                },
+                "FunctionName": "testApp_cognitoPoolProvider",
+                "Code": {
+                    "S3Key": "lambda.zip",
+                    "S3Bucket": "testApp"
+                },
+                "Handler": "index.handler",
+                "Timeout": "30"
+            }
+        },
         "worldApiDeployment": {
             "DependsOn": [
                 "worldApi",
+                "myAuthApiAuthorizer",
                 "thingsApiResource",
                 "thingsOptions",
                 "thingsGet"
@@ -39,6 +60,30 @@
                 "FunctionName": {
                     "Fn::GetAtt": [
                         "dummyLambdaLambda",
+                        "Arn"
+                    ]
+                }
+            }
+        },
+        "cognitoPoolProviderLambdaPermission": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+                "Action": "lambda:*",
+                "Principal": "*",
+                "FunctionName": {
+                    "Fn::GetAtt": [
+                        "cognitoPoolProviderLambda",
+                        "Arn"
+                    ]
+                }
+            }
+        },
+        "cognitoPoolProviderLambdaCustomResource": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "Properties": {
+                "ServiceToken": {
+                    "Fn::GetAtt": [
+                        "cognitoPoolProviderLambda",
                         "Arn"
                     ]
                 }
@@ -97,6 +142,41 @@
                 "Name": "world"
             }
         },
+        "myAuthApiAuthorizer": {
+            "Type": "AWS::ApiGateway::Authorizer",
+            "Properties": {
+                "ProviderARNs": [
+                    {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "arn:aws:cognito-idp:",
+                                {
+                                    "Ref": "AWS::Region"
+                                },
+                                ":",
+                                {
+                                    "Ref": "AWS::AccountId"
+                                },
+                                ":userpool/",
+                                {
+                                    "Fn::GetAtt": [
+                                        "cognitoPoolProviderLambdaCustomResource",
+                                        "UserPoolId"
+                                    ]
+                                }
+                            ]
+                        ]
+                    }
+                ],
+                "Name": "myAuth",
+                "RestApiId": {
+                    "Ref": "worldApi"
+                },
+                "Type": "COGNITO_USER_POOLS",
+                "IdentitySource": "method.request.header.Authorization"
+            }
+        },
         "dummyLambdaLambda": {
             "Type": "AWS::Lambda::Function",
             "Properties": {
@@ -140,7 +220,6 @@
                                 "Action": [
                                     "logs:CreateLogGroup",
                                     "logs:CreateLogStream",
-                                    "logs:DescribeLogStreams",
                                     "logs:PutLogEvents",
                                     "s3:GetObject",
                                     "s3:PutObject",
@@ -167,6 +246,7 @@
         },
         "thingsGet": {
             "DependsOn": [
+                "dummyLambdaLambda",
                 "dummyLambdaLambdaPermission"
             ],
             "Type": "AWS::ApiGateway::Method",
@@ -285,14 +365,44 @@
                     "Type": "AWS",
                     "IntegrationHttpMethod": "POST"
                 },
+                "AuthorizerId": {
+                    "Ref": "myAuthApiAuthorizer"
+                },
                 "RestApiId": {
                     "Ref": "worldApi"
                 },
-                "AuthorizationType": "NONE"
+                "AuthorizationType": "COGNITO_USER_POOLS"
             }
         }
     },
     "Outputs": {
+        "cognitoPoolProviderLambdaCustomResourceUserPoolClientId": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "cognitoPoolProviderLambdaCustomResource",
+                    "UserPoolClientId"
+                ]
+            },
+            "Description": "UserPoolClientId"
+        },
+        "cognitoPoolProviderLambdaCustomResourceUserPoolId": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "cognitoPoolProviderLambdaCustomResource",
+                    "UserPoolId"
+                ]
+            },
+            "Description": "UserPoolId"
+        },
+        "cognitoPoolProviderLambdaCustomResourceIdentityPoolId": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "cognitoPoolProviderLambdaCustomResource",
+                    "IdentityPoolId"
+                ]
+            },
+            "Description": "IdentityPoolId"
+        },
         "worldApiURL": {
             "Value": {
                 "Fn::Join": [

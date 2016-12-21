@@ -38,10 +38,10 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
           ++ map toApiAuthorizers (getApiAuthorizers aid config)
           ++ foldMap toApiChildResources (getApiChildren (Left aid) config)
 
-        apiResName = getApiLogicalName api
+        apiLName = getApiLogicalName api
 
         apiResource = (
-          resource apiResName $
+          resource apiLName $
             ApiGatewayRestApiProperties $
             apiGatewayRestApi
             & agraName ?~ Literal (api ^. aName)
@@ -52,7 +52,7 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
             resource name $
               ApiGatewayDeploymentProperties $
               apiGatewayDeployment
-                (Ref apiResName)
+                (Ref apiLName)
                 & agdStageName ?~ "v1"
           )
           & dependsOn ?~ deps
@@ -68,12 +68,12 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
             ApiGatewayAuthorizerProperties $
             apiGatewayAuthorizer
               & agaProviderARNs ?~ [userPoolArn]
-              & agaRestApiId ?~ (Ref apiResName)
+              & agaRestApiId ?~ (Ref apiLName)
               & agaName ?~ Literal (auth^.aaName)
               & agaType ?~ Literal COGNITO_USER_POOLS_AUTH
               & agaIdentitySource ?~ "method.request.header.Authorization"
           )
-          {- & dependsOn ?~ [cognitoResName] -}
+          {- & dependsOn ?~ [cognitoLName] -}
 
           where
             userPoolArn = Join "" [
@@ -84,12 +84,12 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
               , ":userpool/"
               , userPoolPhysicalId
               ]
-            userPoolPhysicalId = GetAtt cognitoResName "UserPoolId"
+            userPoolPhysicalId = GetAtt cognitoLName "UserPoolId"
 
             name = getApiAuthorizerLogicalName $ getApiAuthorizerById aaid config
             auth = getApiAuthorizerById aaid config
             cognito = getCustomById (auth^.aaCognitoId) config
-            cognitoResName = getCustomLogicalName cognito config
+            cognitoLName = getCustomLogicalName cognito config
 
 
 
@@ -101,32 +101,32 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
 
           where
             apir = getApiResourceById arid config
-            apirResName = getApiResourceLogicalName apir
+            apirLName = getApiResourceLogicalName apir
 
             apirResource =
               case apir of
                 ApiResource{_arParent = Left aid} ->
                   let
-                    apiParent = GetAtt apiResName "RootResourceId"
+                    apiParent = GetAtt apiLName "RootResourceId"
                   in
-                    resource apirResName $
+                    resource apirLName $
                       ApiGatewayResourceProperties $
                       apiGatewayResource
                         apiParent
                         (Literal $ apir ^. arName)
-                        (Ref apiResName)
+                        (Ref apiLName)
 
 
                 ApiResource{_arParent = Right arid'} ->
                   let
-                    apirParentResName = getApiResourceLogicalName $ getApiResourceById arid' config
+                    apirParentLName = getApiResourceLogicalName $ getApiResourceById arid' config
                   in
-                    resource apirResName $
+                    resource apirLName $
                       ApiGatewayResourceProperties $
                       apiGatewayResource
-                        (Ref apirParentResName)
+                        (Ref apirParentLName)
                         (Literal $ apir ^. arName)
-                        (Ref apiResName)
+                        (Ref apiLName)
 
 
 
@@ -138,8 +138,8 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
                   apiGatewayMethod
                     (Literal OPTIONS)
                     & agmeAuthorizationType ?~ Literal NONE
-                    & agmeResourceId ?~ (Ref apirResName)
-                    & agmeRestApiId ?~ (Ref apiResName)
+                    & agmeResourceId ?~ (Ref apirLName)
+                    & agmeRestApiId ?~ (Ref apiLName)
                     & agmeIntegration ?~ integration
                     & agmeMethodResponses ?~ [ methodResponse ]
 
@@ -192,14 +192,15 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
                   specAuth $
                   apiGatewayMethod
                     (Literal $ verb amcVerb)
-                    & agmeResourceId ?~ (Ref apirResName)
-                    & agmeRestApiId ?~ (Ref apiResName)
+                    & agmeResourceId ?~ (Ref apirLName)
+                    & agmeRestApiId ?~ (Ref apiLName)
                     & agmeIntegration ?~ integration
                     & agmeMethodResponses ?~ methodResponses
 
               )
               & dependsOn ?~ [
-                    lbdPermResName
+                    lbdLName
+                  , lbdPermLName
                   ]
 
               where
@@ -210,11 +211,11 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
 
                   Just authId ->
                     let
-                      authResName = getApiAuthorizerLogicalName $ getApiAuthorizerById authId config
+                      authLName = getApiAuthorizerLogicalName $ getApiAuthorizerById authId config
                     in
                     res
                     & agmeAuthorizationType ?~ Literal COGNITO_USER_POOLS
-                    & agmeAuthorizerId ?~ Ref authResName
+                    & agmeAuthorizerId ?~ Ref authLName
 
                 name = getApiMethodLogicalName apir amcVerb
 
@@ -240,8 +241,9 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
                       , ("method.response.header.Access-Control-Allow-Origin", Bool False)
                       ]
 
-                lbdResName = getLambdaLogicalNameFromId amcLbdId config
-                lbdPermResName = getLambdaPermissionLogicalName $ getLambdaById amcLbdId config
+                lbdId = getLambdaById amcLbdId config
+                lbdLName = getLambdaLogicalName lbdId
+                lbdPermLName = getLambdaPermissionLogicalName lbdId
 
                 integration =
                   apiGatewayMethodIntegration
@@ -257,7 +259,7 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllApis confi
                         "arn:aws:apigateway:"
                       , Ref "AWS::Region"
                       , ":lambda:path/2015-03-31/functions/"
-                      , GetAtt lbdResName "Arn"
+                      , GetAtt lbdLName "Arn"
                       , "/invocations"])
 
                     requestTemplates =
@@ -318,7 +320,7 @@ toOutputs config =
   where
 
     toApiOutput (_, api) =
-      output (T.concat [apiResName, "URL"])
+      output (T.concat [apiLName, "URL"])
         apiUrl
         & description ?~ "RestApi URL"
 
@@ -326,10 +328,10 @@ toOutputs config =
         -- https://{restapi_id}.execute-api.{region}.amazonaws.com/{stage_name}/
         apiUrl = Join "" [
             "https://"
-          , Ref apiResName
+          , Ref apiLName
           , ".execute-api.us-east-1.amazonaws.com/v1"
           ]
 
-        apiResName = getApiLogicalName api
+        apiLName = getApiLogicalName api
 
 

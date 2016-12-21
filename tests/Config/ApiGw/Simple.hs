@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Config.ApiGw where
+module Config.ApiGw.Simple where
 
 import           Control.Lens
 import           Control.Monad               (void)
@@ -11,8 +11,6 @@ import           Data.Aeson.Encode.Pretty    (encodePretty)
 import           Data.Aeson.Lens             (key, nth)
 import qualified Data.ByteString.Lazy.Char8  as LBS
 import           Data.Default                (def)
-import           Data.Maybe                  (fromJust, isJust)
-import           Data.Vector                 (Vector)
 import           Test.Tasty.Hspec
 
 import           Qi.Config.AWS.ApiGw         (ApiMethodEvent (..),
@@ -52,7 +50,7 @@ spec :: Spec
 spec = describe "Template" $ do
     let template = getTemplate $ getConfig configProgram
     it "saves test template" $
-      LBS.writeFile "tests/artifacts/apigw_test_template.json" $ encodePretty template
+      LBS.writeFile "tests/artifacts/apigw_simple_test_template.json" $ encodePretty template
 
     context "Outputs" $ do
       let outputs = getOutputs template
@@ -64,8 +62,8 @@ spec = describe "Template" $ do
     context "Resources" $ do
       let resources = getResources template
 
-------
 -- Api
+------
       it "has the expected Api resource under the correct logical name" $
         resources `shouldContainKey` expectedApiLogicalName
 
@@ -75,8 +73,8 @@ spec = describe "Template" $ do
         it "contains correct resource type" $
           resource `shouldContainKVPair` ("Type", String "AWS::ApiGateway::RestApi")
 
---------------
 -- ApiResource
+--------------
       it "has the expected ApiResource resource under the correct logical name" $
         resources `shouldContainKey` expectedApiResourceLogicalName
 
@@ -86,8 +84,9 @@ spec = describe "Template" $ do
         it "contains correct resource type" $
           resource `shouldContainKVPair` ("Type", String "AWS::ApiGateway::Resource")
 
-------------
+
 -- ApiMethod
+------------
       it "has the expected ApiMethod resource under the correct logical name" $
         resources `shouldContainKey` expectedApiMethodLogicalName
 
@@ -102,7 +101,10 @@ spec = describe "Template" $ do
           let (Array dependencies) = getValueUnderKey "DependsOn" resource
 
           it "should contain expected Lambda permission" $
-            dependencies `shouldBe` ["dummyLambdaLambdaPermission"]
+            dependencies `shouldBe` [
+                "dummyLambdaLambda"
+              , "dummyLambdaLambdaPermission"
+              ]
 
 -- Properties
         context "Properties" $ do
@@ -154,8 +156,8 @@ spec = describe "Template" $ do
               lbdLogicalName `shouldBe` String expectedLambdaLogicalName
 
 
-------------
 -- CORS Options Method
+------------
       it "has the expected resource under the correct logical name" $
         resources `shouldContainKey` expectedCorsMethodLogicalName
 
@@ -205,8 +207,8 @@ spec = describe "Template" $ do
 
 
 
-------
 -- ApiDeployment
+----------------
       it "has the expected ApiDeployment resource under the correct logical name" $
         resources `shouldContainKey` expectedApiDeploymentLogicalName
 
@@ -239,8 +241,8 @@ spec = describe "Template" $ do
             properties `shouldContainKVPair` ("RestApiId", ref expectedApiLogicalName)
 
 
-------
 -- Lambda
+---------
       it "has the expected Lambda resource under the correct logical name" $
         resources `shouldContainKey` expectedLambdaLogicalName
 
