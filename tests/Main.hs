@@ -26,7 +26,6 @@ main = do
       , testSpec "ApiGw UserPools Authorizer" ApiGw.UserPoolsAuthorizer.spec
       ]
 
-
 {- decode json `shouldBe` Just createEvent -}
 
   {- where -}
