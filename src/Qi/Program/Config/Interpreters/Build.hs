@@ -40,31 +40,34 @@ newtype QiConfig a = QiConfig {unQiConfig :: State Config a}
 interpret
   :: ConfigProgram ()
   -> QiConfig ()
-interpret program =  do
+interpret program =
   case view program of
-    (RS3Bucket name) :>>= is -> do
+    (RS3Bucket name) :>>= is ->
       interpret . is =<< rS3Bucket name
 
-    (RS3BucketLambda name bucketId lbdProgramFunc profile) :>>= is -> do
+    (RS3BucketLambda name bucketId lbdProgramFunc profile) :>>= is ->
       interpret . is =<< rS3BucketLambda name bucketId lbdProgramFunc profile
 
-    (RDdbTable name hashAttrDef rangeAttrDef provCap) :>>= is -> do
+    (RDdbTable name hashAttrDef rangeAttrDef provCap) :>>= is ->
       interpret . is =<< rDdbTable name hashAttrDef rangeAttrDef provCap
 
-    (RApi name) :>>= is -> do
+    (RApi name) :>>= is ->
       interpret . is =<< rApi name
 
-    (RApiAuthorizer name cognitoId apiId) :>>= is -> do
+    (RApiAuthorizer name cognitoId apiId) :>>= is ->
       interpret . is =<< rApiAuthorizer name cognitoId apiId
 
-    (RApiResource name parentId) :>>= is -> do
+    (RApiResource name parentId) :>>= is ->
       interpret . is =<< rApiResource name parentId
 
-    (RApiMethodLambda name verb apiResourceId methodProfile lbdProgramFunc lbdProfile) :>>= is -> do
+    (RApiMethodLambda name verb apiResourceId methodProfile lbdProgramFunc lbdProfile) :>>= is ->
       interpret . is =<< rApiMethodLambda name verb apiResourceId methodProfile lbdProgramFunc lbdProfile
 
-    (RCustomResource name lbdProgramFunc profile) :>>= is -> do
+    (RCustomResource name lbdProgramFunc profile) :>>= is ->
       interpret . is =<< rCustomResource name lbdProgramFunc profile
+
+    {- (RCwEventsRuleLambda name ruleProfile lbdProgramFunc lbdProfile) :>>= is -> -}
+      {- interpret . is =<< rCustomResource name ruleProfile lbdProgramFunc lbdProfile -}
 
     Return _ ->
       return def

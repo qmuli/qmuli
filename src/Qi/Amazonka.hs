@@ -6,26 +6,31 @@ module Qi.Amazonka (runAmazonka, currentRegion) where
 
 import           Control.Lens
 import           Control.Monad.Trans.AWS (runAWST, send)
-import           Data.Maybe              (fromMaybe)
-import           Data.Yaml               (FromJSON (..), Value (Object), decode,
-                                          (.:))
+import           Data.Aeson              (FromJSON (..), Value (Object),
+                                          eitherDecode, (.:))
+import           Data.Aeson.Types        (typeMismatch, withObject)
+import           Data.Either             (either)
 import           Network.AWS             hiding (send)
 import           Safe                    (readMay)
 import           System.IO               (stdout)
 import           Text.Heredoc
 
 
-qmuliConfig = [there|./qmuli.yaml|]
+qmuliConfig = [there|./qmuli.json|]
 
 newtype CurrentRegion = CurrentRegion {unCurrentRegion :: Region}
 instance FromJSON CurrentRegion where
-  parseJSON (Object v) =
-    CurrentRegion <$> (v .: "aws" >>= (.: "region"))
+  parseJSON (Object o) =
+    CurrentRegion <$> (withObject "AWS configuration" (.: "region") =<< o .: "aws")
+  parseJSON v          = typeMismatch "qmuli configuration" v
+
 
 currentRegion :: Region
-currentRegion = fromMaybe
-  (error "could not parse qmuli.yaml")
-  $ decode qmuliConfig
+currentRegion = unCurrentRegion $
+  either
+    (error . ("could not parse qmuli.yaml: " ++) )
+    id
+    $ eitherDecode qmuliConfig
 
 
 runAmazonka

@@ -38,7 +38,7 @@ import           Types
 
 -- Used the curl commands below to test-drive the endpoints (substitute your unique api stage url first):
 {-
-export API="https://6kkaf6fj99.execute-api.us-east-1.amazonaws.com/v1"
+export API="https://sfvkiwib24.execute-api.us-east-1.amazonaws.com/v1"
 curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"cup\", \"shape\": \"round\", \"size\": 3}" "$API/things"
 curl -v -X GET "$API/things/cup"
 curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"chair\", \"shape\": \"square\", \"size\": 10}" "$API/things"
@@ -53,7 +53,7 @@ main = withConfig config
   where
     config :: ConfigProgram ()
     config = do
-      thingsTable <- ddbTable "things" (DdbAttrDef "Id" S) Nothing (DdbProvCap 1 1)
+      thingsTable <- ddbTable "things" (DdbAttrDef "name" S) Nothing (DdbProvCap 1 1)
 
       -- create a REST API
       api "world" >>= \world ->

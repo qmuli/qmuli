@@ -46,7 +46,9 @@ toResources config = Resources [lbdRoleRes]
 
         actions = Array
           [ "logs:CreateLogGroup"
+          , "logs:DescribeLogGroups"
           , "logs:CreateLogStream"
+          , "logs:DescribeLogStreams"
           , "logs:PutLogEvents"
 
           , "s3:GetObject"
