@@ -18,18 +18,18 @@ import qualified Qi.Config.CF.Role              as Role
 toResources config = foldMap toAllLambdaResources $ getAllLambdas config
   where
     toAllLambdaResources :: Lambda -> Resources
-    toAllLambdaResources lbd = Resources $ [lambdaPermissionLogical, lambdaLogical]
+    toAllLambdaResources lbd = Resources $ [lambdaPermissionResource, lambdaResource]
 
       where
-        lbdResName = getLambdaLogicalName lbd
-        lbdPermResName = getLambdaPermissionLogicalName lbd
+        lbdLName = getLambdaLogicalName lbd
+        lbdPermLName = getLambdaPermissionLogicalName lbd
 
-        lambdaPermissionLogical =
-          resource lbdPermResName $
+        lambdaPermissionResource =
+          resource lbdPermLName $
             LambdaPermissionProperties $
             lambdaPermission
               "lambda:*"
-              (GetAtt lbdResName "Arn")
+              (GetAtt lbdLName "Arn")
               principal
           where
             principal = case lbd of
@@ -37,13 +37,13 @@ toResources config = foldMap toAllLambdaResources $ getAllLambdas config
               ApiLambda{}      -> "apigateway.amazonaws.com"
               CfCustomLambda{} -> "*" -- TODO: not sure whether we even need the permission for CF Custom Resource
 
-        lambdaLogical = (
-          resource lbdResName $
+        lambdaResource = (
+          resource lbdLName $
             LambdaFunctionProperties $
             lambdaFunction
               lbdCode
               "index.handler"
-              (GetAtt Role.lambdaBasicExecutionIAMRoleResourceName "Arn")
+              (GetAtt Role.lambdaBasicExecutionIAMRoleLogicalName "Arn")
               (Literal NodeJS43)
             & lfFunctionName ?~ (Literal lambdaName)
             & lfMemorySize ?~ Literal memorySize

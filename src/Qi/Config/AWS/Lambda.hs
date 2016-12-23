@@ -46,13 +46,34 @@ instance Default LambdaConfig where
 
 data LambdaMemorySize =
     M128
+  | M192
+  | M256
+  | M320
+  | M384
+  | M448
+  | M512
+  | M1024
   | M1536
 
 instance Enum LambdaMemorySize where
   toEnum 128  = M128
+  toEnum 192  = M192
+  toEnum 256  = M256
+  toEnum 320  = M320
+  toEnum 384  = M384
+  toEnum 448  = M448
+  toEnum 512  = M512
+  toEnum 1024 = M1024
   toEnum 1536 = M1536
 
   fromEnum M128  = 128
+  fromEnum M192  = 192
+  fromEnum M256  = 256
+  fromEnum M320  = 320
+  fromEnum M384  = 384
+  fromEnum M448  = 448
+  fromEnum M512  = 512
+  fromEnum M1024 = 1024
   fromEnum M1536 = 1536
 
 
@@ -63,7 +84,7 @@ data LambdaProfile = LambdaProfile {
 
 instance Default LambdaProfile where
   def = LambdaProfile {
-      _lpMemorySize     = M128
+      _lpMemorySize     = M1024
     , _lpTimeoutSeconds = 30
     }
 

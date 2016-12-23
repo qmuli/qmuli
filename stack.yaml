@@ -34,7 +34,7 @@ extra-deps:
 - amazonka-cognito-identity-1.4.5
 - amazonka-cognito-idp-1.4.5
 - managed-1.0.5
-- aeson-0.11.2.1
+- aeson-1.0.2.1
 - http-conduit-2.2.3
 - http-client-0.5.4
 - http-client-tls-0.3.3

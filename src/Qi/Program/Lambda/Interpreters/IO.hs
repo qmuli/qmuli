@@ -13,7 +13,7 @@ import           Control.Concurrent
 import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
 import           Control.Lens                 hiding (view)
-import           Control.Monad                (void)
+import           Control.Monad                (void, (<=<))
 import           Control.Monad.Base           (MonadBase)
 import           Control.Monad.Catch          (MonadCatch, MonadThrow)
 import           Control.Monad.IO.Class       (MonadIO, liftIO)
@@ -34,6 +34,7 @@ import qualified Data.Conduit                 as C
 import           Data.Conduit.Binary          (sinkLbs)
 import qualified Data.Conduit.List            as CL
 import           Data.Default                 (def)
+import           Data.Maybe                   (listToMaybe)
 import           Data.Monoid                  ((<>))
 import           Data.Ratio                   (numerator)
 import           Data.Text                    (Text)
@@ -80,50 +81,69 @@ import           System.IO                    (stdout)
 
 type QiAWS a = AWST (ReaderT (Text, Config) (ResourceT IO)) a
 
-
-
 cloudWatchLoggerWorker
   :: Text
   -> Config
-  -> MVar ()
   -> TChan (Maybe Text)
   -> IO ()
-cloudWatchLoggerWorker lbdName config done chan = do
+cloudWatchLoggerWorker lbdName config chan = do
+  {- logger <- newLogger Debug stdout -}
+  {- stdLoggerEnv <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion -}
   noLoggerEnv <- newEnv Discover <&> set envRegion currentRegion
 
-  runResourceT . runAWST noLoggerEnv $ do
+  {- runResourceT . runAWST stdLoggerEnv $ -}
+  runResourceT . runAWST noLoggerEnv $
+    loop =<< ensureLogStream
 
-    clgr <- send $ createLogGroup groupName
-    -- ignore response
-    clsr <- send $ createLogStream groupName streamName
-    -- ignore response
+  where
+    groupName = config^.namePrefix
+    streamName = lbdName
 
-    loop Nothing
+    ensureLogStream = do
+      groups <- paginate describeLogGroups C.$$ CL.foldMap (^.dlgrsLogGroups)
+      case listToMaybe $ filter ( (== Just groupName) . (^.lgLogGroupName) ) groups of
+        Just group -> do
+          streams <- paginate (describeLogStreams groupName) C.$$ CL.foldMap (^.dlsrsLogStreams)
+          case listToMaybe $ filter ( (== Just streamName) . (^.lsLogStreamName) ) streams of
+            Just stream ->
+              return $ stream^.lsUploadSequenceToken
+            Nothing -> do
+               clsr <- send $ createLogStream groupName streamName
+               return Nothing
+        Nothing -> do
+          clgr <- send $ createLogGroup groupName
+          -- ignore response
+          clsr <- send $ createLogStream groupName streamName
+          -- ignore response
+          return Nothing
 
-    where
-      groupName = config^.namePrefix
-      streamName = lbdName
 
-      loop
-        :: Maybe Text
-        -> AWS ()
-      loop nextToken = do
-        maybeMsg <- liftIO $ atomically (readTChan chan)
-        case maybeMsg of
-          Just msg -> do
-            -- get current UTC epoch time in milliseconds
-            ts <- liftIO $ fromIntegral . round . (* 1000) <$> getPOSIXTime
+    sendLogEvent nextToken msg = do
+      -- get current UTC epoch time in milliseconds
+      ts <- liftIO $ fromIntegral . round . (* 1000) <$> getPOSIXTime
+      let logEvent = inputLogEvent ts msg
+      send $ putLogEvents groupName streamName [logEvent]
+                     & pleSequenceToken .~ nextToken
 
-            let logEvent = inputLogEvent ts msg
 
-            r <- send $ putLogEvents groupName streamName [logEvent]
-                            & pleSequenceToken .~ nextToken
+    loop
+      :: Maybe Text
+      -> AWS ()
+    loop nextToken = do
+      maybeMsg <- liftIO $ atomically (readTChan chan)
+      maybe
+        (void $ sendLogEvent nextToken "Logger exitting...")
+        (loop . (^.plersNextSequenceToken) <=< sendLogEvent nextToken)
+        maybeMsg
 
-            loop $ r^.plersNextSequenceToken
 
-          Nothing ->
-            liftIO $ putMVar done ()
-
+forkIOSync
+  :: IO ()
+  -> IO (MVar ())
+forkIOSync io = do
+  mvar <- newEmptyMVar
+  forkFinally io (\_ -> putMVar mvar ())
+  return mvar
 
 
 run
@@ -132,13 +152,13 @@ run
   -> LambdaProgram ()
   -> IO ()
 run lbdName config program = do
-  loggerDone <- newEmptyMVar
-  logChan <- liftIO $ atomically newTChan
-  liftIO $ forkIO $ cloudWatchLoggerWorker lbdName config loggerDone logChan
+  logChan     <- liftIO $ atomically newTChan
+  loggerDone  <- liftIO . forkIOSync $ cloudWatchLoggerWorker lbdName config logChan
 
   let cloudWatchLogger :: Logger
       cloudWatchLogger level bd = do
-        let msg = fromLazyByteString (LBS.fromChunks ["[lambda][amazonka][]", "[", BS.pack $ show level, "]"]) <> bd
+        let prefix = LBS.fromChunks ["[lambda][amazonka][]", "[", BS.pack $ show level, "]"]
+            msg = fromLazyByteString prefix <> bd
         atomically . writeTChan logChan . Just . decodeUtf8 . LBS.toStrict $ toLazyByteString msg
 
   cloudWatchLoggerEnv <- newEnv Discover <&> set envRegion currentRegion . set envLogger cloudWatchLogger

@@ -1,16 +1,20 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Types where
 
-
-import           Control.Monad    ((<=<))
 import           Data.Aeson
-import           Data.Aeson.Types (typeMismatch)
-import           Data.Text        (Text)
-import qualified Data.Text        as T
+import           Data.Hashable        (Hashable, hashWithSalt)
+import           Data.HashMap.Strict  (HashMap)
+import           Data.String          (IsString)
+import           Data.Text            (Text)
 import           GHC.Generics
+import           Network.AWS.DynamoDB (AttributeValue)
+
+import           Qi.Util.DDB
+
 
 data Thing = Thing {
     name  :: Text
@@ -23,56 +27,28 @@ instance ToJSON Thing where
 
 instance FromJSON Thing where
 
+instance Hashable Thing where
+  s `hashWithSalt` Thing{name} = s `hashWithSalt` name
 
-newtype DdbThing = DdbThing {unDdbThing :: Thing}
+instance FromAttrs Thing where
+  parseAttrs hm = Thing
+    <$> parseStringAttr "name"  hm
+    <*> parseStringAttr "shape" hm
+    <*> parseNumberAttr "size"  hm
 
-instance ToJSON DdbThing where
-  toJSON (DdbThing Thing{name, shape, size}) = asObject
-    [
-      "name"  .= asString name
-    , "shape" .= asString shape
-    , "size"  .= asNumber size
-    ]
+instance ToAttrs Thing where
+  toAttrs Thing{name, shape, size} = [
+                    ("name",  stringAttr name)
+                  , ("shape", stringAttr shape)
+                  , ("size",  numberAttr size)
+                  ]
 
-asNumber
-  :: Show a
-  => a
-  -> Value
-asNumber n = object ["N" .= show n]
-
-asString
-  :: ToJSON a
-  => a
-  -> Value
-asString s = object ["S" .= s]
-
-asObject
-  :: [(Text, Value)]
-  -> Value
-asObject o = object ["M" .= object o]
-
-
-instance FromJSON DdbThing where
-  parseJSON (Object v) = do
-    obj <- fromObject v
-    DdbThing <$> (
-          Thing
-            <$> fromStringProp "name" obj
-            <*> fromStringProp "shape" obj
-            <*> fromNumberProp "size" obj
-        )
-
-    where
-      fromNumber = fmap (read . T.unpack) . (.: "N")
-      fromNumberProp name = fromNumber <=< (.: name)
-
-      fromString = (.: "S")
-      fromStringProp name = fromString <=< (.: name)
-
-      fromObject = (.: "M")
-      fromObjectProp name = fromObject <=< (.: name)
-
-  parseJSON invalid = typeMismatch "DdbThing" invalid
-
+byNameKey
+  :: (Hashable k, IsString k, Eq k)
+  => Text
+  -> HashMap k AttributeValue
+byNameKey name = [
+    ("name", stringAttr name)
+  ]
 
 

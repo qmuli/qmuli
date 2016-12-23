@@ -4,7 +4,8 @@
 
 module Qi.Util where
 
-import           Data.Aeson                  (Value (Number, String), encode,
+import           Data.Aeson                  (Result (Error, Success),
+                                              Value (Number, String), encode,
                                               object)
 import           Data.Text                   (Text)
 import qualified Data.Text                   as T
@@ -25,3 +26,28 @@ respond status content =
       ("status", Number $ fromIntegral status)
     , ("body", content)
     ]
+
+result
+  :: (String -> b)
+  -> (a -> b)
+  -> Result a
+  -> b
+result f g r =
+  case r of
+    Error err -> f err
+    Success x -> g x
+
+withSuccess
+  :: Int
+  -> LambdaProgram ()
+  -> LambdaProgram ()
+withSuccess code f =
+  case code of
+    200         -> f
+    unexpected  ->
+      internalError $ "Error: unexpected response status: " ++ show unexpected
+
+
+
+
+

@@ -24,11 +24,14 @@ import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
 import           Qi.Util
 
 
--- Use the two curl commands below to test-drive the two endpoints (substitute your unique api stage url first):
---
--- curl -v -X POST -H "Content-Type: application/json" -d "{\"property\": 3}" "https://50nk1jhzda.execute-api.us-east-1.amazonaws.com/v1/things"
--- curl -v -X GET "https://50nk1jhzda.execute-api.us-east-1.amazonaws.com/v1/things"
---
+-- Use the curl commands below to test-drive the two endpoints (substitute your unique api stage url first):
+{-
+export API="https://60yaf0cfej.execute-api.us-east-1.amazonaws.com/v1"
+curl -v -X POST -H "Content-Type: application/json" -d "{\"property\": 3}" "$API/things"
+curl -v -X GET "$API/things"
+-}
+
+
 
 main :: IO ()
 main = withConfig config
