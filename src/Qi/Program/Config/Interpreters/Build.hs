@@ -48,8 +48,8 @@ interpret program =
     (RS3BucketLambda name bucketId lbdProgramFunc profile) :>>= is ->
       interpret . is =<< rS3BucketLambda name bucketId lbdProgramFunc profile
 
-    (RDdbTable name hashAttrDef rangeAttrDef provCap) :>>= is ->
-      interpret . is =<< rDdbTable name hashAttrDef rangeAttrDef provCap
+    (RDdbTable name hashAttrDef profile) :>>= is ->
+      interpret . is =<< rDdbTable name hashAttrDef profile
 
     (RApi name) :>>= is ->
       interpret . is =<< rApi name
@@ -94,13 +94,12 @@ interpret program =
       return newLambdaId
 
 
-    rDdbTable name hashAttrDef rangeAttrDef provCap = do
+    rDdbTable name hashAttrDef profile = do
       newDdbTableId <- getNextId
       let newDdbTable = DdbTable {
           _dtName         = name
         , _dtHashAttrDef  = hashAttrDef
-        , _dtRangeAttrDef = rangeAttrDef
-        , _dtProvCap      = provCap
+        , _dtProfile      = profile
         }
 
       ddbConfig . dcTables %= SHM.insert newDdbTableId newDdbTable

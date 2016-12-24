@@ -53,7 +53,7 @@ main = withConfig config
   where
     config :: ConfigProgram ()
     config = do
-      thingsTable <- ddbTable "things" (DdbAttrDef "name" S) Nothing (DdbProvCap 1 1)
+      thingsTable <- ddbTable "things" (DdbAttrDef "name" S) def
 
       -- create a REST API
       api "world" >>= \world ->

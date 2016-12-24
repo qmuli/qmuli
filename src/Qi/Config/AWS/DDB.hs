@@ -26,16 +26,11 @@ data DdbAttrDef = DdbAttrDef {
   , _daType :: DdbAttrType
   }
 
-data DdbProvCap = DdbProvCap {
-    _dpcRead  :: Integer
-  , _dpcWrite :: Integer
-  }
 
 data DdbTable = DdbTable {
-    _dtName         :: Text
-  , _dtHashAttrDef  :: DdbAttrDef
-  , _dtRangeAttrDef :: Maybe DdbAttrDef
-  , _dtProvCap      :: DdbProvCap
+    _dtName        :: Text
+  , _dtHashAttrDef :: DdbAttrDef
+  , _dtProfile     :: DdbTableProfile
   }
 
 
@@ -43,14 +38,38 @@ data DdbConfig = DdbConfig {
     _dcTables :: HashMap DdbTableId DdbTable
   }
 
-
 instance Default DdbConfig where
   def = DdbConfig {
     _dcTables = SHM.empty
   }
 
+
+data DdbProvCap = DdbProvCap {
+    _dpcRead  :: Integer
+  , _dpcWrite :: Integer
+  }
+
+instance Default DdbProvCap where
+  def = DdbProvCap {
+    _dpcRead  = 2
+  , _dpcWrite = 2
+  }
+
+data DdbTableProfile = DdbTableProfile {
+    _dtpRangeKey :: Maybe DdbAttrDef
+  , _dtpProvCap  :: DdbProvCap
+  }
+
+instance Default DdbTableProfile where
+  def = DdbTableProfile {
+    _dtpRangeKey  = Nothing
+  , _dtpProvCap   = def
+  }
+
+
 makeLenses ''DdbAttrDef
-makeLenses ''DdbProvCap
 makeLenses ''DdbTable
+makeLenses ''DdbProvCap
+makeLenses ''DdbTableProfile
 makeLenses ''DdbConfig
 
