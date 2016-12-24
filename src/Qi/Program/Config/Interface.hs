@@ -15,7 +15,6 @@ import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ApiMethodProfile)
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.DDB
-{- import           Qi.Config.AWS.Lambda.Profile          (LambdaProfile) -}
 import           Qi.Config.AWS.Lambda                  (LambdaProfile)
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
@@ -39,8 +38,7 @@ data ConfigInstruction a where
   RDdbTable
     :: Text
     -> DdbAttrDef
-    -> Maybe DdbAttrDef
-    -> DdbProvCap
+    -> DdbTableProfile
     -> ConfigInstruction DdbTableId
 
   RApi
@@ -79,7 +77,7 @@ s3Bucket = singleton . RS3Bucket
 
 s3BucketLambda name s3BucketId lbd = singleton . RS3BucketLambda name s3BucketId lbd
 
-ddbTable name hashAttrDef rangeAttrDef = singleton . RDdbTable name hashAttrDef rangeAttrDef
+ddbTable name hashAttrDef = singleton . RDdbTable name hashAttrDef
 
 api = singleton . RApi
 

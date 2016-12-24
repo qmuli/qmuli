@@ -13,8 +13,7 @@ import qualified Data.Text                   as T
 import           Stratosphere                hiding (name)
 
 import           Qi.Config.AWS
-import           Qi.Config.AWS.DDB           (daName, daType, dpcRead, dpcWrite,
-                                              dtHashAttrDef, dtName, dtProvCap)
+import           Qi.Config.AWS.DDB           hiding (DdbAttrType (..))
 import qualified Qi.Config.AWS.DDB           as DDB
 import           Qi.Config.AWS.DDB.Accessors
 
@@ -45,8 +44,10 @@ toResources config = Resources . map toDdbTableRes $ getAllDdbTables config
           ]
         provisionedThroughput =
           dynamoDBTableProvisionedThroughput
-            (Literal . Integer' $ table^.dtProvCap.dpcRead)
-            (Literal . Integer' $ table^.dtProvCap.dpcWrite)
+            (Literal . Integer' $ provCap^.dpcRead)
+            (Literal . Integer' $ provCap^.dpcWrite)
+          where
+            provCap = table^.dtProfile.dtpProvCap
 
         toAttrType DDB.S = S
         toAttrType DDB.N = N
