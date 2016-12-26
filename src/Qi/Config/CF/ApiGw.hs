@@ -13,20 +13,18 @@ import           Data.Text                                   (Text)
 import qualified Data.Text                                   as T
 import           Qi.Config.AWS
 import           Qi.Config.AWS.ApiGw
-import qualified Qi.Config.AWS.ApiGw.Api.Accessors           as Api
 import qualified Qi.Config.AWS.ApiGw.ApiAuthorizer.Accessors as ApiAuthorizer
 import qualified Qi.Config.AWS.ApiGw.ApiDeployment.Accessors as ApiDeployment
 import qualified Qi.Config.AWS.ApiGw.ApiMethod.Accessors     as ApiMethod
 import           Qi.Config.AWS.ApiGw.ApiMethod.Profile       (ampAuthId)
 import qualified Qi.Config.AWS.ApiGw.ApiResource.Accessors   as ApiResource
-import qualified Qi.Config.AWS.CF.Accessors                  as CF
 import qualified Qi.Config.AWS.Lambda.Accessors              as Lambda
 import           Qi.Config.Identifier
 import           Stratosphere                                hiding (Delete,
                                                               name)
 import           Text.Heredoc
 
-toResources config = Resources . foldMap toStagedApiResources $ Api.getAll config
+toResources config = Resources . foldMap toStagedApiResources $ getAllWithIds config
 
   where
     jsonContentType = "application/json"
@@ -38,7 +36,7 @@ toResources config = Resources . foldMap toStagedApiResources $ Api.getAll confi
           ++ map toApiAuthorizers (ApiAuthorizer.getChildren aid config)
           ++ foldMap toApiChildResources (ApiResource.getChildren (Left aid) config)
 
-        apiLName = Api.getLogicalName api
+        apiLName = getLogicalName config api
 
         apiResource = (
           resource apiLName $
@@ -86,10 +84,10 @@ toResources config = Resources . foldMap toStagedApiResources $ Api.getAll confi
               ]
             userPoolPhysicalId = GetAtt cognitoLName "UserPoolId"
 
-            name = ApiAuthorizer.getLogicalName $ ApiAuthorizer.getById aaid config
-            auth = ApiAuthorizer.getById aaid config
-            cognito = CF.getById (auth^.aaCognitoId) config
-            cognitoLName = CF.getLogicalName cognito config
+            name = getLogicalName config $ getById config aaid
+            auth = getById config aaid
+            cognito = getById config (auth^.aaCognitoId)
+            cognitoLName = getLogicalName config cognito
 
 
 
@@ -100,8 +98,8 @@ toResources config = Resources . foldMap toStagedApiResources $ Api.getAll confi
           foldMap toApiChildResources (ApiResource.getChildren (Right arid) config)
 
           where
-            apir = ApiResource.getById arid config
-            apirLName = ApiResource.getLogicalName apir
+            apir = getById config arid
+            apirLName = getLogicalName config apir
 
             apirResource =
               case apir of
@@ -119,7 +117,7 @@ toResources config = Resources . foldMap toStagedApiResources $ Api.getAll confi
 
                 ApiResource{_arParent = Right arid'} ->
                   let
-                    apirParentLName = ApiResource.getLogicalName $ ApiResource.getById arid' config
+                    apirParentLName = getLogicalNameFromId config arid'
                   in
                     resource apirLName $
                       ApiGatewayResourceProperties $
@@ -211,7 +209,7 @@ toResources config = Resources . foldMap toStagedApiResources $ Api.getAll confi
 
                   Just authId ->
                     let
-                      authLName = ApiAuthorizer.getLogicalName $ ApiAuthorizer.getById authId config
+                      authLName = getLogicalNameFromId config authId
                     in
                     res
                     & agmeAuthorizationType ?~ Literal COGNITO_USER_POOLS
@@ -241,9 +239,9 @@ toResources config = Resources . foldMap toStagedApiResources $ Api.getAll confi
                       , ("method.response.header.Access-Control-Allow-Origin", Bool False)
                       ]
 
-                lbdId = Lambda.getById amcLbdId config
-                lbdLName = Lambda.getLogicalName lbdId
-                lbdPermLName = Lambda.getPermissionLogicalName lbdId
+                lbdId = getById config amcLbdId
+                lbdLName = getLogicalName config lbdId
+                lbdPermLName = Lambda.getPermissionLogicalName config lbdId
 
                 integration =
                   apiGatewayMethodIntegration
@@ -315,9 +313,12 @@ toOutputs
   :: Config
   -> Outputs
 toOutputs config =
-  Outputs . map toApiOutput $ Api.getAll config
+  Outputs . map toApiOutput $ getAllWithIds config
 
   where
+    toApiOutput
+      :: (ApiId, Api)
+      -> Output
     toApiOutput (_, api) =
       output (T.concat [apiLName, "URL"])
         apiUrl
@@ -331,6 +332,6 @@ toOutputs config =
           , ".execute-api.us-east-1.amazonaws.com/v1"
           ]
 
-        apiLName = Api.getLogicalName api
+        apiLName = getLogicalName config api
 
 

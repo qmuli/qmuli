@@ -25,13 +25,12 @@ main = withConfig config
 
       let ruleProfile = ScheduledEventProfile "cron(* * * * ? *)"
 
-      void $ cwEventLambda "myEventLambda" ruleProfile eventLambda $
-        def & lpMemorySize .~ M1536
+      void $ cwEventLambda "myEventLambda" ruleProfile eventLambda def
 
     eventLambda
       :: CwEvent -> LambdaProgram ()
     eventLambda event = do
       -- emit log messages that end up in the appropriate cloudwatch group/stream
-      say "hello there!"
+      say "tick"
 
 

@@ -1,24 +1,28 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE OverloadedStrings      #-}
+{-# LANGUAGE TemplateHaskell        #-}
 
 module Qi.Config.AWS where
 
 import           Control.Lens
 import           Control.Monad.State.Class (MonadState)
+import           Data.Char                 (isAlphaNum)
 import           Data.Default              (Default, def)
+import           Data.Hashable             (Hashable)
+import qualified Data.HashMap.Strict       as SHM
+import           Data.Maybe                (fromMaybe)
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 
-import           Qi.Config.AWS.ApiGw       (ApiGwConfig)
-import           Qi.Config.AWS.CF          (CfConfig)
-import           Qi.Config.AWS.CW          (CwConfig)
-import           Qi.Config.AWS.DDB         (DdbConfig)
-import           Qi.Config.AWS.Lambda      (LambdaConfig)
-import           Qi.Config.AWS.S3          (S3Config)
-import           Qi.Config.Identifier      (FromInt (..))
+import           Qi.Config.AWS.ApiGw
+import           Qi.Config.AWS.CF
+import           Qi.Config.AWS.CW
+import           Qi.Config.AWS.DDB
+import           Qi.Config.AWS.Lambda
+import           Qi.Config.AWS.S3
+import           Qi.Config.Identifier
 
 
 data Config = Config {
@@ -68,4 +72,114 @@ namePrefixWith
   -> Config
   -> Text
 namePrefixWith sep name config = T.concat [config^.namePrefix, sep, name]
+
+
+
+
+makeAlphaNumeric
+  :: Text
+  -> Text
+makeAlphaNumeric = T.filter isAlphaNum
+
+class (Eq rid, Show rid, Hashable rid) => CfResource r rid | rid -> r, r -> rid where
+
+  rNameSuffix
+    :: r
+    -> Text
+  getName
+    :: Config
+    -> r
+    -> Text
+  getMap
+    :: Config
+    -> SHM.HashMap rid r
+
+  getAllWithIds
+    :: Config
+    -> [(rid, r)]
+  getAllWithIds = SHM.toList . getMap
+
+  getAll
+    :: Config
+    -> [r]
+  getAll = SHM.elems . getMap
+
+  getById
+    :: (Show rid, Eq rid, Hashable rid)
+    => Config
+    -> rid
+    -> r
+  getById config rid =
+    fromMaybe
+      (error $ "Could not reference resource with id: " ++ show rid)
+      $ SHM.lookup rid $ getMap config
+
+  getLogicalName
+    :: Config
+    -> r
+    -> Text
+  getLogicalName config r =  T.concat [makeAlphaNumeric (getName config r), rNameSuffix r]
+
+  getPhysicalName
+    :: Config
+    -> r
+    -> Text
+  getPhysicalName config r =
+    makeAlphaNumeric (getName config r) `underscoreNamePrefixWith` config
+
+  getLogicalNameFromId
+    :: Config
+    -> rid
+    -> Text
+  getLogicalNameFromId config rid =
+    getLogicalName config $ getById config rid
+
+instance CfResource CwEventsRule CwEventsRuleId where
+  rNameSuffix = const "CwEventsRule"
+  getName _ = (^.cerName)
+  getMap = (^.cwConfig.ccRules)
+
+
+instance CfResource Lambda LambdaId where
+  rNameSuffix = const "Lambda"
+  getName _ = (^.lbdName)
+  getMap = (^.lbdConfig.lcLambdas)
+
+
+instance CfResource Custom CustomId where
+  rNameSuffix = const "Custom"
+  getName config = getLogicalNameFromId config . (^.cLbdId)
+  getMap = (^.cfConfig.cfcCustoms)
+
+
+instance CfResource DdbTable DdbTableId where
+  rNameSuffix = const "DynamoDBTable"
+  getName _ = (^.dtName)
+  getMap = (^.ddbConfig.dcTables)
+
+
+instance CfResource S3Bucket S3BucketId where
+  rNameSuffix = const "S3Bucket"
+  getName _ = (^.s3bName)
+  getMap = (^.s3Config.s3Buckets.s3idxIdToS3Bucket)
+  getPhysicalName config r =
+    makeAlphaNumeric (getName config r) `dotNamePrefixWith` config
+
+
+instance CfResource Api ApiId where
+  rNameSuffix = const "Api"
+  getName _ = (^.aName)
+  getMap = (^.apiGwConfig.acApis)
+
+
+instance CfResource ApiAuthorizer ApiAuthorizerId where
+  rNameSuffix = const "ApiAuthorizer"
+  getName _ = (^.aaName)
+  getMap = (^.apiGwConfig.acApiAuthorizers)
+
+
+instance CfResource ApiResource ApiResourceId where
+  rNameSuffix = const "ApiResource"
+  getName _ = (^.arName)
+  getMap = (^.apiGwConfig.acApiResources)
 

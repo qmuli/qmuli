@@ -21,7 +21,6 @@ import qualified Qi.Config.AWS.ApiGw.ApiMethod.Event  as ApiMethodEvent (parse)
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.CW
 import           Qi.Config.AWS.Lambda
-import qualified Qi.Config.AWS.Lambda.Accessors       as Lambda
 import           Qi.Config.AWS.S3
 import qualified Qi.Config.AWS.S3.Event               as S3Event (parse)
 import           Qi.Config.CF                         as CW
@@ -90,7 +89,7 @@ withNameAndConfig appName configProgram =
 
     config = snd . (`runState` def{_namePrefix = appName}) . CB.unQiConfig $ CB.interpret configProgram
 
-    lbdIOMap = SHM.fromList $ map toLbdIOPair $ Lambda.getAll config
+    lbdIOMap = SHM.fromList $ map toLbdIOPair $ getAll config
 
       where
         toLbdIOPair

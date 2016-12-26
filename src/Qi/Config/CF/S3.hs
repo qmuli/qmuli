@@ -14,10 +14,9 @@ import           Stratosphere                   hiding (S3Bucket, name)
 import           Qi.Config.AWS
 import qualified Qi.Config.AWS.Lambda.Accessors as Lambda
 import           Qi.Config.AWS.S3
-import qualified Qi.Config.AWS.S3.Accessors     as S3
 
 
-toResources config = Resources . map toS3BucketRes $ S3.getAll config
+toResources config = Resources . map toS3BucketRes $ getAll config
   where
     toS3BucketRes bucket@S3Bucket{_s3bEventConfigs} = (
       resource resName $
@@ -29,15 +28,15 @@ toResources config = Resources . map toS3BucketRes $ S3.getAll config
       & dependsOn ?~ reqs
 
       where
-        resName = S3.getLogicalName bucket
-        bucketName = S3.getPhysicalName bucket config
+        resName = getLogicalName config bucket
+        bucketName = getPhysicalName config bucket
 
         reqs = concat $
           map (\lec ->  let
-                          lbd = Lambda.getById (lec^.lbdId) config
+                          lbd = getById config (lec^.lbdId)
                         in
-                        [ Lambda.getPermissionLogicalName lbd
-                        , Lambda.getLogicalName lbd
+                        [ Lambda.getPermissionLogicalName config lbd
+                        , getLogicalName config lbd
                         ]) _s3bEventConfigs
 
 
@@ -47,4 +46,4 @@ toResources config = Resources . map toS3BucketRes $ S3.getAll config
         lbdC S3EventConfig{_event, _lbdId} =
           s3BucketLambdaConfiguration
             (Literal . T.pack $ show _event)
-            (GetAtt (Lambda.getLogicalNameFromId _lbdId config) "Arn")
+            (GetAtt (getLogicalNameFromId config _lbdId) "Arn")

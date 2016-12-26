@@ -24,7 +24,7 @@ parse (Object e) config = do
     bucketName  <- (.: "name") =<< s3 .: "bucket"
     key         <- (.: "key")  =<< s3 .: "object"
 
-    return . S3Event $ S3Object (getIdByName (removeDotNamePrefix bucketName) config) (S3Key key)
+    return . S3Event $ S3Object (getIdByName config $ removeDotNamePrefix bucketName) (S3Key key)
 
 removeDotNamePrefix
   :: String

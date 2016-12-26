@@ -53,10 +53,8 @@ import           Network.HTTP.Client          (ManagerSettings, Request,
 import           Qi.Amazonka                  (currentRegion)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.DDB
-import qualified Qi.Config.AWS.DDB.Accessors  as DDB
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
-import qualified Qi.Config.AWS.S3.Accessors   as S3
 import           Qi.Config.Identifier         (DdbTableId)
 import           Qi.Program.Lambda.Interface  (LambdaInstruction (..),
                                                LambdaProgram)
@@ -257,8 +255,8 @@ run lbdName config program = do
           :: S3Object
           -> QiAWS ByteString
         getS3ObjectContent S3Object{_s3oBucketId, _s3oKey = S3Key objKey} = do
-          let bucketName = S3.getPhysicalName bucket config
-              bucket = S3.getById _s3oBucketId config
+          let bucketName = getPhysicalName config bucket
+              bucket = getById config _s3oBucketId
 
           r <- send . getObject (BucketName bucketName) $ ObjectKey objKey
           sinkBody (r ^. gorsBody) sinkLbs
@@ -269,8 +267,8 @@ run lbdName config program = do
           -> a
           -> QiAWS a
         foldStreamFromS3Object S3Object{_s3oBucketId, _s3oKey = S3Key objKey} folder zero = do
-          let bucketName = S3.getPhysicalName bucket config
-              bucket = S3.getById _s3oBucketId config
+          let bucketName = getPhysicalName config bucket
+              bucket = getById config _s3oBucketId
 
           r <- send . getObject (BucketName bucketName) $ ObjectKey objKey
           sinkBody (r ^. gorsBody) $ CL.fold folder zero
@@ -313,8 +311,8 @@ run lbdName config program = do
           return ()
 
           where
-            bucketName = S3.getPhysicalName bucket config
-            bucket = S3.getById _s3oBucketId config
+            bucketName = getPhysicalName config bucket
+            bucket = getById config _s3oBucketId
 
 
 -- DynamoDB
@@ -325,7 +323,7 @@ run lbdName config program = do
           send $ scan tableName
 
           where
-            tableName = DDB.getPhysicalName (DDB.getById ddbTableId config) config
+            tableName = getPhysicalName config $ getById config ddbTableId
 
 
         queryDdbRecords
@@ -339,7 +337,7 @@ run lbdName config program = do
             & qExpressionAttributeValues .~ expAttrs
 
           where
-            tableName = DDB.getPhysicalName (DDB.getById ddbTableId config) config
+            tableName = getPhysicalName config $ getById config ddbTableId
 
 
         getDdbRecord
@@ -350,7 +348,7 @@ run lbdName config program = do
           send $ getItem tableName & giKey .~ keys
 
           where
-            tableName = DDB.getPhysicalName (DDB.getById ddbTableId config) config
+            tableName = getPhysicalName config $ getById config ddbTableId
 
 
         putDdbRecord
@@ -361,7 +359,7 @@ run lbdName config program = do
           send $ putItem tableName & piItem .~ item
 
           where
-            tableName = DDB.getPhysicalName (DDB.getById ddbTableId config) config
+            tableName = getPhysicalName config $ getById config ddbTableId
 
 
         deleteDdbRecord
@@ -372,8 +370,7 @@ run lbdName config program = do
           send $ deleteItem tableName & diKey .~ key
 
           where
-            tableName = DDB.getPhysicalName (DDB.getById ddbTableId config) config
-
+            tableName = getPhysicalName config $ getById config ddbTableId
 
 -- Util
         say

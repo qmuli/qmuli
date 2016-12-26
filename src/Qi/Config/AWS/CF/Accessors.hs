@@ -16,33 +16,6 @@ import qualified Qi.Config.AWS.Lambda.Accessors as Lambda
 import           Qi.Config.Identifier
 
 
-getLogicalName
-  :: Custom
-  -> Config
-  -> Text
-getLogicalName custom config =
-  T.concat [ Lambda.getLogicalNameFromId (custom ^. cLbdId) config, "CustomResource"]
-
-
-getById
-  :: CustomId
-  -> Config
-  -> Custom
-getById cid config =
-  case SHM.lookup cid customMap of
-    Just custom -> custom
-    Nothing  -> error $ "Could not reference s3 bucket with id: " ++ show cid
-  where
-    customMap = config^.cfConfig.cfcCustoms
-
-
-getAll
-  :: Config
-  -> [Custom]
-getAll config = SHM.elems $ config^.cfConfig.cfcCustoms
-
-
-
 insert
   :: Custom
   -> (CustomId, (CfConfig -> CfConfig))
