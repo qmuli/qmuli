@@ -17,27 +17,28 @@ import           Qi.Config.Identifier
 makeAlphaNumeric :: Text -> Text
 makeAlphaNumeric = T.filter isAlphaNum
 
-getApiAuthorizerLogicalName
+getLogicalName
   :: ApiAuthorizer
   -> Text
-getApiAuthorizerLogicalName auth = T.concat [makeAlphaNumeric $ auth^.aaName, "ApiAuthorizer"]
+getLogicalName auth = T.concat [makeAlphaNumeric $ auth^.aaName, "ApiAuthorizer"]
 
-getApiAuthorizerById
+getById
   :: ApiAuthorizerId
   -> Config
   -> ApiAuthorizer
-getApiAuthorizerById aaid config =
+getById aaid config =
   case SHM.lookup aaid aaMap of
     Just ar -> ar
     Nothing -> error $ "Could not reference api resource with id: " ++ show aaid
   where
     aaMap = config^.apiGwConfig.acApiAuthorizers
 
-getApiAuthorizers
+getChildren
   :: ApiId
   -> Config
   -> [ApiAuthorizerId]
-getApiAuthorizers aid config = SHM.lookupDefault [] aid $ config^.apiGwConfig.acApiAuthorizerDeps
+getChildren aid config = 
+  SHM.lookupDefault [] aid $ config^.apiGwConfig.acApiAuthorizerDeps
 
 
 

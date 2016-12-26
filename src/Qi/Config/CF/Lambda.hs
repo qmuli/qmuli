@@ -15,14 +15,14 @@ import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.Lambda.Accessors
 import qualified Qi.Config.CF.Role              as Role
 
-toResources config = foldMap toAllLambdaResources $ getAllLambdas config
+toResources config = foldMap toAllLambdaResources $ getAll config
   where
     toAllLambdaResources :: Lambda -> Resources
     toAllLambdaResources lbd = Resources $ [lambdaPermissionResource, lambdaResource]
 
       where
-        lbdLName = getLambdaLogicalName lbd
-        lbdPermLName = getLambdaPermissionLogicalName lbd
+        lbdLName = getLogicalName lbd
+        lbdPermLName = getPermissionLogicalName lbd
 
         lambdaPermissionResource =
           resource lbdPermLName $
@@ -36,6 +36,7 @@ toResources config = foldMap toAllLambdaResources $ getAllLambdas config
               S3BucketLambda{} -> "s3.amazonaws.com"
               ApiLambda{}      -> "apigateway.amazonaws.com"
               CfCustomLambda{} -> "*" -- TODO: not sure whether we even need the permission for CF Custom Resource
+              CwEventLambda{}  -> "events.amazonaws.com"
 
         lambdaResource = (
           resource lbdLName $
@@ -51,7 +52,7 @@ toResources config = foldMap toAllLambdaResources $ getAllLambdas config
           )
 
           where
-            lambdaName = getFullLambdaName lbd config
+            lambdaName = getPhysicalName lbd config
 
             memorySize = fromIntegral . fromEnum $ lbd^.lbdProfile.lpMemorySize
             timeOut = fromIntegral $ lbd^.lbdProfile.lpTimeoutSeconds

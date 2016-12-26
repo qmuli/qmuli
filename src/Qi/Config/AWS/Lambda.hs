@@ -13,11 +13,14 @@ import           Stratosphere
 
 import           Qi.Config.AWS.ApiGw         (ApiMethodEvent)
 import           Qi.Config.AWS.CF            (CfEvent)
+import           Qi.Config.AWS.CW            (CwEvent)
 import           Qi.Config.AWS.S3            (S3Event)
 import           Qi.Config.Identifier
 import           Qi.Program.Lambda.Interface (LambdaProgram)
 
-data Lambda = S3BucketLambda {
+
+data Lambda =
+    S3BucketLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
   , _lbdS3BucketLambdaProgram :: S3Event -> LambdaProgram ()
@@ -30,9 +33,13 @@ data Lambda = S3BucketLambda {
   | CfCustomLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdCFCustomLambdaProgram :: CfEvent -> LambdaProgram ()
+  , _lbdCfCustomLambdaProgram :: CfEvent -> LambdaProgram ()
   }
-
+  | CwEventLambda {
+    _lbdName                 :: Text
+  , _lbdProfile              :: LambdaProfile
+  , _lbdCwEventLambdaProgram :: CwEvent -> LambdaProgram ()
+  }
 
 data LambdaConfig = LambdaConfig {
     _lcLambdas :: HashMap LambdaId Lambda

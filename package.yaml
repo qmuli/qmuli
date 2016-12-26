@@ -69,6 +69,7 @@ library:
     - Qi.Config.AWS
     - Qi.Config.AWS.ApiGw
     - Qi.Config.AWS.CF
+    - Qi.Config.AWS.CW
     - Qi.Config.AWS.DDB
     - Qi.Config.AWS.Lambda
     - Qi.Config.AWS.ApiGw.ApiMethod.Profile
@@ -83,7 +84,11 @@ library:
     - Qi.Util.CustomCFResource
     - Qi.Util.DDB
     - Qi.Program.Config.Interpreters.Build
-  ghc-options: -Wall
+  ghc-options: 
+    -O0
+    -W 
+    -Wno-unused-imports 
+    -Wno-unused-matches 
 
 executables:
   # qmuli-simple-s3-copy:
@@ -107,13 +112,13 @@ executables:
       # - base >= 4.8 && < 5
       # - qmuli
     # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-  qmuli-apigw-lambda-dynamodb:
-    main: Main.hs
-    source-dirs: examples/apigw-lambda-dynamodb/src
-    dependencies:
-      - base >= 4.8 && < 5
-      - qmuli
-    ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  # qmuli-apigw-lambda-dynamodb:
+    # main: Main.hs
+    # source-dirs: examples/apigw-lambda-dynamodb/src
+    # dependencies:
+      # - base >= 4.8 && < 5
+      # - qmuli
+    # ghc-options: -W -static -threaded -rtsopts -with-rtsopts=-N
   # qmuli-cognito:
     # main: Main.hs
     # source-dirs: examples/cognito/src
@@ -121,7 +126,13 @@ executables:
       # - base >= 4.8 && < 5
       # - qmuli
     # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-
+  qmuli-cw-events:
+    main: Main.hs
+    source-dirs: examples/cw-events/src
+    dependencies:
+      - base >= 4.8 && < 5
+      - qmuli
+    ghc-options: -W -Wno-unused-imports -static -threaded -rtsopts -with-rtsopts=-N
 
 tests:
   tasty:

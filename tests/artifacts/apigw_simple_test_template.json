@@ -100,7 +100,7 @@
         "dummyLambdaLambda": {
             "Type": "AWS::Lambda::Function",
             "Properties": {
-                "MemorySize": "128",
+                "MemorySize": "1024",
                 "Runtime": "nodejs4.3",
                 "Role": {
                     "Fn::GetAtt": [
@@ -139,7 +139,9 @@
                                 "Effect": "Allow",
                                 "Action": [
                                     "logs:CreateLogGroup",
+                                    "logs:DescribeLogGroups",
                                     "logs:CreateLogStream",
+                                    "logs:DescribeLogStreams",
                                     "logs:PutLogEvents",
                                     "s3:GetObject",
                                     "s3:PutObject",

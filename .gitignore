@@ -8,5 +8,6 @@ qmuli-apigw-lambda-s3
 qmuli-simple-s3-copy
 qmuli-cognito
 qmuli-fold-s3-content
+qmuli-cw-events
 *.zip
 TAGS

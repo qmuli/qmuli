@@ -15,10 +15,10 @@ import           Qi.Config.AWS.ApiGw
 import           Qi.Config.Identifier
 
 
-getApiStageLogicalName
+getLogicalName
   :: Api
   -> Text
-getApiStageLogicalName api = T.concat [api^.aName, "ApiDeployment"]
+getLogicalName api = T.concat [api^.aName, "ApiDeployment"]
 
 
 

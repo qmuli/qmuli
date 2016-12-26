@@ -17,10 +17,10 @@ import           Qi.Config.Identifier
 makeAlphaNumeric :: Text -> Text
 makeAlphaNumeric = T.filter isAlphaNum
 
-getApiMethodLogicalName
+getLogicalName
   :: ApiResource
   -> ApiVerb
   -> Text
-getApiMethodLogicalName apir verb = T.concat [makeAlphaNumeric $ apir^.arName, T.pack $ show verb]
+getLogicalName apir verb = T.concat [makeAlphaNumeric $ apir^.arName, T.pack $ show verb]
 
 
