@@ -14,6 +14,7 @@ import qualified Data.Text                 as T
 
 import           Qi.Config.AWS.ApiGw       (ApiGwConfig)
 import           Qi.Config.AWS.CF          (CfConfig)
+import           Qi.Config.AWS.CW          (CwConfig)
 import           Qi.Config.AWS.DDB         (DdbConfig)
 import           Qi.Config.AWS.Lambda      (LambdaConfig)
 import           Qi.Config.AWS.S3          (S3Config)
@@ -28,17 +29,19 @@ data Config = Config {
   , _lbdConfig   :: LambdaConfig
   , _ddbConfig   :: DdbConfig
   , _cfConfig    :: CfConfig
+  , _cwConfig    :: CwConfig
 }
 
 instance Default Config where
   def = Config {
-      _namePrefix = "qmuli"
-    , _nextId     = 0  -- global autoincrement id state
-    , _s3Config   = def
+      _namePrefix   = "qmuli"
+    , _nextId       = 0  -- global autoincrement id state
+    , _s3Config     = def
     , _apiGwConfig  = def
-    , _lbdConfig  = def
-    , _ddbConfig  = def
-    , _cfConfig   = def
+    , _lbdConfig    = def
+    , _ddbConfig    = def
+    , _cfConfig     = def
+    , _cwConfig     = def
   }
 
 makeLenses ''Config

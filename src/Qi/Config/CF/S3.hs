@@ -12,12 +12,12 @@ import qualified Data.Text                      as T
 import           Stratosphere                   hiding (S3Bucket, name)
 
 import           Qi.Config.AWS
-import           Qi.Config.AWS.Lambda.Accessors
+import qualified Qi.Config.AWS.Lambda.Accessors as Lambda
 import           Qi.Config.AWS.S3
-import           Qi.Config.AWS.S3.Accessors
+import qualified Qi.Config.AWS.S3.Accessors     as S3
 
 
-toResources config = Resources . map toS3BucketRes $ getAllBuckets config
+toResources config = Resources . map toS3BucketRes $ S3.getAll config
   where
     toS3BucketRes bucket@S3Bucket{_s3bEventConfigs} = (
       resource resName $
@@ -29,21 +29,22 @@ toResources config = Resources . map toS3BucketRes $ getAllBuckets config
       & dependsOn ?~ reqs
 
       where
-        resName = getS3BucketLogicalName bucket
-        bucketName = getFullBucketName bucket config
+        resName = S3.getLogicalName bucket
+        bucketName = S3.getPhysicalName bucket config
 
         reqs = concat $
           map (\lec ->  let
-                          lbd = getLambdaById (lec^.lbdId) config
+                          lbd = Lambda.getById (lec^.lbdId) config
                         in
-                        [ getLambdaPermissionLogicalName lbd
-                        , getLambdaLogicalName lbd
+                        [ Lambda.getPermissionLogicalName lbd
+                        , Lambda.getLogicalName lbd
                         ]) _s3bEventConfigs
 
 
         lbdConfigs = s3BucketNotificationConfiguration
           & sbncLambdaConfigurations ?~ (map lbdC _s3bEventConfigs)
 
-        lbdC S3EventConfig{_event, _lbdId} = s3BucketLambdaConfiguration
-          (Literal . T.pack $ show _event)
-          (GetAtt (getLambdaLogicalNameFromId _lbdId config) "Arn")
+        lbdC S3EventConfig{_event, _lbdId} =
+          s3BucketLambdaConfiguration
+            (Literal . T.pack $ show _event)
+            (GetAtt (Lambda.getLogicalNameFromId _lbdId config) "Arn")

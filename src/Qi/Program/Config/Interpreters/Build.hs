@@ -20,12 +20,11 @@ import           Data.Text                   (Text)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.CF
-import           Qi.Config.AWS.CF.Accessors
+import qualified Qi.Config.AWS.CF.Accessors  as CF
+import           Qi.Config.AWS.CW
 import           Qi.Config.AWS.DDB
-import           Qi.Config.AWS.DDB.Accessors
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
-import           Qi.Config.AWS.S3.Accessors
 import           Qi.Config.Identifier
 import           Qi.Program.Config.Interface hiding (apiResource)
 
@@ -66,8 +65,8 @@ interpret program =
     (RCustomResource name lbdProgramFunc profile) :>>= is ->
       interpret . is =<< rCustomResource name lbdProgramFunc profile
 
-    {- (RCwEventsRuleLambda name ruleProfile lbdProgramFunc lbdProfile) :>>= is -> -}
-      {- interpret . is =<< rCustomResource name ruleProfile lbdProgramFunc lbdProfile -}
+    (RCwEventLambda name ruleProfile lbdProgramFunc lbdProfile) :>>= is ->
+      interpret . is =<< rCwEventLambda name ruleProfile lbdProgramFunc lbdProfile
 
     Return _ ->
       return def
@@ -143,14 +142,14 @@ interpret program =
       return newApiResourceId
 
 
-    rApiMethodLambda name verb apiResourceId lbdProfile lbdProgramFunc profile = do
+    rApiMethodLambda name verb apiResourceId methodProfile lbdProgramFunc lbdProfile = do
       newLambdaId <- getNextId
-      let newLambda = ApiLambda name profile lbdProgramFunc
+      let newLambda = ApiLambda name lbdProfile lbdProgramFunc
           modifyApiResource = arMethodConfigs %~ (apiMethodConfig:)
           apiMethodConfig = ApiMethodConfig {
-              amcVerb = verb
-            , amcProfile = lbdProfile
-            , amcLbdId = newLambdaId
+              amcVerb     = verb
+            , amcProfile  = methodProfile
+            , amcLbdId    = newLambdaId
             }
 
       apiGwConfig.acApiResources %= SHM.adjust modifyApiResource apiResourceId
@@ -161,7 +160,7 @@ interpret program =
     rCustomResource name lbdProgramFunc profile = do
       newLambdaId <- getNextId
       let newCustom = Custom newLambdaId
-          (newCustomId, cfConfigModifier) = insertCustom newCustom
+          (newCustomId, cfConfigModifier) = CF.insert newCustom
 
           newLambda = CfCustomLambda name profile lbdProgramFunc
 
@@ -169,4 +168,21 @@ interpret program =
       cfConfig %= cfConfigModifier
 
       return newCustomId
+
+
+    rCwEventLambda name ruleProfile lbdProgramFunc lbdProfile = do
+      newEventsRuleId <- getNextId
+      newLambdaId     <- getNextId
+
+      let newLambda = CwEventLambda name lbdProfile lbdProgramFunc
+          newEventsRule = CwEventsRule {
+            _cerName    = name
+          , _cerProfile = ruleProfile
+          , _cerLbdId   = newLambdaId
+          }
+
+      cwConfig.ccRules %= SHM.insert newEventsRuleId newEventsRule
+      lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
+      return newLambdaId
+
 

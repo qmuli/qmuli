@@ -14,44 +14,44 @@ import           Stratosphere                   hiding (S3Bucket, name)
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.CF
-import           Qi.Config.AWS.CF.Accessors
-import           Qi.Config.AWS.Lambda.Accessors
+import qualified Qi.Config.AWS.CF.Accessors     as CF
+import qualified Qi.Config.AWS.Lambda.Accessors as Lambda
 
 
-toResources config = Resources . map toCustomRes $ getAllCustoms config
+toResources config = Resources . map toResource $ CF.getAll config
   where
-    toCustomRes custom@Custom{_cLbdId} =
+    toResource custom@Custom{_cLbdId} =
       resource resName $
         CloudFormationCustomResourceProperties $
         cloudFormationCustomResource
-          (GetAtt lbdResName "Arn")
+          (GetAtt lbdLogicalName "Arn")
 
       where
-        resName = getCustomLogicalName custom config
-        lbdResName = getLambdaLogicalNameFromId (custom^.cLbdId) config
+        resName = CF.getLogicalName custom config
+        lbdLogicalName = Lambda.getLogicalNameFromId (custom^.cLbdId) config
 
 
 toOutputs config =
-  Outputs . foldMap toCustomOutputs $ getAllCustoms config
+  Outputs . foldMap toCustomOutputs $ CF.getAll config
 
   where
 
     toCustomOutputs custom = [
-        output (T.concat [customResName, "UserPoolId"])
+        output (T.concat [lname, "UserPoolId"])
           upid
           & description ?~ "UserPoolId"
-      , output (T.concat [customResName, "UserPoolClientId"])
+      , output (T.concat [lname, "UserPoolClientId"])
           upcid
           & description ?~ "UserPoolClientId"
-      , output (T.concat [customResName, "IdentityPoolId"])
+      , output (T.concat [lname, "IdentityPoolId"])
           ipid
           & description ?~ "IdentityPoolId"
       ]
 
       where
-        customResName = getCustomLogicalName custom config
+        lname = CF.getLogicalName custom config
 
-        upid  = GetAtt customResName "UserPoolId"
-        upcid = GetAtt customResName "UserPoolClientId"
-        ipid  = GetAtt customResName "IdentityPoolId"
+        upid  = GetAtt lname "UserPoolId"
+        upcid = GetAtt lname "UserPoolClientId"
+        ipid  = GetAtt lname "IdentityPoolId"
 

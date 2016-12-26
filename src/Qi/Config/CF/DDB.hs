@@ -18,7 +18,7 @@ import qualified Qi.Config.AWS.DDB           as DDB
 import           Qi.Config.AWS.DDB.Accessors
 
 
-toResources config = Resources . map toDdbTableRes $ getAllDdbTables config
+toResources config = Resources . map toDdbTableRes $ getAll config
   where
     toDdbTableRes table =
       resource resName $
@@ -30,8 +30,8 @@ toResources config = Resources . map toDdbTableRes $ getAllDdbTables config
         & ddbtTableName ?~ (Literal tableName)
 
       where
-        resName = getDdbTableLogicalName table
-        tableName = getFullDdbTableName table config
+        resName = getLogicalName table
+        tableName = getPhysicalName table config
 
 
         attributeDefinitions = [

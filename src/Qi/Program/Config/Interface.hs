@@ -14,6 +14,7 @@ import           Qi.Config.AWS                         (Config)
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ApiMethodProfile)
 import           Qi.Config.AWS.CF
+import           Qi.Config.AWS.CW
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda                  (LambdaProfile)
 import           Qi.Config.AWS.S3
@@ -72,6 +73,12 @@ data ConfigInstruction a where
     -> LambdaProfile
     -> ConfigInstruction CustomId
 
+  RCwEventLambda
+    :: Text
+    -> CwEventsRuleProfile
+    -> (CwEvent -> LambdaProgram ())
+    -> LambdaProfile
+    -> ConfigInstruction LambdaId
 
 s3Bucket = singleton . RS3Bucket
 
@@ -95,4 +102,7 @@ apiMethodLambda name verb resourceId methodProfile lbd =
   singleton . RApiMethodLambda name verb resourceId methodProfile lbd
 
 customResource name lbd = singleton . RCustomResource name lbd
+
+cwEventLambda name ruleProfile lbdProgramFunc =
+  singleton . RCwEventLambda name ruleProfile lbdProgramFunc
 

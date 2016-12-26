@@ -53,10 +53,10 @@ import           Network.HTTP.Client          (ManagerSettings, Request,
 import           Qi.Amazonka                  (currentRegion)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.DDB
-import           Qi.Config.AWS.DDB.Accessors
+import qualified Qi.Config.AWS.DDB.Accessors  as DDB
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
-import           Qi.Config.AWS.S3.Accessors
+import qualified Qi.Config.AWS.S3.Accessors   as S3
 import           Qi.Config.Identifier         (DdbTableId)
 import           Qi.Program.Lambda.Interface  (LambdaInstruction (..),
                                                LambdaProgram)
@@ -257,8 +257,8 @@ run lbdName config program = do
           :: S3Object
           -> QiAWS ByteString
         getS3ObjectContent S3Object{_s3oBucketId, _s3oKey = S3Key objKey} = do
-          let bucketName = getFullBucketName bucket config
-              bucket = getS3BucketById _s3oBucketId config
+          let bucketName = S3.getPhysicalName bucket config
+              bucket = S3.getById _s3oBucketId config
 
           r <- send . getObject (BucketName bucketName) $ ObjectKey objKey
           sinkBody (r ^. gorsBody) sinkLbs
@@ -269,8 +269,8 @@ run lbdName config program = do
           -> a
           -> QiAWS a
         foldStreamFromS3Object S3Object{_s3oBucketId, _s3oKey = S3Key objKey} folder zero = do
-          let bucketName = getFullBucketName bucket config
-              bucket = getS3BucketById _s3oBucketId config
+          let bucketName = S3.getPhysicalName bucket config
+              bucket = S3.getById _s3oBucketId config
 
           r <- send . getObject (BucketName bucketName) $ ObjectKey objKey
           sinkBody (r ^. gorsBody) $ CL.fold folder zero
@@ -313,8 +313,8 @@ run lbdName config program = do
           return ()
 
           where
-            bucketName = getFullBucketName bucket config
-            bucket = getS3BucketById _s3oBucketId config
+            bucketName = S3.getPhysicalName bucket config
+            bucket = S3.getById _s3oBucketId config
 
 
 -- DynamoDB
@@ -325,7 +325,7 @@ run lbdName config program = do
           send $ scan tableName
 
           where
-            tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config
+            tableName = DDB.getPhysicalName (DDB.getById ddbTableId config) config
 
 
         queryDdbRecords
@@ -339,7 +339,7 @@ run lbdName config program = do
             & qExpressionAttributeValues .~ expAttrs
 
           where
-            tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config
+            tableName = DDB.getPhysicalName (DDB.getById ddbTableId config) config
 
 
         getDdbRecord
@@ -350,7 +350,7 @@ run lbdName config program = do
           send $ getItem tableName & giKey .~ keys
 
           where
-            tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config
+            tableName = DDB.getPhysicalName (DDB.getById ddbTableId config) config
 
 
         putDdbRecord
@@ -361,7 +361,7 @@ run lbdName config program = do
           send $ putItem tableName & piItem .~ item
 
           where
-            tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config
+            tableName = DDB.getPhysicalName (DDB.getById ddbTableId config) config
 
 
         deleteDdbRecord
@@ -372,7 +372,7 @@ run lbdName config program = do
           send $ deleteItem tableName & diKey .~ key
 
           where
-            tableName = getFullDdbTableName (getDdbTableById ddbTableId config) config
+            tableName = DDB.getPhysicalName (DDB.getById ddbTableId config) config
 
 
 -- Util

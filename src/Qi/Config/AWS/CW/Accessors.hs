@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Qi.Config.AWS.Lambda.Accessors where
+module Qi.Config.AWS.CW.Accessors where
 
 import           Control.Lens
 import qualified Data.HashMap.Strict  as SHM
@@ -10,56 +10,39 @@ import           Data.Text            (Text)
 import qualified Data.Text            as T
 
 import           Qi.Config.AWS
-import           Qi.Config.AWS.Lambda (Lambda, lbdName, lcLambdas)
+import           Qi.Config.AWS.CW
 import           Qi.Config.Identifier
 
 
-rType = "lambda"
-getName = (^.lbdName)
-getMap = (^.lbdConfig.lcLambdas)
+rType = "events rule"
+getName = (^.cerName)
+getMap = (^.cwConfig.ccRules)
 
-
-getLogicalNameFromId
-  :: LambdaId
-  -> Config
-  -> Text
-getLogicalNameFromId rid =
-  getLogicalName . getById rid
 
 getLogicalName
-  :: Lambda
+  :: CwEventsRule
   -> Text
-getLogicalName r =
-  T.concat [getName r, "Lambda"]
+getLogicalName r =  T.concat [getName r, "CwEventsRule"]
 
 getPhysicalName
-  :: Lambda
+  :: CwEventsRule
   -> Config
   -> Text
 getPhysicalName r config =
   getName r `underscoreNamePrefixWith` config
 
-getPermissionLogicalName
-  :: Lambda
-  -> Text
-getPermissionLogicalName r =
-  T.concat [getName r, "LambdaPermission"]
-
 getAll
   :: Config
-  -> [Lambda]
+  -> [CwEventsRule]
 getAll = SHM.elems . getMap
 
 getById
-  :: LambdaId
+  :: CwEventsRuleId
   -> Config
-  -> Lambda
+  -> CwEventsRule
 getById rid config =
   fromMaybe
     (error $ "Could not reference " ++ rType ++ " with id: " ++ show rid)
     $ SHM.lookup rid $ getMap config
-
-
-
 
 

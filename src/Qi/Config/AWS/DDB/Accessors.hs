@@ -4,7 +4,6 @@
 module Qi.Config.AWS.DDB.Accessors where
 
 import           Control.Lens
-import           Data.Hashable
 import qualified Data.HashMap.Strict  as SHM
 import           Data.Text            (Text)
 import qualified Data.Text            as T
@@ -14,31 +13,31 @@ import           Qi.Config.AWS.DDB
 import           Qi.Config.Identifier
 
 
-
-getDdbTableLogicalName
+getLogicalName
   :: DdbTable
   -> Text
-getDdbTableLogicalName table =  T.concat [table^.dtName, "DynamoDBTable"]
+getLogicalName table =  T.concat [table^.dtName, "DynamoDBTable"]
 
-getFullDdbTableName
+
+getPhysicalName
   :: DdbTable
   -> Config
   -> Text
-getFullDdbTableName table config =
+getPhysicalName table config =
   (table^.dtName) `underscoreNamePrefixWith` config
 
 
-getAllDdbTables
+getAll
   :: Config
   -> [DdbTable]
-getAllDdbTables config = SHM.elems $ config^.ddbConfig.dcTables
+getAll config = SHM.elems $ config^.ddbConfig.dcTables
 
 
-getDdbTableById
+getById
   :: DdbTableId
   -> Config
   -> DdbTable
-getDdbTableById tid config =
+getById tid config =
   case SHM.lookup tid tableMap of
     Just lbd -> lbd
     Nothing  -> error $ "Could not reference s3 bucket with id: " ++ show tid

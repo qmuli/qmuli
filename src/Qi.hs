@@ -19,10 +19,12 @@ import           System.Environment                   (getArgs, withArgs)
 import           Qi.Config.AWS
 import qualified Qi.Config.AWS.ApiGw.ApiMethod.Event  as ApiMethodEvent (parse)
 import           Qi.Config.AWS.CF
+import           Qi.Config.AWS.CW
 import           Qi.Config.AWS.Lambda
-import           Qi.Config.AWS.Lambda.Accessors       (getAllLambdas)
+import qualified Qi.Config.AWS.Lambda.Accessors       as Lambda
 import           Qi.Config.AWS.S3
 import qualified Qi.Config.AWS.S3.Event               as S3Event (parse)
+import           Qi.Config.CF                         as CW
 import           Qi.Config.CF                         as CF
 import qualified Qi.Deploy.CF                         as CF
 import qualified Qi.Deploy.Lambda                     as Lambda
@@ -88,7 +90,7 @@ withNameAndConfig appName configProgram =
 
     config = snd . (`runState` def{_namePrefix = appName}) . CB.unQiConfig $ CB.interpret configProgram
 
-    lbdIOMap = SHM.fromList $ map toLbdIOPair $ getAllLambdas config
+    lbdIOMap = SHM.fromList $ map toLbdIOPair $ Lambda.getAll config
 
       where
         toLbdIOPair
@@ -109,8 +111,12 @@ withNameAndConfig appName configProgram =
         parseLambdaEvent ApiLambda{_lbdApiMethodLambdaProgram} eventJson =
           _lbdApiMethodLambdaProgram <$> (parseEither (`ApiMethodEvent.parse` config) =<< eitherDecode (LBS.pack eventJson))
 
-        parseLambdaEvent CfCustomLambda{_lbdCFCustomLambdaProgram} eventJson =
-          _lbdCFCustomLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String CfEvent)
+        parseLambdaEvent CfCustomLambda{_lbdCfCustomLambdaProgram} eventJson =
+          _lbdCfCustomLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String CfEvent)
+
+        parseLambdaEvent CwEventLambda{_lbdCwEventLambdaProgram} eventJson =
+          _lbdCwEventLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String CwEvent)
+
 
         lbdIO
           :: Text

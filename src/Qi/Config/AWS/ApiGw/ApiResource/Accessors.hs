@@ -18,27 +18,27 @@ import           Qi.Config.Identifier
 makeAlphaNumeric :: Text -> Text
 makeAlphaNumeric = T.filter isAlphaNum
 
-getApiResourceLogicalName
+getLogicalName
   :: ApiResource
   -> Text
-getApiResourceLogicalName apir = T.concat [makeAlphaNumeric $ apir^.arName, "ApiResource"]
+getLogicalName apir = T.concat [makeAlphaNumeric $ apir^.arName, "ApiResource"]
 
-getApiResourceById
+getById
   :: ApiResourceId
   -> Config
   -> ApiResource
-getApiResourceById arid config =
+getById arid config =
   case SHM.lookup arid arMap of
     Just ar -> ar
     Nothing -> error $ "Could not reference api resource with id: " ++ show arid
   where
     arMap = config^.apiGwConfig.acApiResources
 
-getApiChildren
+getChildren
   :: Either ApiId ApiResourceId
   -> Config
   -> [ApiResourceId]
-getApiChildren rid config = SHM.lookupDefault [] rid $ config^.apiGwConfig.acApiResourceDeps
+getChildren rid config = SHM.lookupDefault [] rid $ config^.apiGwConfig.acApiResourceDeps
 
 
 

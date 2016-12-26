@@ -12,23 +12,23 @@ import qualified Data.Text                      as T
 import           Qi.Config.AWS
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.Lambda           (Lambda, lbdName, lcLambdas)
-import           Qi.Config.AWS.Lambda.Accessors (getLambdaLogicalNameFromId)
+import qualified Qi.Config.AWS.Lambda.Accessors as Lambda
 import           Qi.Config.Identifier
 
 
-getCustomLogicalName
+getLogicalName
   :: Custom
   -> Config
   -> Text
-getCustomLogicalName custom config =
-  T.concat [ getLambdaLogicalNameFromId (custom ^. cLbdId) config, "CustomResource"]
+getLogicalName custom config =
+  T.concat [ Lambda.getLogicalNameFromId (custom ^. cLbdId) config, "CustomResource"]
 
 
-getCustomById
+getById
   :: CustomId
   -> Config
   -> Custom
-getCustomById cid config =
+getById cid config =
   case SHM.lookup cid customMap of
     Just custom -> custom
     Nothing  -> error $ "Could not reference s3 bucket with id: " ++ show cid
@@ -36,17 +36,17 @@ getCustomById cid config =
     customMap = config^.cfConfig.cfcCustoms
 
 
-getAllCustoms
+getAll
   :: Config
   -> [Custom]
-getAllCustoms config = SHM.elems $ config^.cfConfig.cfcCustoms
+getAll config = SHM.elems $ config^.cfConfig.cfcCustoms
 
 
 
-insertCustom
+insert
   :: Custom
   -> (CustomId, (CfConfig -> CfConfig))
-insertCustom custom = (cid, insertIdToCustom)
+insert custom = (cid, insertIdToCustom)
   where
     insertIdToCustom = cfcCustoms %~ SHM.insert cid custom
     cid = CustomId $ hash custom

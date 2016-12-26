@@ -44,3 +44,6 @@ newtype CustomId = CustomId Int deriving (Eq, Show, Hashable)
 instance FromInt CustomId where
   fromInt = CustomId
 
+newtype CwEventsRuleId = CwEventsRuleId Int deriving (Eq, Show, Hashable)
+instance FromInt CwEventsRuleId where
+  fromInt = CwEventsRuleId

@@ -13,25 +13,26 @@ import           Qi.Config.AWS.ApiGw
 import           Qi.Config.Identifier
 
 
-getApiLogicalName
+getLogicalName
   :: Api
   -> Text
-getApiLogicalName api = T.concat [api^.aName, "Api"]
+getLogicalName api = T.concat [api^.aName, "Api"]
 
-getApiById
+getById
   :: ApiId
   -> Config
   -> Api
-getApiById aid config =
+getById aid config =
   case SHM.lookup aid aMap of
     Just a  -> a
     Nothing -> error $ "Could not reference api with id: " ++ show aid
   where
     aMap = config^.apiGwConfig.acApis
 
-getAllApis
+getAll
   :: Config
   -> [(ApiId, Api)]
-getAllApis config = SHM.toList $ config^.apiGwConfig.acApis
+getAll config =
+  SHM.toList $ config^.apiGwConfig.acApis
 
 
