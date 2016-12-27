@@ -8,14 +8,13 @@ module Main where
 import           Control.Lens
 import           Control.Monad               (void)
 import           Data.Default                (def)
-import           Data.Text                   (pack)
 
 import           Qi                          (withConfig)
-import           Qi.Config.AWS.CW            (CwEvent, CwEventsRuleProfile (..))
-import           Qi.Config.AWS.Lambda        (LambdaMemorySize (..),
-                                              lpMemorySize)
+import           Qi.Config.AWS.CW            (CwEventsRuleProfile (ScheduledEventProfile))
 import           Qi.Program.Config.Interface (ConfigProgram, cwEventLambda)
-import           Qi.Program.Lambda.Interface (LambdaProgram, say)
+import           Qi.Program.Lambda.Interface (CwLambdaProgram, say)
+import           Qi.Util                     (success)
+
 
 main :: IO ()
 main = withConfig config
@@ -28,9 +27,10 @@ main = withConfig config
       void $ cwEventLambda "myEventLambda" ruleProfile eventLambda def
 
     eventLambda
-      :: CwEvent -> LambdaProgram ()
-    eventLambda event = do
+      :: CwLambdaProgram
+    eventLambda _ = do
       -- emit log messages that end up in the appropriate cloudwatch group/stream
       say "tick"
 
+      success "lambda had executed successfully"
 

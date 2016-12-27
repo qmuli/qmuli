@@ -9,5 +9,6 @@ qmuli-simple-s3-copy
 qmuli-cognito
 qmuli-fold-s3-content
 qmuli-cw-events
+qmuli-stream-s3-objects
 *.zip
 TAGS

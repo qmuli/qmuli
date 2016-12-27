@@ -102,7 +102,7 @@ withNameAndConfig appName configProgram =
         parseLambdaEvent
           :: Lambda
           -> String
-          -> Either String (LambdaProgram ())
+          -> Either String (LambdaProgram LBS.ByteString)
 
         parseLambdaEvent S3BucketLambda{_lbdS3BucketLambdaProgram} eventJson =
           _lbdS3BucketLambdaProgram <$> (parseEither (`S3Event.parse` config) =<< eitherDecode (LBS.pack eventJson))

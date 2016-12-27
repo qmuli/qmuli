@@ -5,6 +5,7 @@
 module Qi.Config.AWS.Lambda where
 
 import           Control.Lens
+import qualified Data.ByteString.Lazy.Char8  as LBS
 import           Data.Default                (Default, def)
 import           Data.HashMap.Strict         (HashMap)
 import qualified Data.HashMap.Strict         as SHM
@@ -23,22 +24,22 @@ data Lambda =
     S3BucketLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdS3BucketLambdaProgram :: S3Event -> LambdaProgram ()
+  , _lbdS3BucketLambdaProgram :: S3Event -> LambdaProgram LBS.ByteString
   }
   | ApiLambda {
     _lbdName                   :: Text
   , _lbdProfile                :: LambdaProfile
-  , _lbdApiMethodLambdaProgram :: ApiMethodEvent -> LambdaProgram ()
+  , _lbdApiMethodLambdaProgram :: ApiMethodEvent -> LambdaProgram LBS.ByteString
   }
   | CfCustomLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdCfCustomLambdaProgram :: CfEvent -> LambdaProgram ()
+  , _lbdCfCustomLambdaProgram :: CfEvent -> LambdaProgram LBS.ByteString
   }
   | CwEventLambda {
     _lbdName                 :: Text
   , _lbdProfile              :: LambdaProfile
-  , _lbdCwEventLambdaProgram :: CwEvent -> LambdaProgram ()
+  , _lbdCwEventLambdaProgram :: CwEvent -> LambdaProgram LBS.ByteString
   }
 
 data LambdaConfig = LambdaConfig {

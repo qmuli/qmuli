@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
@@ -6,78 +7,86 @@
 {-# LANGUAGE OverloadedLists            #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
 
 module Qi.Program.Lambda.Interpreters.IO (run) where
 
-import           Control.Concurrent
+import           Control.Concurrent                   hiding (yield)
 import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
-import           Control.Lens                 hiding (view)
-import           Control.Monad                (void, (<=<))
-import           Control.Monad.Base           (MonadBase)
-import           Control.Monad.Catch          (MonadCatch, MonadThrow)
-import           Control.Monad.IO.Class       (MonadIO, liftIO)
-import           Control.Monad.Operational    (ProgramViewT ((:>>=), Return),
-                                               singleton, view)
-import           Control.Monad.Reader.Class   (MonadReader)
-import           Control.Monad.Trans.AWS      (AWST, runAWST, send)
-import           Control.Monad.Trans.Class    (lift)
-import           Control.Monad.Trans.Reader   (ReaderT, ask, asks, runReaderT)
-import           Control.Monad.Trans.Resource (MonadResource, ResourceT)
-import           Data.Aeson                   (Value (..), encode, object)
-import           Data.Binary.Builder          (fromLazyByteString,
-                                               toLazyByteString)
-import qualified Data.ByteString.Char8        as BS
-import           Data.ByteString.Lazy.Char8   (ByteString)
-import qualified Data.ByteString.Lazy.Char8   as LBS
-import qualified Data.Conduit                 as C
-import           Data.Conduit.Binary          (sinkLbs)
-import qualified Data.Conduit.List            as CL
-import           Data.Default                 (def)
-import           Data.Maybe                   (listToMaybe)
-import           Data.Monoid                  ((<>))
-import           Data.Ratio                   (numerator)
-import           Data.Text                    (Text)
-import qualified Data.Text                    as T
-import           Data.Text.Encoding           (decodeUtf8)
-import qualified Data.Text.IO                 as T
-import           Data.Time.Clock.POSIX        (getPOSIXTime)
-import           Network.AWS                  hiding (Request, Response, send)
+import           Control.Lens                         hiding (view)
+import           Control.Monad                        (void, (<=<))
+import           Control.Monad.Base                   (MonadBase)
+import           Control.Monad.Catch                  (MonadCatch, MonadThrow)
+import           Control.Monad.IO.Class               (MonadIO, liftIO)
+import           Control.Monad.Operational            (ProgramViewT ((:>>=), Return),
+                                                       singleton, view)
+import           Control.Monad.Reader.Class           (MonadReader)
+import           Control.Monad.Trans.AWS              (AWST, runAWST, send)
+import           Control.Monad.Trans.Class            (lift)
+import           Control.Monad.Trans.Reader           (ReaderT, ask, asks,
+                                                       runReaderT)
+import           Control.Monad.Trans.Resource         (MonadResource, ResourceT)
+import           Data.Aeson                           (Value (..), encode,
+                                                       object)
+import           Data.Binary.Builder                  (fromLazyByteString,
+                                                       toLazyByteString)
+import qualified Data.ByteString.Char8                as BS
+import qualified Data.ByteString.Lazy.Char8           as LBS
+import           Data.Conduit                         (Conduit, Sink,
+                                                       awaitForever, transPipe,
+                                                       unwrapResumable, yield,
+                                                       ($$), (=$=))
+import           Data.Conduit.Binary                  (sinkLbs)
+import qualified Data.Conduit.List                    as CL
+import           Data.Default                         (def)
+import           Data.Maybe                           (listToMaybe)
+import           Data.Monoid                          ((<>))
+import           Data.Ratio                           (numerator)
+import           Data.Text                            (Text)
+import qualified Data.Text                            as T
+import           Data.Text.Encoding                   (decodeUtf8)
+import qualified Data.Text.IO                         as T
+import           Data.Time.Clock.POSIX                (getPOSIXTime)
+import           Network.AWS                          hiding (Request, Response,
+                                                       send)
 import           Network.AWS.CloudWatchLogs
-import           Network.AWS.Data.Body        (fuseStream)
+import           Network.AWS.Data.Body                (RsBody (..), fuseStream)
 import           Network.AWS.DynamoDB
 import           Network.AWS.S3
-import           Network.HTTP.Client          (ManagerSettings, Request,
-                                               Response, httpLbs, newManager)
+import           Network.AWS.S3.CreateMultipartUpload
+import           Network.AWS.S3.StreamingUpload
+import           Network.HTTP.Client                  (ManagerSettings, Request,
+                                                       Response, httpLbs,
+                                                       newManager)
+import           System.Mem                           (performMajorGC)
 
-import           Qi.Amazonka                  (currentRegion)
+import           Qi.Amazonka                          (currentRegion)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
-import           Qi.Config.Identifier         (DdbTableId)
-import           Qi.Program.Lambda.Interface  (LambdaInstruction (..),
-                                               LambdaProgram)
-import           System.IO                    (stdout)
+import           Qi.Config.Identifier                 (DdbTableId)
+import           Qi.Program.Lambda.Interface          (LambdaInstruction (..),
+                                                       LambdaProgram)
+import           System.IO                            (stdout)
 
 
--- This would have been nice, but the monad stack needs another ReaderT and one
--- seemingly cannot flatten two ReaderT-s in a similar fashion
-{- newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a} -}
-  {- deriving ( -}
-      {- Functor -}
-    {- , Applicative -}
-    {- , Monad -}
-    {- , MonadIO -}
-    {- , MonadCatch -}
-    {- , MonadThrow -}
-    {- , MonadResource -}
-    {- , MonadBase IO -}
-    {- , MonadReader Env -}
-    {- , MonadAWS -}
-    {- ) -}
+newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
+  deriving (
+      Functor
+    , Applicative
+    , Monad
+    , MonadIO
+    , MonadCatch
+    , MonadThrow
+    , MonadResource
+    , MonadBase IO
+    , MonadReader Env
+    , MonadAWS
+    )
 
-type QiAWS a = AWST (ReaderT (Text, Config) (ResourceT IO)) a
+liftAWSFromResourceIO = liftAWS . lift
 
 cloudWatchLoggerWorker
   :: Text
@@ -98,10 +107,10 @@ cloudWatchLoggerWorker lbdName config chan = do
     streamName = lbdName
 
     ensureLogStream = do
-      groups <- paginate describeLogGroups C.$$ CL.foldMap (^.dlgrsLogGroups)
+      groups <- paginate describeLogGroups $$ CL.foldMap (^.dlgrsLogGroups)
       case listToMaybe $ filter ( (== Just groupName) . (^.lgLogGroupName) ) groups of
         Just group -> do
-          streams <- paginate (describeLogStreams groupName) C.$$ CL.foldMap (^.dlsrsLogStreams)
+          streams <- paginate (describeLogStreams groupName) $$ CL.foldMap (^.dlsrsLogStreams)
           case listToMaybe $ filter ( (== Just streamName) . (^.lsLogStreamName) ) streams of
             Just stream ->
               return $ stream^.lsUploadSequenceToken
@@ -123,7 +132,6 @@ cloudWatchLoggerWorker lbdName config chan = do
       send $ putLogEvents groupName streamName [logEvent]
                      & pleSequenceToken .~ nextToken
 
-
     loop
       :: Maybe Text
       -> AWS ()
@@ -134,7 +142,7 @@ cloudWatchLoggerWorker lbdName config chan = do
         (loop . (^.plersNextSequenceToken) <=< sendLogEvent nextToken)
         maybeMsg
 
-
+-- this allows to wait on the forked child thread
 forkIOSync
   :: IO ()
   -> IO (MVar ())
@@ -147,7 +155,7 @@ forkIOSync io = do
 run
   :: Text
   -> Config
-  -> LambdaProgram ()
+  -> LambdaProgram LBS.ByteString
   -> IO ()
 run lbdName config program = do
   logChan     <- liftIO $ atomically newTChan
@@ -155,13 +163,15 @@ run lbdName config program = do
 
   let cloudWatchLogger :: Logger
       cloudWatchLogger level bd = do
-        let prefix = LBS.fromChunks ["[lambda][amazonka][]", "[", BS.pack $ show level, "]"]
+        let prefix = LBS.fromChunks ["[lambda][amazonka][]", "[", BS.pack $ show level, "] "]
             msg = fromLazyByteString prefix <> bd
         atomically . writeTChan logChan . Just . decodeUtf8 . LBS.toStrict $ toLazyByteString msg
 
   cloudWatchLoggerEnv <- newEnv Discover <&> set envRegion currentRegion . set envLogger cloudWatchLogger
 
-  runResourceT . (`runReaderT` (lbdName, config)) . runAWST cloudWatchLoggerEnv $ go logChan program
+  runResourceT . runAWST cloudWatchLoggerEnv . unQiAWS $ do
+    output <- go logChan program
+    liftIO $ LBS.putStr output
 
   atomically $ writeTChan logChan Nothing -- signal the end
   takeMVar loggerDone -- wait on the logger to finish logging messages
@@ -169,68 +179,64 @@ run lbdName config program = do
   where
     go
       :: TChan (Maybe Text)
-      -> LambdaProgram ()
-      -> QiAWS ()
+      -> LambdaProgram a
+      -> QiAWS a
     go logChan = interpret
       where
         logMessage
           :: Text
           -> QiAWS ()
-        logMessage = liftIO . atomically . writeTChan logChan . Just . T.append "[Message]"
+        logMessage = liftIO . atomically . writeTChan logChan . Just . T.append "[Message] "
 
         interpret
-          :: LambdaProgram ()
-          -> QiAWS ()
+          :: LambdaProgram a
+          -> QiAWS a
         interpret program =
           case view program of
 
 -- Http
             (Http request ms) :>>= is ->
-              interpret . is =<< http request ms
+               http request ms >>= interpret . is
 
 -- Amazonka
             (AmazonkaSend cmd) :>>= is ->
-              interpret . is =<< amazonkaSend cmd
+              amazonkaSend cmd >>= interpret . is
 
 -- S3
             (GetS3ObjectContent s3Obj) :>>= is ->
-              interpret . is =<< getS3ObjectContent s3Obj
+              getS3ObjectContent s3Obj >>= interpret . is
 
-            (FoldStreamFromS3Object s3Obj folder zero) :>>= is ->
-              interpret . is =<< foldStreamFromS3Object s3Obj folder zero
+            (StreamFromS3Object s3Obj sink) :>>= is ->
+              streamFromS3Object s3Obj sink >>= interpret . is
+
+            (StreamS3Objects inS3Obj outS3Obj conduit) :>>= is ->
+              streamS3Objects inS3Obj outS3Obj conduit >>= interpret . is
 
             (PutS3ObjectContent s3Obj content) :>>= is ->
-              interpret . is =<< putS3ObjectContent s3Obj content
+              putS3ObjectContent s3Obj content >>= interpret . is
 
 -- DDB
             (ScanDdbRecords ddbTableId) :>>= is ->
-              interpret . is =<< scanDdbRecords ddbTableId
+              scanDdbRecords ddbTableId >>= interpret . is
 
             (QueryDdbRecords ddbTableId keyCond expAttrs) :>>= is ->
-              interpret . is =<< queryDdbRecords ddbTableId keyCond expAttrs
+              queryDdbRecords ddbTableId keyCond expAttrs >>= interpret . is
 
             (GetDdbRecord ddbTableId keys) :>>= is ->
-              interpret . is =<< getDdbRecord ddbTableId keys
+              getDdbRecord ddbTableId keys >>= interpret . is
 
             (PutDdbRecord ddbTableId item) :>>= is ->
-              interpret . is =<< putDdbRecord ddbTableId item
+              putDdbRecord ddbTableId item >>= interpret . is
 
             (DeleteDdbRecord ddbTableId key) :>>= is ->
-              interpret . is =<< deleteDdbRecord ddbTableId key
+              deleteDdbRecord ddbTableId key >>= interpret . is
 
 -- Util
             (Say text) :>>= is ->
-              interpret . is =<< say text
+              say text >>= interpret . is
 
-            (Output content) :>>= is ->
-              output content -- final output, no more program instructions
-
-            Return _ -> do
-              -- if it gets this far, just return success to keep the js shim happy
-              output . encode $ object [
-                  ("status", Number 200)
-                , ("body", object [("message", "lambda had executed successfully")])
-                ]
+            Return x ->
+              return x
 
 
 -- Http
@@ -238,7 +244,7 @@ run lbdName config program = do
         http
           :: Request
           -> ManagerSettings
-          -> QiAWS (Response ByteString)
+          -> QiAWS (Response LBS.ByteString)
         http request ms = liftIO $ do
           manager <- newManager ms
           httpLbs request manager
@@ -253,66 +259,62 @@ run lbdName config program = do
 -- S3
         getS3ObjectContent
           :: S3Object
-          -> QiAWS ByteString
+          -> QiAWS LBS.ByteString
         getS3ObjectContent S3Object{_s3oBucketId, _s3oKey = S3Key objKey} = do
-          let bucketName = getPhysicalName config bucket
-              bucket = getById config _s3oBucketId
-
+          let bucketName = getPhysicalName config $ getById config _s3oBucketId
           r <- send . getObject (BucketName bucketName) $ ObjectKey objKey
           sinkBody (r ^. gorsBody) sinkLbs
 
-        foldStreamFromS3Object
+        streamFromS3Object
           :: S3Object
-          -> (a -> BS.ByteString -> a)
-          -> a
+          -> (Sink BS.ByteString LambdaProgram a)
           -> QiAWS a
-        foldStreamFromS3Object S3Object{_s3oBucketId, _s3oKey = S3Key objKey} folder zero = do
-          let bucketName = getPhysicalName config bucket
-              bucket = getById config _s3oBucketId
-
-          r <- send . getObject (BucketName bucketName) $ ObjectKey objKey
-          sinkBody (r ^. gorsBody) $ CL.fold folder zero
-
-
-        -- TODO: come up with a way to stream one S3 object into another one while transforming it in some way
-
-        {- streamS3Objects -}
-          {- :: S3Object -}
-          {- -> S3Object -}
-          {- -> (BS.ByteString -> BS.ByteString) -}
-          {- -> QiAWS () -}
-        {- streamS3Objects -}
-          {- fromS3Obj@S3Object{_s3oKey = S3Key fromObjKey} -}
-          {- toS3Obj@S3Object{_s3oKey = S3Key toObjKey} -}
-          {- f = do -}
-            {- let fromBucketName = getFullBucketName fromBucket config -}
-                {- fromBucket = getS3BucketById (fromS3Obj^.s3oBucketId) config -}
-
-                {- toBucketName = getFullBucketName toBucket config -}
-                {- toBucket = getS3BucketById (toS3Obj^.s3oBucketId) config -}
-
-            {- rr <- send . getObject (BucketName fromBucketName) $ ObjectKey fromObjKey -}
-
-            {- let xformedBody = fuseStream (rr ^. gorsBody) $ CL.map f -}
-                {- src = xformedBody^.streamBody -}
+        streamFromS3Object S3Object{_s3oBucketId, _s3oKey = S3Key objKey} sink = do
+          let bucketName = getPhysicalName config $ getById config _s3oBucketId
+          source <- transPipe liftAWSFromResourceIO . fst <$> (
+                      liftAWSFromResourceIO . unwrapResumable . _streamBody . (^.gorsBody)
+                  =<< (send $ getObject (BucketName bucketName) $ ObjectKey objKey)
+                )
+          source $$ transPipe interpret sink
 
 
-            {- wr <- send . putObject (BucketName toBucketName) (ObjectKey toObjKey) $ toBody xformedBody -}
+        streamS3Objects
+            :: S3Object
+            -> S3Object
+            -> (Conduit BS.ByteString LambdaProgram BS.ByteString)
+            -> QiAWS ()
+        streamS3Objects
+          fromS3Obj@S3Object{_s3oKey  = S3Key fromObjKey}
+          toS3Obj@S3Object{_s3oKey    = S3Key toObjKey}
+          cond = do
 
-            {- return () -}
+            let fromBucketName = getPhysicalName config $ getById config $ fromS3Obj^.s3oBucketId
+                toBucketName = getPhysicalName config $ getById config $ toS3Obj^.s3oBucketId
+                sink = streamUpload $ createMultipartUpload (BucketName toBucketName) (ObjectKey toObjKey)
+                conduit = transPipe interpret cond
+                -- not sure if this will help with memory leaks
+                {- gcConduit = awaitForever $ \i -> do -}
+                              {- liftIO $ performMajorGC -}
+                              {- yield i -}
 
+            source <- transPipe liftAWSFromResourceIO . fst <$> (
+                      liftAWSFromResourceIO . unwrapResumable . _streamBody . (^.gorsBody)
+                  =<< (send $ getObject (BucketName fromBucketName) $ ObjectKey fromObjKey)
+                )
+
+            {- void $ source =$= gcConduit =$= conduit $$ sink -}
+            void $ source =$= conduit $$ sink
 
         putS3ObjectContent
           :: S3Object
-          -> ByteString
+          -> LBS.ByteString
           -> QiAWS ()
         putS3ObjectContent s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key objKey} content = do
           r <- send . putObject (BucketName bucketName) (ObjectKey objKey) $ toBody content
           return ()
 
           where
-            bucketName = getPhysicalName config bucket
-            bucket = getById config _s3oBucketId
+            bucketName = getPhysicalName config $ getById config _s3oBucketId
 
 
 -- DynamoDB
@@ -377,14 +379,4 @@ run lbdName config program = do
           :: Text
           -> QiAWS ()
         say = logMessage
-
-
-        output
-          :: ByteString
-          -> QiAWS ()
-        output content =
-          liftIO $ LBS.putStr content
-
-
-
 

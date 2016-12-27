@@ -59,7 +59,7 @@ dependencies:
   - unix >= 2.7 && < 2.8
   - unordered-containers >= 0.2 && < 0.3
   - yaml >= 0.8 && < 0.9
-
+  - amazonka-s3-streaming >= 0.1 && < 0.2
 
 library:
   source-dirs:
@@ -89,6 +89,7 @@ library:
     -W 
     -Wno-unused-imports 
     -Wno-unused-matches 
+    -Wno-unused-do-bind
 
 executables:
   # qmuli-simple-s3-copy:
@@ -97,42 +98,49 @@ executables:
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-    # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-  # qmuli-fold-s3-content:
+    # ghc-options: -O0 -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  qmuli-fold-s3-content:
+    main: Main.hs
+    source-dirs: examples/fold-s3-content/src
+    dependencies:
+      - base >= 4.8 && < 5
+      - qmuli
+    ghc-options: -O0 -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  # qmuli-stream-s3-objects:
     # main: Main.hs
-    # source-dirs: examples/fold-s3-content/src
+    # source-dirs: examples/stream-s3-objects/src
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-    # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+    # ghc-options: -O0 -Wall -Wno-unused-imports -static -threaded -rtsopts -with-rtsopts=-N
   # qmuli-apigw-lambda-s3:
     # main: Main.hs
     # source-dirs: examples/apigw-lambda-s3/src
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-    # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
+    # ghc-options: -O0 -Wall -static -threaded -rtsopts -with-rtsopts=-N
   # qmuli-apigw-lambda-dynamodb:
     # main: Main.hs
     # source-dirs: examples/apigw-lambda-dynamodb/src
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-    # ghc-options: -W -static -threaded -rtsopts -with-rtsopts=-N
+    # ghc-options: -O0 -Wall -static -threaded -rtsopts -with-rtsopts=-N
   # qmuli-cognito:
     # main: Main.hs
     # source-dirs: examples/cognito/src
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-    # ghc-options: -Wall -static -threaded -rtsopts -with-rtsopts=-N
-  qmuli-cw-events:
-    main: Main.hs
-    source-dirs: examples/cw-events/src
-    dependencies:
-      - base >= 4.8 && < 5
-      - qmuli
-    ghc-options: -W -Wno-unused-imports -static -threaded -rtsopts -with-rtsopts=-N
+    # ghc-options: -O0 -Wall -static -threaded -rtsopts -with-rtsopts=-N
+  # qmuli-cw-events:
+    # main: Main.hs
+    # source-dirs: examples/cw-events/src
+    # dependencies:
+      # - base >= 4.8 && < 5
+      # - qmuli
+    # ghc-options: -O0 -Wall -static -threaded -rtsopts -with-rtsopts=-N
 
 tests:
   tasty:

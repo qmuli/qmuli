@@ -53,6 +53,8 @@ toResources config = Resources [lbdRoleRes]
 
           , "s3:GetObject"
           , "s3:PutObject"
+          , "s3:ListMultipartUploadParts"
+          , "s3:AbortMultipartUpload"
 
           , "dynamodb:Scan"
           , "dynamodb:Query"

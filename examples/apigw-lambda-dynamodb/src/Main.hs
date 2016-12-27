@@ -6,31 +6,30 @@
 module Main where
 
 import           Control.Lens                    hiding (view, (.=))
-import           Control.Monad                   (forM, void)
+import           Control.Monad                   (forM)
 import           Data.Aeson
 import           Data.Default                    (def)
-import qualified Data.HashMap.Strict             as SHM
-import           Data.Text                       (pack)
+import qualified Data.Text                       as T
 import           Network.AWS.DynamoDB.DeleteItem
 import           Network.AWS.DynamoDB.GetItem
 import           Network.AWS.DynamoDB.PutItem
 import           Network.AWS.DynamoDB.Scan
+import           Prelude                         hiding (scan)
 
 import           Qi                              (withConfig)
-import           Qi.Config.AWS.ApiGw             (ApiMethodEvent (..),
-                                                  ApiVerb (Delete, Get, Post),
-                                                  RequestBody (..), aeBody,
-                                                  aeParams, rpPath)
+import           Qi.Config.AWS.ApiGw             (ApiVerb (Delete, Get, Post))
 import           Qi.Config.AWS.DDB               (DdbAttrDef (..),
-                                                  DdbAttrType (..),
-                                                  DdbProvCap (..))
+                                                  DdbAttrType (..))
 import           Qi.Config.Identifier            (DdbTableId)
-import           Qi.Program.Config.Interface     (ConfigProgram)
-import           Qi.Program.Config.Interface
-import           Qi.Program.Lambda.Interface     (LambdaProgram,
+import           Qi.Program.Config.Interface     (ConfigProgram, api,
+                                                  apiMethodLambda, apiResource,
+                                                  ddbTable)
+import           Qi.Program.Lambda.Interface     (ApiLambdaProgram,
                                                   deleteDdbRecord, getDdbRecord,
-                                                  putDdbRecord, scanDdbRecords)
-import           Qi.Util
+                                                  putDdbRecord, say,
+                                                  scanDdbRecords)
+import           Qi.Util                         (internalError, result,
+                                                  success, withSuccess)
 import           Qi.Util.ApiGw
 import           Qi.Util.DDB
 
@@ -79,10 +78,11 @@ main = withConfig config
 
     scan
       :: DdbTableId
-      -> ApiMethodEvent
-      -> LambdaProgram ()
-    scan ddbTableId event = do
+      -> ApiLambdaProgram
+    scan ddbTableId _ = do
+      say "scanning records..."
       r <- scanDdbRecords ddbTableId
+      say $ T.concat ["got scan response: ", T.pack $ show r]
       withSuccess (r^.srsResponseStatus) $
         result
           (internalError . ("Parsing error: " ++))
@@ -92,10 +92,10 @@ main = withConfig config
 
     get
       :: DdbTableId
-      -> ApiMethodEvent
-      -> LambdaProgram ()
+      -> ApiLambdaProgram
     get ddbTableId event =
       withPathParam "thingId" event $ \tid -> do
+        say $ T.concat ["getting record with thingId:", tid, "..."]
         r <- getDdbRecord ddbTableId $ byNameKey tid
         withSuccess (r^.girsResponseStatus) $
           result
@@ -106,24 +106,24 @@ main = withConfig config
 
     put
       :: DdbTableId
-      -> ApiMethodEvent
-      -> LambdaProgram ()
+      -> ApiLambdaProgram
     put ddbTableId event =
       withDeserializedBody event $ \(thing :: Thing) -> do
+        say $ T.concat ["putting record: ", T.pack $ show thing, "..."]
         r <- putDdbRecord ddbTableId $ toAttrs thing
         withSuccess (r^.pirsResponseStatus) $
-          successString "successfully put thing"
+          success "successfully put thing"
 
 
     delete
       :: DdbTableId
-      -> ApiMethodEvent
-      -> LambdaProgram ()
+      -> ApiLambdaProgram
     delete ddbTableId event = do
       withPathParam "thingId" event $ \tid -> do
+        say $ T.concat ["deletting record with thingId:", tid, "..."]
         r <- deleteDdbRecord ddbTableId $ byNameKey tid
         withSuccess (r^.dirsResponseStatus) $
-          successString "successfully deleted thing"
+          success "successfully deleted thing"
 
 
 

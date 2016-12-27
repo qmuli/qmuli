@@ -7,8 +7,9 @@ module Qi.Program.Lambda.Interface where
 
 import           Control.Monad.Operational       (Program, singleton)
 import           Data.Aeson                      (Value)
-import           Data.ByteString                 (ByteString)
+import qualified Data.ByteString                 as BS
 import qualified Data.ByteString.Lazy            as LBS
+import           Data.Conduit
 import           Data.Text                       (Text)
 import           Network.AWS                     hiding (Request, Response)
 import           Network.AWS.DynamoDB.DeleteItem
@@ -20,12 +21,20 @@ import           Network.HTTP.Client
 
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.CF
+import           Qi.Config.AWS.CW
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier            (DdbTableId)
 
 
-type LambdaProgram a = Program LambdaInstruction a
+type LambdaProgram = Program LambdaInstruction
+
+type CompleteLambdaProgram = LambdaProgram LBS.ByteString
+
+type ApiLambdaProgram = ApiMethodEvent  -> CompleteLambdaProgram
+type S3LambdaProgram  = S3Event         -> CompleteLambdaProgram
+type CfLambdaProgram  = CfEvent         -> CompleteLambdaProgram
+type CwLambdaProgram  = CwEvent         -> CompleteLambdaProgram
 
 data LambdaInstruction a where
 
@@ -43,11 +52,16 @@ data LambdaInstruction a where
     :: S3Object
     -> LambdaInstruction LBS.ByteString
 
-  FoldStreamFromS3Object
+  StreamFromS3Object
     :: S3Object
-    -> (a -> ByteString -> a)
-    -> a
+    -> (Sink BS.ByteString LambdaProgram a)
     -> LambdaInstruction a
+
+  StreamS3Objects
+    :: S3Object
+    -> S3Object
+    -> Conduit BS.ByteString LambdaProgram BS.ByteString
+    -> LambdaInstruction ()
 
   PutS3ObjectContent
     :: S3Object
@@ -83,10 +97,6 @@ data LambdaInstruction a where
     :: Text
     -> LambdaInstruction ()
 
-  Output
-    :: LBS.ByteString
-    -> LambdaInstruction ()
-
 
 -- HTTP client
 
@@ -113,12 +123,18 @@ getS3ObjectContent
   -> LambdaProgram LBS.ByteString
 getS3ObjectContent = singleton . GetS3ObjectContent
 
-foldStreamFromS3Object
+streamFromS3Object
   :: S3Object
-  -> (a -> ByteString -> a)
-  -> a
+  -> (Sink BS.ByteString LambdaProgram a)
   -> LambdaProgram a
-foldStreamFromS3Object s3Obj folder = singleton . FoldStreamFromS3Object s3Obj folder
+streamFromS3Object s3Obj = singleton . StreamFromS3Object s3Obj
+
+streamS3Objects
+    :: S3Object
+    -> S3Object
+    -> Conduit BS.ByteString LambdaProgram BS.ByteString
+    -> LambdaProgram ()
+streamS3Objects inS3Obj outS3Obj = singleton . StreamS3Objects inS3Obj outS3Obj
 
 putS3ObjectContent
   :: S3Object
@@ -165,7 +181,3 @@ say
   -> LambdaProgram ()
 say = singleton . Say
 
-output
-  :: LBS.ByteString
-  -> LambdaProgram ()
-output = singleton . Output
