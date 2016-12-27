@@ -155,6 +155,10 @@ To destroy a stack:
 `simple-s3-copy <same-globally-unique-name-as-above> cf destroy`
 
 
+###Troubleshooting
+In case if lambda function suddenly starts timing out, pay close attention to the lambda memory consumption. Sometimes a log message containing `c_poll: permission denied` may appear. Try increasing the lambda function's provisioned memory size.
+
+
 Future work
 -----------
 

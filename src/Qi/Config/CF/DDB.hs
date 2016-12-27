@@ -5,17 +5,16 @@
 module Qi.Config.CF.DDB (toResources) where
 
 import           Control.Lens
-import           Data.Aeson                  (Value (Array), object)
-import qualified Data.ByteString.Lazy        as LBS
-import qualified Data.HashMap.Strict         as SHM
-import           Data.Text                   (Text)
-import qualified Data.Text                   as T
-import           Stratosphere                hiding (name)
+import           Data.Aeson           (Value (Array), object)
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.HashMap.Strict  as SHM
+import           Data.Text            (Text)
+import qualified Data.Text            as T
+import           Stratosphere         hiding (name)
 
 import           Qi.Config.AWS
-import           Qi.Config.AWS.DDB           hiding (DdbAttrType (..))
-import qualified Qi.Config.AWS.DDB           as DDB
-import           Qi.Config.AWS.DDB.Accessors
+import           Qi.Config.AWS.DDB    hiding (DdbAttrType (..))
+import qualified Qi.Config.AWS.DDB    as DDB
 
 
 toResources config = Resources . map toDdbTableRes $ getAll config
@@ -30,8 +29,8 @@ toResources config = Resources . map toDdbTableRes $ getAll config
         & ddbtTableName ?~ (Literal tableName)
 
       where
-        resName = getLogicalName table
-        tableName = getPhysicalName table config
+        resName = getLogicalName config table
+        tableName = getPhysicalName config table
 
 
         attributeDefinitions = [

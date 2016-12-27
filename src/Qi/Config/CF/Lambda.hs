@@ -21,8 +21,8 @@ toResources config = foldMap toAllLambdaResources $ getAll config
     toAllLambdaResources lbd = Resources $ [lambdaPermissionResource, lambdaResource]
 
       where
-        lbdLName = getLogicalName lbd
-        lbdPermLName = getPermissionLogicalName lbd
+        lbdLName = getLogicalName config lbd
+        lbdPermLName = getPermissionLogicalName config lbd
 
         lambdaPermissionResource =
           resource lbdPermLName $
@@ -52,7 +52,7 @@ toResources config = foldMap toAllLambdaResources $ getAll config
           )
 
           where
-            lambdaName = getPhysicalName lbd config
+            lambdaName = getPhysicalName config lbd
 
             memorySize = fromIntegral . fromEnum $ lbd^.lbdProfile.lpMemorySize
             timeOut = fromIntegral $ lbd^.lbdProfile.lpTimeoutSeconds

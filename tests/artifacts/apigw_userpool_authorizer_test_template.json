@@ -78,17 +78,6 @@
                 }
             }
         },
-        "cognitoPoolProviderLambdaCustomResource": {
-            "Type": "AWS::CloudFormation::CustomResource",
-            "Properties": {
-                "ServiceToken": {
-                    "Fn::GetAtt": [
-                        "cognitoPoolProviderLambda",
-                        "Arn"
-                    ]
-                }
-            }
-        },
         "thingsOptions": {
             "Type": "AWS::ApiGateway::Method",
             "Properties": {
@@ -161,7 +150,7 @@
                                 ":userpool/",
                                 {
                                     "Fn::GetAtt": [
-                                        "cognitoPoolProviderLambdaCustomResource",
+                                        "cognitoPoolProviderLambdaCustom",
                                         "UserPoolId"
                                     ]
                                 }
@@ -225,6 +214,8 @@
                                     "logs:PutLogEvents",
                                     "s3:GetObject",
                                     "s3:PutObject",
+                                    "s3:ListMultipartUploadParts",
+                                    "s3:AbortMultipartUpload",
                                     "dynamodb:Scan",
                                     "dynamodb:Query",
                                     "dynamodb:GetItem",
@@ -244,6 +235,17 @@
                         "PolicyName": "testApp_LambdaExecutionPolicy"
                     }
                 ]
+            }
+        },
+        "cognitoPoolProviderLambdaCustom": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "Properties": {
+                "ServiceToken": {
+                    "Fn::GetAtt": [
+                        "cognitoPoolProviderLambda",
+                        "Arn"
+                    ]
+                }
             }
         },
         "thingsGet": {
@@ -378,32 +380,32 @@
         }
     },
     "Outputs": {
-        "cognitoPoolProviderLambdaCustomResourceUserPoolClientId": {
+        "cognitoPoolProviderLambdaCustomIdentityPoolId": {
             "Value": {
                 "Fn::GetAtt": [
-                    "cognitoPoolProviderLambdaCustomResource",
+                    "cognitoPoolProviderLambdaCustom",
+                    "IdentityPoolId"
+                ]
+            },
+            "Description": "IdentityPoolId"
+        },
+        "cognitoPoolProviderLambdaCustomUserPoolClientId": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "cognitoPoolProviderLambdaCustom",
                     "UserPoolClientId"
                 ]
             },
             "Description": "UserPoolClientId"
         },
-        "cognitoPoolProviderLambdaCustomResourceUserPoolId": {
+        "cognitoPoolProviderLambdaCustomUserPoolId": {
             "Value": {
                 "Fn::GetAtt": [
-                    "cognitoPoolProviderLambdaCustomResource",
+                    "cognitoPoolProviderLambdaCustom",
                     "UserPoolId"
                 ]
             },
             "Description": "UserPoolId"
-        },
-        "cognitoPoolProviderLambdaCustomResourceIdentityPoolId": {
-            "Value": {
-                "Fn::GetAtt": [
-                    "cognitoPoolProviderLambdaCustomResource",
-                    "IdentityPoolId"
-                ]
-            },
-            "Description": "IdentityPoolId"
         },
         "worldApiURL": {
             "Value": {

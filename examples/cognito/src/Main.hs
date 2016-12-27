@@ -4,16 +4,14 @@ module Main where
 
 import           Control.Lens                          hiding (view, (.=))
 import           Control.Monad                         (void)
-import           Data.Aeson                            hiding (decode)
+import           Data.Aeson                            (Value (String))
 import           Data.Default                          (def)
 import qualified Data.HashMap.Strict                   as SHM
-import           Data.Text                             (Text)
 import qualified Data.Text                             as T
 import           Web.JWT                               (claims, decode)
 
 import           Qi                                    (withConfig)
-import           Qi.Config.AWS.ApiGw                   (ApiMethodEvent,
-                                                        ApiVerb (Get), aeParams,
+import           Qi.Config.AWS.ApiGw                   (ApiVerb (Get), aeParams,
                                                         rpHeaders)
 import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ampAuthId)
 import           Qi.Program.Config.Interface           (ConfigProgram, api,
@@ -21,9 +19,8 @@ import           Qi.Program.Config.Interface           (ConfigProgram, api,
                                                         apiMethodLambda,
                                                         apiResource,
                                                         customResource)
-import           Qi.Program.Lambda.Interface           (LambdaProgram)
-import           Qi.Util                               (argumentsError,
-                                                        successString)
+import           Qi.Program.Lambda.Interface           (ApiLambdaProgram, say)
+import           Qi.Util                               (argumentsError, success)
 import           Qi.Util.Cognito                       (cognitoPoolProviderLambda)
 
 main :: IO ()
@@ -35,22 +32,20 @@ main = withConfig config
               (cognitoPoolProviderLambda "MyIdentityPool" "MyUserPool" "MyClient") def
 
 
-      api "world" >>= \world -> do
+      void $ api "world" >>= \world -> do
         authId <- apiAuthorizer "myAuth" cognito world
 
         apiResource "secure" world >>= \secure -> do
           apiMethodLambda "hello" Get secure (def & ampAuthId ?~ authId) greetLambda def
 
-      return ()
-
 
     greetLambda
-      :: ApiMethodEvent
-      -> LambdaProgram ()
+      :: ApiLambdaProgram
     greetLambda event = do
-      withJwt event $ \jwt ->
-        successString $ "jwt contents: " ++ show (decode jwt)
-        {- successString $ "jwt: " ++ T.unpack jwt -}
+      withJwt event $ \jwt -> do
+        say $ T.concat ["jwt contents: ", T.pack $ show (decode jwt)]
+        success "lambda had executed successfully"
+
 
 
 

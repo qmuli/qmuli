@@ -18,15 +18,17 @@ import           Qi.Config.AWS.S3            (S3Event, s3Object, s3eObject,
 import           Qi.Config.Identifier        (S3BucketId)
 import           Qi.Program.Config.Interface (ConfigProgram, s3Bucket,
                                               s3BucketLambda)
-import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
+import           Qi.Program.Lambda.Interface (S3LambdaProgram,
+                                              getS3ObjectContent,
                                               putS3ObjectContent, say)
+import           Qi.Util                     (success)
+
 
 main :: IO ()
 main = withConfig config
   where
     config :: ConfigProgram ()
     config = do
-
 
       -- create an "input" s3 bucket
       incoming <- s3Bucket "incoming"
@@ -46,7 +48,7 @@ main = withConfig config
 
     copyContentsLambda
       :: S3BucketId
-      -> (S3Event -> LambdaProgram ())
+      -> S3LambdaProgram
     copyContentsLambda sinkBucketId = lbd
       where
         lbd event = do
@@ -61,4 +63,7 @@ main = withConfig config
 
           -- write the content into a new file in the "output" bucket
           putS3ObjectContent outgoingS3Obj content
+
+          success "lambda had executed successfully"
+
 

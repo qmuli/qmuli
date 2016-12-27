@@ -14,9 +14,6 @@ import           Qi.Config.AWS.ApiGw
 import           Qi.Config.Identifier
 
 
-makeAlphaNumeric :: Text -> Text
-makeAlphaNumeric = T.filter isAlphaNum
-
 getLogicalName
   :: ApiResource
   -> ApiVerb

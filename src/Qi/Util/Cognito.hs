@@ -30,8 +30,7 @@ import           Network.AWS.CognitoIdentityProvider.Types                (Verif
 import           Qi.Config.AWS.CF
 import           Qi.Program.Lambda.Interface                              (LambdaProgram,
                                                                            amazonkaSend,
-                                                                           http,
-                                                                           output)
+                                                                           http)
 import           Qi.Util.ApiGw
 import           Qi.Util.CustomCFResource
 

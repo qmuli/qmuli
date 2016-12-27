@@ -7,6 +7,7 @@ module Qi.Program.Config.Interface where
 import           Control.Monad.Operational             (Program, singleton)
 import           Control.Monad.State.Strict            (State)
 import           Data.ByteString                       (ByteString)
+import qualified Data.ByteString.Lazy.Char8            as LBS
 import           Data.Default                          (Default, def)
 import           Data.Text                             (Text)
 
@@ -19,7 +20,10 @@ import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda                  (LambdaProfile)
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
-import           Qi.Program.Lambda.Interface           (LambdaProgram)
+import           Qi.Program.Lambda.Interface           (ApiLambdaProgram,
+                                                        CfLambdaProgram,
+                                                        CwLambdaProgram,
+                                                        S3LambdaProgram)
 
 
 type ConfigProgram a = Program ConfigInstruction a
@@ -32,7 +36,7 @@ data ConfigInstruction a where
   RS3BucketLambda
     :: Text
     -> S3BucketId
-    -> (S3Event -> LambdaProgram ())
+    -> S3LambdaProgram
     -> LambdaProfile
     -> ConfigInstruction LambdaId
 
@@ -63,20 +67,20 @@ data ConfigInstruction a where
     -> ApiVerb
     -> ApiResourceId
     -> ApiMethodProfile
-    -> (ApiMethodEvent -> LambdaProgram ())
+    -> ApiLambdaProgram
     -> LambdaProfile
     -> ConfigInstruction LambdaId
 
   RCustomResource
     :: Text
-    -> (CfEvent -> LambdaProgram ())
+    -> CfLambdaProgram
     -> LambdaProfile
     -> ConfigInstruction CustomId
 
   RCwEventLambda
     :: Text
     -> CwEventsRuleProfile
-    -> (CwEvent -> LambdaProgram ())
+    -> CwLambdaProgram
     -> LambdaProfile
     -> ConfigInstruction LambdaId
 

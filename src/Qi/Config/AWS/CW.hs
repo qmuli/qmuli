@@ -25,7 +25,6 @@ data CwEventsRule = CwEventsRule {
   , _cerLbdId   :: LambdaId
   }
 
-
 data CwConfig = CwConfig {
     _ccRules :: HashMap CwEventsRuleId CwEventsRule
   }

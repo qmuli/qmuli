@@ -21,12 +21,11 @@ import           Network.HTTP.Client         (Request (..), RequestBody (..),
 import           Network.HTTP.Client.TLS     (tlsManagerSettings)
 
 import           Qi.Config.AWS.CF
-import           Qi.Program.Lambda.Interface (LambdaProgram, amazonkaSend, http,
-                                              output)
+import           Qi.Program.Lambda.Interface (LambdaProgram, amazonkaSend, http)
 import           Qi.Util                     (respond)
 
 
-type CfEventHandler = CfEvent -> LambdaProgram ()
+type CfEventHandler = CfEvent -> LambdaProgram LBS.ByteString
 
 data CfStatus = CfSuccess | CfFailed
 instance ToJSON CfStatus where

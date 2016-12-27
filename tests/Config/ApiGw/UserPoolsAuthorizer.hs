@@ -13,15 +13,14 @@ import qualified Data.ByteString.Lazy.Char8            as LBS
 import           Data.Default                          (def)
 import           Test.Tasty.Hspec
 
-import           Qi.Config.AWS.ApiGw                   (ApiMethodEvent (..),
-                                                        ApiVerb (Get))
+import           Qi.Config.AWS.ApiGw                   (ApiVerb (Get))
 import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ampAuthId)
 import           Qi.Program.Config.Interface           (ConfigProgram, api,
                                                         apiAuthorizer,
                                                         apiMethodLambda,
                                                         apiResource,
                                                         customResource)
-import           Qi.Program.Lambda.Interface           (LambdaProgram)
+import           Qi.Program.Lambda.Interface           (ApiLambdaProgram)
 import           Qi.Util.Cognito                       (cognitoPoolProviderLambda)
 
 import           Config                                (getConfig, getOutputs,
@@ -45,8 +44,7 @@ configProgram = do
               dummyLambda def
 
 dummyLambda
-  :: ApiMethodEvent
-  -> LambdaProgram ()
+  :: ApiLambdaProgram
 dummyLambda _ = undefined
 
 

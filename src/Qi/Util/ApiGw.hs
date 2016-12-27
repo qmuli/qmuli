@@ -9,6 +9,7 @@ import           Control.Monad               ((<=<))
 import           Data.Aeson
 import           Data.Aeson.Types            (typeMismatch)
 import qualified Data.ByteString.Char8       as BS
+import qualified Data.ByteString.Lazy.Char8  as LBS
 import qualified Data.HashMap.Strict         as SHM
 import           Data.Text                   (Text)
 import qualified Data.Text                   as T
@@ -20,7 +21,7 @@ import           Qi.Config.AWS.ApiGw         (ApiMethodEvent (..),
                                               aeParams, rpPath)
 import           Qi.Config.AWS.DDB           (DdbAttrDef (..), DdbAttrType (..),
                                               DdbProvCap (..))
-import           Qi.Program.Lambda.Interface (LambdaProgram, output)
+import           Qi.Program.Lambda.Interface (LambdaProgram)
 import           Qi.Util
 
 
@@ -35,8 +36,8 @@ withPathParam name event f = case SHM.lookup name $ event^.aeParams.rpPath of
 withDeserializedBody
   :: FromJSON a
   => ApiMethodEvent
-  -> (a -> LambdaProgram ())
-  -> LambdaProgram ()
+  -> (a -> LambdaProgram LBS.ByteString)
+  -> LambdaProgram LBS.ByteString
 withDeserializedBody event f = case event^.aeBody of
   JsonBody jb ->
     result

@@ -19,9 +19,10 @@ import           Qi.Config.Identifier        (S3BucketId)
 import           Qi.Program.Config.Interface (ConfigProgram, api,
                                               apiMethodLambda, apiResource,
                                               s3Bucket)
-import           Qi.Program.Lambda.Interface (LambdaProgram, getS3ObjectContent,
+import           Qi.Program.Lambda.Interface (ApiLambdaProgram,
+                                              getS3ObjectContent,
                                               putS3ObjectContent)
-import           Qi.Util
+import           Qi.Util                     (success)
 
 
 -- Use the curl commands below to test-drive the two endpoints (substitute your unique api stage url first):
@@ -43,7 +44,7 @@ main = withConfig config
       void $ api "world" >>= \apiId ->
         apiResource "things" apiId >>= \apiResourceId -> do
 
-          void $ apiMethodLambda
+          apiMethodLambda
             "createThing"
             Post apiResourceId def
             (writeContentsLambda bucketId) def
@@ -53,16 +54,13 @@ main = withConfig config
             Get apiResourceId def
             (readContentsLambda bucketId) def
 
-      return ()
-
 
     writeContentsLambda
       :: S3BucketId
-      -> ApiMethodEvent
-      -> LambdaProgram ()
+      -> ApiLambdaProgram
     writeContentsLambda bucketId ApiMethodEvent{_aeBody} = do
       putS3ObjectContent (s3Object bucketId) content
-      successString "successfully added content"
+      success "successfully added content"
 
       where
         content = case _aeBody of
@@ -73,8 +71,7 @@ main = withConfig config
 
     readContentsLambda
       :: S3BucketId
-      -> ApiMethodEvent
-      -> LambdaProgram ()
+      -> ApiLambdaProgram
     readContentsLambda bucketId _ = do
       content <- getS3ObjectContent $ s3Object bucketId
       success . String . decodeUtf8 $ LBS.toStrict content

@@ -5,24 +5,36 @@
 module Qi.Util where
 
 import           Data.Aeson                  (Result (Error, Success),
-                                              Value (Number, String), encode,
-                                              object)
+                                              Value (Number, Object, String),
+                                              encode, object)
+import qualified Data.ByteString.Lazy.Char8  as LBS
+import           Data.HashMap.Strict         (HashMap)
 import           Data.Text                   (Text)
 import qualified Data.Text                   as T
 
-import           Qi.Program.Lambda.Interface (LambdaProgram, output)
+import           Qi.Program.Lambda.Interface (CompleteLambdaProgram)
 
 
-success = respond 200
-successString s = respond 200 $ object [ ("message", String $ T.pack s) ]
+success
+  :: Value
+  -> CompleteLambdaProgram
+success v =
+  respond 200 $ case v of
+    Object _ -> v
+    String _ -> object [ ("message", v) ]
+
 created = respond 201
 
 argumentsError = respond 400 . String . T.pack
 notFoundError = respond 404 . String . T.pack
 internalError = respond 500 . String . T.pack
 
+respond
+  :: Int
+  -> Value
+  -> CompleteLambdaProgram
 respond status content =
-  output . encode $ object [
+  return . encode $ object [
       ("status", Number $ fromIntegral status)
     , ("body", content)
     ]
@@ -39,8 +51,8 @@ result f g r =
 
 withSuccess
   :: Int
-  -> LambdaProgram ()
-  -> LambdaProgram ()
+  -> CompleteLambdaProgram
+  -> CompleteLambdaProgram
 withSuccess code f =
   case code of
     200         -> f

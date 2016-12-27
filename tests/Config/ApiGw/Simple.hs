@@ -13,11 +13,10 @@ import qualified Data.ByteString.Lazy.Char8  as LBS
 import           Data.Default                (def)
 import           Test.Tasty.Hspec
 
-import           Qi.Config.AWS.ApiGw         (ApiMethodEvent (..),
-                                              ApiVerb (Get))
+import           Qi.Config.AWS.ApiGw         (ApiVerb (Get))
 import           Qi.Program.Config.Interface (ConfigProgram, api,
                                               apiMethodLambda, apiResource)
-import           Qi.Program.Lambda.Interface (LambdaProgram)
+import           Qi.Program.Lambda.Interface (ApiLambdaProgram)
 
 import           Config                      (getConfig, getOutputs,
                                               getResources, getTemplate)
@@ -32,8 +31,7 @@ configProgram =
               things def dummyLambda def
 
 dummyLambda
-  :: ApiMethodEvent
-  -> LambdaProgram ()
+  :: ApiLambdaProgram
 dummyLambda _ = undefined
 
 

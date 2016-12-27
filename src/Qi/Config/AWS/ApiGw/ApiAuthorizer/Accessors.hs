@@ -14,30 +14,11 @@ import           Qi.Config.AWS.ApiGw
 import           Qi.Config.Identifier
 
 
-makeAlphaNumeric :: Text -> Text
-makeAlphaNumeric = T.filter isAlphaNum
-
-getLogicalName
-  :: ApiAuthorizer
-  -> Text
-getLogicalName auth = T.concat [makeAlphaNumeric $ auth^.aaName, "ApiAuthorizer"]
-
-getById
-  :: ApiAuthorizerId
-  -> Config
-  -> ApiAuthorizer
-getById aaid config =
-  case SHM.lookup aaid aaMap of
-    Just ar -> ar
-    Nothing -> error $ "Could not reference api resource with id: " ++ show aaid
-  where
-    aaMap = config^.apiGwConfig.acApiAuthorizers
-
 getChildren
   :: ApiId
   -> Config
   -> [ApiAuthorizerId]
-getChildren aid config = 
+getChildren aid config =
   SHM.lookupDefault [] aid $ config^.apiGwConfig.acApiAuthorizerDeps
 
 
