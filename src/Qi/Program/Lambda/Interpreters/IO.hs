@@ -11,65 +11,64 @@
 
 module Qi.Program.Lambda.Interpreters.IO (run) where
 
-import           Control.Concurrent                   hiding (yield)
+import           Control.Concurrent                    hiding (yield)
 import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
-import           Control.Lens                         hiding (view)
-import           Control.Monad                        (void, (<=<))
-import           Control.Monad.Base                   (MonadBase)
-import           Control.Monad.Catch                  (MonadCatch, MonadThrow)
-import           Control.Monad.IO.Class               (MonadIO, liftIO)
-import           Control.Monad.Operational            (ProgramViewT ((:>>=), Return),
-                                                       singleton, view)
-import           Control.Monad.Reader.Class           (MonadReader)
-import           Control.Monad.Trans.AWS              (AWST, runAWST, send)
-import           Control.Monad.Trans.Class            (lift)
-import           Control.Monad.Trans.Reader           (ReaderT, ask, asks,
-                                                       runReaderT)
-import           Control.Monad.Trans.Resource         (MonadResource, ResourceT)
-import           Data.Aeson                           (Value (..), encode,
-                                                       object)
-import           Data.Binary.Builder                  (fromLazyByteString,
-                                                       toLazyByteString)
-import qualified Data.ByteString.Char8                as BS
-import qualified Data.ByteString.Lazy.Char8           as LBS
-import           Data.Conduit                         (Conduit, Sink,
-                                                       awaitForever, transPipe,
-                                                       unwrapResumable, yield,
-                                                       ($$), (=$=))
-import           Data.Conduit.Binary                  (sinkLbs)
-import qualified Data.Conduit.List                    as CL
-import           Data.Default                         (def)
-import           Data.Maybe                           (listToMaybe)
-import           Data.Monoid                          ((<>))
-import           Data.Ratio                           (numerator)
-import           Data.Text                            (Text)
-import qualified Data.Text                            as T
-import           Data.Text.Encoding                   (decodeUtf8)
-import qualified Data.Text.IO                         as T
-import           Data.Time.Clock.POSIX                (getPOSIXTime)
-import           Network.AWS                          hiding (Request, Response,
-                                                       send)
+import           Control.Lens                          hiding (view)
+import           Control.Monad                         (void, (<=<))
+import           Control.Monad.Base                    (MonadBase)
+import           Control.Monad.Catch                   (MonadCatch, MonadThrow)
+import           Control.Monad.IO.Class                (MonadIO, liftIO)
+import           Control.Monad.Operational             (ProgramViewT ((:>>=), Return),
+                                                        singleton, view)
+import           Control.Monad.Reader.Class            (MonadReader)
+import           Control.Monad.Trans.AWS               (AWST, runAWST, send)
+import           Control.Monad.Trans.Class             (lift)
+import           Control.Monad.Trans.Reader            (ReaderT, ask, asks,
+                                                        runReaderT)
+import           Control.Monad.Trans.Resource          (MonadResource,
+                                                        ResourceT)
+import           Data.Aeson                            (Value (..), encode,
+                                                        object)
+import           Data.Binary.Builder                   (fromLazyByteString,
+                                                        toLazyByteString)
+import qualified Data.ByteString.Char8                 as BS
+import qualified Data.ByteString.Lazy.Char8            as LBS
+import           Data.Conduit                          (Conduit, Sink,
+                                                        awaitForever, transPipe,
+                                                        unwrapResumable, yield,
+                                                        ($$), (=$=))
+import           Data.Conduit.Binary                   (sinkLbs)
+import qualified Data.Conduit.List                     as CL
+import           Data.Default                          (def)
+import           Data.Monoid                           ((<>))
+import           Data.Text                             (Text)
+import qualified Data.Text                             as T
+import           Data.Text.Encoding                    (decodeUtf8)
+import qualified Data.Text.IO                          as T
+import           GHC.Exts                              (fromList)
+import           Network.AWS                           hiding (Request,
+                                                        Response, send)
 import           Network.AWS.CloudWatchLogs
-import           Network.AWS.Data.Body                (RsBody (..), fuseStream)
+import           Network.AWS.Data.Body                 (RsBody (..), fuseStream)
 import           Network.AWS.DynamoDB
 import           Network.AWS.S3
 import           Network.AWS.S3.CreateMultipartUpload
 import           Network.AWS.S3.StreamingUpload
-import           Network.HTTP.Client                  (ManagerSettings, Request,
-                                                       Response, httpLbs,
-                                                       newManager)
-import           System.Mem                           (performMajorGC)
+import           Network.HTTP.Client                   (ManagerSettings,
+                                                        Request, Response,
+                                                        httpLbs, newManager)
+import           System.Mem                            (performMajorGC)
 
-import           Qi.Amazonka                          (currentRegion)
+import           Qi.Amazonka                           (currentRegion)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
-import           Qi.Config.Identifier                 (DdbTableId)
-import           Qi.Program.Lambda.Interface          (LambdaInstruction (..),
-                                                       LambdaProgram)
-import           System.IO                            (stdout)
+import           Qi.Config.Identifier                  (DdbTableId)
+import           Qi.Program.Lambda.Interface           (LambdaInstruction (..),
+                                                        LambdaProgram)
+import           Qi.Program.Lambda.Interpreters.IO.Log
 
 
 newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
@@ -88,69 +87,6 @@ newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
 
 liftAWSFromResourceIO = liftAWS . lift
 
-cloudWatchLoggerWorker
-  :: Text
-  -> Config
-  -> TChan (Maybe Text)
-  -> IO ()
-cloudWatchLoggerWorker lbdName config chan = do
-  {- logger <- newLogger Debug stdout -}
-  {- stdLoggerEnv <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion -}
-  noLoggerEnv <- newEnv Discover <&> set envRegion currentRegion
-
-  {- runResourceT . runAWST stdLoggerEnv $ -}
-  runResourceT . runAWST noLoggerEnv $
-    loop =<< ensureLogStream
-
-  where
-    groupName = config^.namePrefix
-    streamName = lbdName
-
-    ensureLogStream = do
-      groups <- paginate describeLogGroups $$ CL.foldMap (^.dlgrsLogGroups)
-      case listToMaybe $ filter ( (== Just groupName) . (^.lgLogGroupName) ) groups of
-        Just group -> do
-          streams <- paginate (describeLogStreams groupName) $$ CL.foldMap (^.dlsrsLogStreams)
-          case listToMaybe $ filter ( (== Just streamName) . (^.lsLogStreamName) ) streams of
-            Just stream ->
-              return $ stream^.lsUploadSequenceToken
-            Nothing -> do
-               clsr <- send $ createLogStream groupName streamName
-               return Nothing
-        Nothing -> do
-          clgr <- send $ createLogGroup groupName
-          -- ignore response
-          clsr <- send $ createLogStream groupName streamName
-          -- ignore response
-          return Nothing
-
-
-    sendLogEvent nextToken msg = do
-      -- get current UTC epoch time in milliseconds
-      ts <- liftIO $ fromIntegral . round . (* 1000) <$> getPOSIXTime
-      let logEvent = inputLogEvent ts msg
-      send $ putLogEvents groupName streamName [logEvent]
-                     & pleSequenceToken .~ nextToken
-
-    loop
-      :: Maybe Text
-      -> AWS ()
-    loop nextToken = do
-      maybeMsg <- liftIO $ atomically (readTChan chan)
-      maybe
-        (void $ sendLogEvent nextToken "Logger exitting...")
-        (loop . (^.plersNextSequenceToken) <=< sendLogEvent nextToken)
-        maybeMsg
-
--- this allows to wait on the forked child thread
-forkIOSync
-  :: IO ()
-  -> IO (MVar ())
-forkIOSync io = do
-  mvar <- newEmptyMVar
-  forkFinally io (\_ -> putMVar mvar ())
-  return mvar
-
 
 run
   :: Text
@@ -165,7 +101,7 @@ run lbdName config program = do
       cloudWatchLogger level bd = do
         let prefix = LBS.fromChunks ["[lambda][amazonka][]", "[", BS.pack $ show level, "] "]
             msg = fromLazyByteString prefix <> bd
-        atomically . writeTChan logChan . Just . decodeUtf8 . LBS.toStrict $ toLazyByteString msg
+        queueLogEntry logChan . decodeUtf8 . LBS.toStrict $ toLazyByteString msg
 
   cloudWatchLoggerEnv <- newEnv Discover <&> set envRegion currentRegion . set envLogger cloudWatchLogger
 
@@ -173,12 +109,12 @@ run lbdName config program = do
     output <- go logChan program
     liftIO $ LBS.putStr output
 
-  atomically $ writeTChan logChan Nothing -- signal the end
+  signalLogEnd logChan
   takeMVar loggerDone -- wait on the logger to finish logging messages
 
   where
     go
-      :: TChan (Maybe Text)
+      :: LogChan
       -> LambdaProgram a
       -> QiAWS a
     go logChan = interpret
@@ -186,7 +122,7 @@ run lbdName config program = do
         logMessage
           :: Text
           -> QiAWS ()
-        logMessage = liftIO . atomically . writeTChan logChan . Just . T.append "[Message] "
+        logMessage msg = liftIO . queueLogEntry logChan $ T.append "[Message] " msg
 
         interpret
           :: LambdaProgram a

@@ -11,6 +11,7 @@ import qualified Data.Text                      as T
 import           Stratosphere                   hiding (name)
 
 import           Qi.Config.AWS
+import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.Lambda.Accessors
 import qualified Qi.Config.CF.Role              as Role
@@ -33,10 +34,11 @@ toResources config = foldMap toAllLambdaResources $ getAll config
               principal
           where
             principal = case lbd of
-              S3BucketLambda{} -> "s3.amazonaws.com"
-              ApiLambda{}      -> "apigateway.amazonaws.com"
-              CfCustomLambda{} -> "*" -- TODO: not sure whether we even need the permission for CF Custom Resource
-              CwEventLambda{}  -> "events.amazonaws.com"
+              S3BucketLambda{}  -> "s3.amazonaws.com"
+              ApiLambda{}       -> "apigateway.amazonaws.com"
+              CfCustomLambda{}  -> "*" -- TODO: not sure whether we even need the permission for CF Custom Resource
+              CwEventLambda{}   -> "events.amazonaws.com"
+              DdbStreamLambda{} -> "dynamodb.amazonaws.com"
 
         lambdaResource = (
           resource lbdLName $

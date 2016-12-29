@@ -8,7 +8,6 @@ module Main where
 import           Control.Lens
 import           Control.Monad               (void)
 import qualified Data.ByteString.Char8       as BS
-import qualified Data.ByteString.Lazy.Char8  as LBS
 import qualified Data.Conduit.List           as CL
 import           Data.Default                (def)
 import qualified Data.Text                   as T

@@ -50,6 +50,9 @@ interpret program =
     (RDdbTable name hashAttrDef profile) :>>= is ->
       interpret . is =<< rDdbTable name hashAttrDef profile
 
+    (RDdbStreamLambda name tableId lbd profile) :>>= is ->
+      interpret . is =<< rDdbStreamLambda name tableId lbd profile
+
     (RApi name) :>>= is ->
       interpret . is =<< rApi name
 
@@ -72,6 +75,8 @@ interpret program =
       return def
 
   where
+
+-- S3
     rS3Bucket name = do
       newS3BucketId <- getNextId
       let newBucket = def & s3bName .~ name
@@ -92,19 +97,31 @@ interpret program =
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
       return newLambdaId
 
-
+-- DDB
     rDdbTable name hashAttrDef profile = do
       newDdbTableId <- getNextId
       let newDdbTable = DdbTable {
-          _dtName         = name
-        , _dtHashAttrDef  = hashAttrDef
-        , _dtProfile      = profile
+          _dtName           = name
+        , _dtHashAttrDef    = hashAttrDef
+        , _dtProfile        = profile
+        , _dtStreamHandler  = Nothing
         }
 
       ddbConfig . dcTables %= SHM.insert newDdbTableId newDdbTable
       return newDdbTableId
 
 
+    rDdbStreamLambda name tableId lbdProgramFunc profile = do
+
+      newLambdaId <- getNextId
+      let newLambda = DdbStreamLambda name profile lbdProgramFunc
+
+      ddbConfig.dcTables %= SHM.adjust (dtStreamHandler .~ Just newLambdaId) tableId
+      lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
+      return newLambdaId
+
+
+-- Api
     rApi name = do
       newApiId <- getNextId
       let newApi = def & aName .~ name
@@ -145,14 +162,13 @@ interpret program =
     rApiMethodLambda name verb apiResourceId methodProfile lbdProgramFunc lbdProfile = do
       newLambdaId <- getNextId
       let newLambda = ApiLambda name lbdProfile lbdProgramFunc
-          modifyApiResource = arMethodConfigs %~ (apiMethodConfig:)
           apiMethodConfig = ApiMethodConfig {
               amcVerb     = verb
             , amcProfile  = methodProfile
             , amcLbdId    = newLambdaId
             }
 
-      apiGwConfig.acApiResources %= SHM.adjust modifyApiResource apiResourceId
+      apiGwConfig.acApiResources %= SHM.adjust (arMethodConfigs %~ (apiMethodConfig:)) apiResourceId
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
       return newLambdaId
 
