@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs             #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -17,20 +18,31 @@ import           Qi.Config.AWS.DDB    hiding (DdbAttrType (..))
 import qualified Qi.Config.AWS.DDB    as DDB
 
 
-toResources config = Resources . map toDdbTableRes $ getAll config
+toResources config = Resources . foldMap toDdbTableResources $ getAll config
   where
-    toDdbTableRes table =
-      resource resName $
+    toDdbTableResources table = [tableRes table] ++ toConditionalDdbTableResources table
+
+    toConditionalDdbTableResources table =
+      case table^.dtStreamHandler of
+        Just lbdId -> [tableStreamEventSourceMappingRes table lbdId]
+        _          -> []
+
+    tableRes table =
+      resource lname $
         DynamoDBTableProperties $
         dynamoDBTable
           attributeDefinitions
           keySchema
           provisionedThroughput
-        & ddbtTableName ?~ (Literal tableName)
+          & ddbtTableName ?~ (Literal pname)
+          & ddbtStreamSpecification .~ streamSpec
 
       where
-        resName = getLogicalName config table
-        tableName = getPhysicalName config table
+        streamSpec = const (dynamoDBTableStreamSpecification $ Literal NEW_AND_OLD_IMAGES)
+          <$> (table^.dtStreamHandler)
+
+        lname = getLogicalName config table
+        pname = getPhysicalName config table
 
 
         attributeDefinitions = [
@@ -51,3 +63,20 @@ toResources config = Resources . map toDdbTableRes $ getAll config
         toAttrType DDB.S = S
         toAttrType DDB.N = N
         toAttrType DDB.B = B
+
+
+    tableStreamEventSourceMappingRes table lbdId =
+      resource lname $
+        LambdaEventSourceMappingProperties $
+        lambdaEventSourceMapping
+        tableStreamArn
+        (Literal lbdPName)
+        "LATEST"
+
+      where
+        lname = tableLName `T.append` "EventSourceMapping"
+        tableLName = getLogicalName config table
+        tableStreamArn = GetAtt tableLName "StreamArn"
+        lbdPName = getPhysicalName config $ getById config lbdId
+
+

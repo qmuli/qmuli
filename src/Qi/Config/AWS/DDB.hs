@@ -5,6 +5,7 @@
 module Qi.Config.AWS.DDB where
 
 import           Control.Lens
+import           Data.Aeson
 import           Data.ByteString      (ByteString)
 import           Data.Default         (Default, def)
 import           Data.HashMap.Strict  (HashMap)
@@ -18,6 +19,15 @@ import           Qi.Config.Identifier
 
 type DdbAttrs = HashMap Text AttributeValue
 
+
+data DdbStreamEvent = DdbStreamEvent {
+    _dseData :: Value
+  } deriving Show
+
+instance FromJSON DdbStreamEvent where
+  parseJSON = pure . DdbStreamEvent
+
+
 data DdbAttrType = S | N | B
   deriving Show
 
@@ -28,9 +38,10 @@ data DdbAttrDef = DdbAttrDef {
 
 
 data DdbTable = DdbTable {
-    _dtName        :: Text
-  , _dtHashAttrDef :: DdbAttrDef
-  , _dtProfile     :: DdbTableProfile
+    _dtName          :: Text
+  , _dtHashAttrDef   :: DdbAttrDef
+  , _dtProfile       :: DdbTableProfile
+  , _dtStreamHandler :: Maybe LambdaId
   }
 
 

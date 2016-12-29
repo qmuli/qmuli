@@ -31,10 +31,11 @@ type LambdaProgram = Program LambdaInstruction
 
 type CompleteLambdaProgram = LambdaProgram LBS.ByteString
 
-type ApiLambdaProgram = ApiMethodEvent  -> CompleteLambdaProgram
-type S3LambdaProgram  = S3Event         -> CompleteLambdaProgram
-type CfLambdaProgram  = CfEvent         -> CompleteLambdaProgram
-type CwLambdaProgram  = CwEvent         -> CompleteLambdaProgram
+type ApiLambdaProgram       = ApiMethodEvent  -> CompleteLambdaProgram
+type S3LambdaProgram        = S3Event         -> CompleteLambdaProgram
+type CfLambdaProgram        = CfEvent         -> CompleteLambdaProgram
+type CwLambdaProgram        = CwEvent         -> CompleteLambdaProgram
+type DdbStreamLambdaProgram = DdbStreamEvent  -> CompleteLambdaProgram
 
 data LambdaInstruction a where
 

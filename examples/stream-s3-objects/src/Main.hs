@@ -49,7 +49,7 @@ main = withConfig config
       :: S3BucketId
       -> S3LambdaProgram
     streamS3ObjectsLambda sinkBucketId event = do
-      let incomingS3Obj = event ^. s3eObject
+      let incomingS3Obj = event^.s3eObject
           outgoingS3Obj = s3oBucketId .~ sinkBucketId $ incomingS3Obj
 
           conduit :: Conduit BS.ByteString LambdaProgram BS.ByteString

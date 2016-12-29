@@ -20,6 +20,7 @@ import           Qi.Config.AWS
 import qualified Qi.Config.AWS.ApiGw.ApiMethod.Event  as ApiMethodEvent (parse)
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.CW
+import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
 import qualified Qi.Config.AWS.S3.Event               as S3Event (parse)
@@ -116,6 +117,8 @@ withNameAndConfig appName configProgram =
         parseLambdaEvent CwEventLambda{_lbdCwEventLambdaProgram} eventJson =
           _lbdCwEventLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String CwEvent)
 
+        parseLambdaEvent DdbStreamLambda{_lbdDdbStreamLambdaProgram} eventJson =
+          _lbdDdbStreamLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String DdbStreamEvent)
 
         lbdIO
           :: Text

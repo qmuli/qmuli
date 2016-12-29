@@ -23,12 +23,15 @@ import           Qi.Config.Identifier
 import           Qi.Program.Lambda.Interface           (ApiLambdaProgram,
                                                         CfLambdaProgram,
                                                         CwLambdaProgram,
+                                                        DdbStreamLambdaProgram,
                                                         S3LambdaProgram)
 
 
 type ConfigProgram a = Program ConfigInstruction a
 
 data ConfigInstruction a where
+
+-- S3
   RS3Bucket
     :: Text
     -> ConfigInstruction S3BucketId
@@ -40,12 +43,21 @@ data ConfigInstruction a where
     -> LambdaProfile
     -> ConfigInstruction LambdaId
 
+-- DDB
   RDdbTable
     :: Text
     -> DdbAttrDef
     -> DdbTableProfile
     -> ConfigInstruction DdbTableId
 
+  RDdbStreamLambda
+    :: Text
+    -> DdbTableId
+    -> DdbStreamLambdaProgram
+    -> LambdaProfile
+    -> ConfigInstruction LambdaId
+
+-- Api
   RApi
     :: Text
     -> ConfigInstruction ApiId
@@ -71,12 +83,14 @@ data ConfigInstruction a where
     -> LambdaProfile
     -> ConfigInstruction LambdaId
 
+-- Custom
   RCustomResource
     :: Text
     -> CfLambdaProgram
     -> LambdaProfile
     -> ConfigInstruction CustomId
 
+-- CloudWatch Logs
   RCwEventLambda
     :: Text
     -> CwEventsRuleProfile
@@ -89,6 +103,8 @@ s3Bucket = singleton . RS3Bucket
 s3BucketLambda name s3BucketId lbd = singleton . RS3BucketLambda name s3BucketId lbd
 
 ddbTable name hashAttrDef = singleton . RDdbTable name hashAttrDef
+
+ddbStreamLambda name tableId lbd = singleton . RDdbStreamLambda name tableId lbd
 
 api = singleton . RApi
 

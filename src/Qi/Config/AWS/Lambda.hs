@@ -15,31 +15,37 @@ import           Stratosphere
 import           Qi.Config.AWS.ApiGw         (ApiMethodEvent)
 import           Qi.Config.AWS.CF            (CfEvent)
 import           Qi.Config.AWS.CW            (CwEvent)
+import           Qi.Config.AWS.DDB           (DdbStreamEvent)
 import           Qi.Config.AWS.S3            (S3Event)
 import           Qi.Config.Identifier
-import           Qi.Program.Lambda.Interface (LambdaProgram)
+import           Qi.Program.Lambda.Interface (CompleteLambdaProgram)
 
 
 data Lambda =
     S3BucketLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdS3BucketLambdaProgram :: S3Event -> LambdaProgram LBS.ByteString
+  , _lbdS3BucketLambdaProgram :: S3Event -> CompleteLambdaProgram
   }
   | ApiLambda {
     _lbdName                   :: Text
   , _lbdProfile                :: LambdaProfile
-  , _lbdApiMethodLambdaProgram :: ApiMethodEvent -> LambdaProgram LBS.ByteString
+  , _lbdApiMethodLambdaProgram :: ApiMethodEvent -> CompleteLambdaProgram
   }
   | CfCustomLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdCfCustomLambdaProgram :: CfEvent -> LambdaProgram LBS.ByteString
+  , _lbdCfCustomLambdaProgram :: CfEvent -> CompleteLambdaProgram
   }
   | CwEventLambda {
     _lbdName                 :: Text
   , _lbdProfile              :: LambdaProfile
-  , _lbdCwEventLambdaProgram :: CwEvent -> LambdaProgram LBS.ByteString
+  , _lbdCwEventLambdaProgram :: CwEvent -> CompleteLambdaProgram
+  }
+  | DdbStreamLambda {
+    _lbdName                   :: Text
+  , _lbdProfile                :: LambdaProfile
+  , _lbdDdbStreamLambdaProgram :: DdbStreamEvent -> CompleteLambdaProgram
   }
 
 data LambdaConfig = LambdaConfig {

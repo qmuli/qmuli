@@ -4,6 +4,28 @@
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
 resolver: lts-7.14
 
+# resolver: lts-7.10
+# compiler: ghc-8.0.1.20161117
+# compiler-check: match-exact
+
+# setup-info:
+  # ghc:
+    # linux64:
+      # 8.0.1.20161117:
+        # url: http://downloads.haskell.org/~ghc/8.0.2-rc1/ghc-8.0.1.20161117-x86_64-deb8-linux.tar.xz
+        # content-length: 112047972
+        # sha1: 6a6e4c9c53c71cc84b6966a9f61948542fd2f15a
+    # macosx:
+      # 8.0.1.20161117:
+        # url: https://downloads.haskell.org/~ghc/8.0.2-rc1/ghc-8.0.1.20161117-x86_64-apple-darwin.tar.xz
+        # content-length: 113379688
+        # sha1: 53ed03d986a49ea680c291540ce44ce469514d7c
+    # windows64:
+      # 8.0.1.20161117:
+        # url: https://downloads.haskell.org/~ghc/8.0.2-rc1/ghc-8.0.1.20161117-x86_64-unknown-mingw32.tar.xz
+        # content-length: 155652048
+        # sha1: 74118dd8fd8b5e4c69b25df1644273fbe13177c7
+
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
@@ -13,6 +35,9 @@ packages:
 - location:
     git: https://github.com/ababkin/stratosphere.git
     commit: 598330b6276ca4d6fb9f8bfd66f089324402ae7e
+- location:
+    git: https://github.com/axman6/amazonka-s3-streaming.git
+    commit: 8ebd148a263012fe82931841d78d77025374b67f
 - 'system-extra'
 # - location:
     # git: https://github.com/lykahb/groundhog.git
@@ -52,9 +77,37 @@ extra-package-dbs: []
 # docker:
   # enable: true
 
-# ghc-options:
-#  "*": -Wno-unused-do-bind
+ghc-options:
+  "*": 
+    # -O*
+    # -funfolding-use-threshold=16 -O2 -optc-O3
+    -O
+    -W 
+    -Wno-unused-imports 
+    -Wno-unused-matches 
+    -Wno-unused-do-bind
 
+  "qmuli-stream-s3-objects": -static -threaded
+  "qmuli-fold-s3-content": -static -threaded
+
+apply-ghc-options: locals # all local packages, the default
+# rebuild-ghc-options: true
+
+build:
+  library-profiling: false
+  executable-profiling: false
+  copy-bins: false
+  prefetch: false
+  keep-going: false
+
+  # # NOTE: global usage of haddock can cause build failures when documentation is
+  # # incorrectly formatted.  This could also affect scripts which use stack.
+  # haddock: false
+  # haddock-arguments: ""
+  # open-haddocks: false    # --open
+  # haddock-deps: false     # if unspecified, defaults to true if haddock is set
+  # haddock-internal: false
+  
 # Control whether we use the GHC we find on the path
 # system-ghc: true
 
