@@ -1,7 +1,15 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Qi.Dispatcher where
+module Qi.Dispatcher (
+    invokeLambda
+  , deployApp
+  , createCfStack
+  , describeCfStack
+  , destroyCfStack
+  , go
+  , renderCfTemplate
+  ) where
 
 import           Control.Concurrent            (threadDelay)
 import           Control.Lens
@@ -17,10 +25,6 @@ import qualified Data.Text                     as T
 import           GHC.Generics
 import           Network.AWS                   (AWS, send)
 import           Network.AWS.CloudFormation
-import           Network.AWS.Data.Body         (toBody)
-import           Network.AWS.S3                (BucketName (BucketName),
-                                                ObjectKey (ObjectKey),
-                                                createBucket, putObject)
 import           Prelude                       hiding (FilePath, log)
 import           System.Console.ANSI
 import           System.Environment.Executable (splitExecutablePath)
@@ -28,9 +32,14 @@ import           Turtle                        (FilePath, fromString, liftIO,
                                                 sh, toText)
 
 import qualified Qi.Amazonka                   as A
-import           Qi.Config.AWS                 (Config, namePrefix)
+import           Qi.Config.AWS                 (Config, getAll, getPhysicalName,
+                                                namePrefix)
+import           Qi.Config.AWS.S3              (S3Bucket)
 import qualified Qi.Config.CF                  as CF
-import           Qi.Deploy.Build               (build)
+import           Qi.Dispatcher.Build           (build)
+import           Qi.Dispatcher.Lambda          (invokeLambda)
+import           Qi.Dispatcher.S3              (clearBuckets, createBucket,
+                                                putObject)
 
 
 type Dispatcher = ReaderT Config IO
@@ -58,16 +67,16 @@ deployApp :: Dispatcher ()
 deployApp =
   withConfig $ \config -> do
     let appName = config^.namePrefix
-    runAmazonka $ do
-      send $ createBucket (BucketName appName)
-      void . send . putObject (BucketName appName) (ObjectKey "cf.json") . toBody $ CF.render config
 
-    liftIO $ do  -- get the current executable filename
-      (_, execFilename) <- splitExecutablePath
+    content <- liftIO $ do
+      (_, execFilename) <- splitExecutablePath -- get the current executable filename
       lambdaPackagePath <- fromString <$> build "." execFilename
-      content <- LBS.readFile . T.unpack $ toTextIgnore lambdaPackagePath
-      void $ A.runAmazonka $
-        send $ putObject (BucketName appName) (ObjectKey "lambda.zip") $ toBody content
+      LBS.readFile . T.unpack $ toTextIgnore lambdaPackagePath
+
+    runAmazonka $ do
+      createBucket appName
+      putObject appName "cf.json" $ CF.render config
+      putObject appName "lambda.zip" content
 
   where
     toTextIgnore :: FilePath -> T.Text
@@ -118,9 +127,13 @@ destroyCfStack
   :: Dispatcher ()
   -> Dispatcher ()
 destroyCfStack action =
-  withAppName $ \appName -> do
+  withConfig $ \config -> do
+    let appName = config^.namePrefix
+
     printSuccess "destroying the stack..."
+
     runAmazonka $ do
+      clearBuckets $ map (getPhysicalName config) (getAll config :: [S3Bucket])
       void . send $ deleteStack appName
                   & dsRetainResources .~ []
 
@@ -128,6 +141,7 @@ destroyCfStack action =
     printPending "waiting on the stack to be destroyed..."
     waitOnStackStatus SSDeleteComplete True
     printSuccess "stack was successfully destroyed"
+
 
 go :: Dispatcher ()
 go = do

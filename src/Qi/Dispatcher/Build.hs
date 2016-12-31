@@ -1,9 +1,9 @@
 {-# LANGUAGE QuasiQuotes     #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Qi.Deploy.Build(build) where
+module Qi.Dispatcher.Build(build) where
 
-import           System.Build       (stackInDocker, BuildTarget(SimpleTarget))
+import           System.Build       (BuildTarget (SimpleTarget), stackInDocker)
 import           System.Directory
 import           System.Docker
 import           System.Posix.Files
