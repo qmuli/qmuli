@@ -15,7 +15,6 @@ import           System.Environment                   (getArgs, withArgs)
 
 import           Qi.Config.AWS
 import           Qi.Dispatcher
-import           Qi.LambdaDispatcher                  (invokeLambda)
 import           Qi.Program.Config.Interface          (ConfigProgram)
 import           Qi.Program.Config.Interpreters.Build (QiConfig (unQiConfig),
                                                        interpret)

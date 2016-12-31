@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Qi.LambdaDispatcher (invokeLambda) where
+module Qi.Dispatcher.Lambda (invokeLambda) where
 
 import           Control.Lens
 import           Control.Monad.IO.Class              (liftIO)
