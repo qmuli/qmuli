@@ -4,35 +4,21 @@
 module Qi where
 
 import           Control.Lens
+import           Control.Monad.IO.Class               (liftIO)
 import           Control.Monad.State.Strict           (runState)
-import           Data.Aeson
-import           Data.Aeson.Encode.Pretty             (encodePretty)
-import           Data.Aeson.Types
-import qualified Data.ByteString.Lazy.Char8           as LBS
+import           Control.Monad.Trans.Reader           (runReaderT)
 import           Data.Char                            (isDigit, isLower)
 import           Data.Default                         (def)
-import qualified Data.HashMap.Strict                  as SHM
 import           Data.Text                            (Text)
 import qualified Data.Text                            as T
 import           System.Environment                   (getArgs, withArgs)
 
 import           Qi.Config.AWS
-import qualified Qi.Config.AWS.ApiGw.ApiMethod.Event  as ApiMethodEvent (parse)
-import           Qi.Config.AWS.CF
-import           Qi.Config.AWS.CW
-import           Qi.Config.AWS.DDB
-import           Qi.Config.AWS.Lambda
-import           Qi.Config.AWS.S3
-import qualified Qi.Config.AWS.S3.Event               as S3Event (parse)
-import           Qi.Config.CF                         as CW
-import           Qi.Config.CF                         as CF
-import qualified Qi.Deploy.CF                         as CF
-import qualified Qi.Deploy.Lambda                     as Lambda
-import qualified Qi.Deploy.S3                         as S3
+import           Qi.Dispatcher
+import           Qi.LambdaDispatcher                  (invokeLambda)
 import           Qi.Program.Config.Interface          (ConfigProgram)
-import qualified Qi.Program.Config.Interpreters.Build as CB
-import           Qi.Program.Lambda.Interface          (LambdaProgram)
-import qualified Qi.Program.Lambda.Interpreters.IO    as LIO
+import           Qi.Program.Config.Interpreters.Build (QiConfig (unQiConfig),
+                                                       interpret)
 
 
 withConfig
@@ -41,94 +27,39 @@ withConfig
 withConfig configProgram = do
   args <- getArgs
   case args of
-    (appName:rest) -> withArgs rest $ withNameAndConfig (T.pack appName) configProgram
-    _              -> putStrLn "Please provide a unique application name for your qmulus"
+    (appName:rest) ->
+      if invalid appName
+        then
+          putStrLn $ "Invalid qmulus name: '" ++ appName ++ "', the name should only contain alphanumeric lower case characters or a hyphen"
+        else
+          withArgs rest $ withNameAndConfig (T.pack appName) configProgram
+    _ -> putStrLn "Please provide a unique application name for your qmulus"
+
+  where
+    invalid = not . all (\c -> isLower c || isDigit c || c == '-')
+
 
 withNameAndConfig
   :: Text
   -> ConfigProgram ()
   -> IO ()
-withNameAndConfig appName configProgram =
-  if invalid appName
-    then
-      putStrLn $ "Invalid qmulus name: '" ++ T.unpack appName ++ "', the name should only contain alphanumeric lower case characters or a hyphen"
-    else do
-      args <- getArgs
-      case args of
-        "cf":"template":[] ->
-          LBS.putStr $ CF.render config
+withNameAndConfig appName configProgram = do
+  args <- getArgs
+  (flip runReaderT) config $ do
+    case args of
+      "cf":"template":[]  -> renderCfTemplate
+      "cf":"deploy":[]    -> deployApp
+      "cf":"create":[]    -> createCfStack
+      "cf":"describe":[]  -> describeCfStack
+      "cf":"destroy":[]   -> destroyCfStack $ return ()
+      "cf":"go":[]        -> go
 
-        "cf":"deploy":[] -> do -- deploy CF template and the lambda package
-          S3.createBucket appName
-          S3.upload appName "cf.json" $ CF.render config
-          Lambda.deploy appName
+      "lbd":lbdName:event:[] -> invokeLambda lbdName event
 
-        "cf":"create":[] -> -- create CF stack
-          CF.create appName
-
-        "cf":"describe":[] -> do -- describe CF stack
-          desc <- CF.describe appName
-          LBS.putStrLn $ encodePretty desc
-
-        "cf":"destroy":[] -> -- destroy CF stack
-          CF.destroy appName
-
-
-        -- execute the lambda on the event
-        "lbd":lbdName:event:_ ->
-          case SHM.lookup (T.pack lbdName) lbdIOMap of
-            Nothing ->
-              putStrLn $ "No lambda with name '" ++ lbdName ++ "' was found"
-            Just lbdIO ->
-              lbdIO event
-
-
-        _ -> putStrLn $ "Unexpected arguments: '" ++ show args ++ "'"
+      _ -> liftIO . putStrLn $ "Unexpected arguments: '" ++ show args ++ "'"
 
   where
-    invalid = not . all (\c -> isLower c || isDigit c || c == '-') . T.unpack
+    config = snd . (`runState` def{_namePrefix = appName}) . unQiConfig $ interpret configProgram
 
-    config = snd . (`runState` def{_namePrefix = appName}) . CB.unQiConfig $ CB.interpret configProgram
-
-    lbdIOMap = SHM.fromList $ map toLbdIOPair $ getAll config
-
-      where
-        toLbdIOPair
-          :: Lambda
-          -> (Text, String -> IO ())
-        toLbdIOPair lbd = (name, lbdIO name lbd)
-          where
-            name = lbd^.lbdName
-
-        parseLambdaEvent
-          :: Lambda
-          -> String
-          -> Either String (LambdaProgram LBS.ByteString)
-
-        parseLambdaEvent S3BucketLambda{_lbdS3BucketLambdaProgram} eventJson =
-          _lbdS3BucketLambdaProgram <$> (parseEither (`S3Event.parse` config) =<< eitherDecode (LBS.pack eventJson))
-
-        parseLambdaEvent ApiLambda{_lbdApiMethodLambdaProgram} eventJson =
-          _lbdApiMethodLambdaProgram <$> (parseEither (`ApiMethodEvent.parse` config) =<< eitherDecode (LBS.pack eventJson))
-
-        parseLambdaEvent CfCustomLambda{_lbdCfCustomLambdaProgram} eventJson =
-          _lbdCfCustomLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String CfEvent)
-
-        parseLambdaEvent CwEventLambda{_lbdCwEventLambdaProgram} eventJson =
-          _lbdCwEventLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String CwEvent)
-
-        parseLambdaEvent DdbStreamLambda{_lbdDdbStreamLambdaProgram} eventJson =
-          _lbdDdbStreamLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String DdbStreamEvent)
-
-        lbdIO
-          :: Text
-          -> Lambda
-          -> String
-          -> IO ()
-        lbdIO name lbd eventJson =
-          either
-            (\err -> fail $ concat ["Could not parse event: ", show eventJson, ", error was: ", err])
-            (LIO.run name config)
-            (parseLambdaEvent lbd eventJson)
 
 

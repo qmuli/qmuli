@@ -41,6 +41,7 @@ import           GHC.Exts                   (fromList)
 import           Network.AWS                hiding (Request, Response, send)
 import           Network.AWS.CloudWatchLogs
 import           Network.AWS.Data.Body      (RsBody (..), fuseStream)
+import           System.IO                  (hPutStrLn, stderr)
 
 import           Qi.Amazonka                (currentRegion)
 import           Qi.Config.AWS
@@ -48,7 +49,9 @@ import           Qi.Config.AWS
 
 type LogChan = TChan (Maybe InputLogEvent)
 
-toInputLogEvent :: Text -> IO InputLogEvent
+toInputLogEvent
+  :: Text
+  -> IO InputLogEvent
 toInputLogEvent entry = do
   -- get current UTC epoch time in milliseconds
   ts <- fromIntegral . round . (* 1000) <$> getPOSIXTime
@@ -71,9 +74,15 @@ readAllAvailableTChan
   :: TChan a
   -> STM [a]
 readAllAvailableTChan chan =
-  ifM (isEmptyTChan chan)
-    (pure [])
-    $ (:) <$> readTChan chan <*> readAllAvailableTChan chan
+  readWithLimit limit
+  where
+    limit = 100
+    readWithLimit 0 = pure []
+    readWithLimit count =
+      ifM (isEmptyTChan chan)
+        (pure [])
+        $ (:) <$> readTChan chan <*> readWithLimit (count - 1)
+
 
 cloudWatchLoggerWorker
   :: Text
@@ -112,8 +121,7 @@ cloudWatchLoggerWorker lbdName config chan = do
           return Nothing
 
 
-    sendIfAny [] nextToken =
-      return nextToken
+    sendIfAny [] nextToken = return nextToken
     sendIfAny msgs nextToken = fmap (^.plersNextSequenceToken)
       . send $ putLogEvents groupName streamName (fromList msgs)
                      & pleSequenceToken .~ nextToken
@@ -144,7 +152,11 @@ forkIOSync
 forkIOSync io = do
   mvar <- newEmptyMVar
   forkFinally io $ either
-                      (\(e :: SomeException) -> error $ show e)
+                      (\(e :: SomeException) -> do
+                        hPutStrLn stderr "Error occured in the CloudWatch Logger:"
+                        hPutStrLn stderr $ show e
+                        putMVar mvar ()
+                      )
                       (putMVar mvar)
   return mvar
 

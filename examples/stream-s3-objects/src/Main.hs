@@ -54,7 +54,7 @@ main = withConfig config
 
           conduit :: Conduit BS.ByteString LambdaProgram BS.ByteString
           conduit = awaitForever $ \bs -> do
-                      lift . say . T.pack $ "streaming chunk of size: " ++ show (BS.length bs)
+                      {- lift . say . T.pack $ "streaming chunk of size: " ++ show (BS.length bs) -}
                       yield bs
 
       void $ streamS3Objects incomingS3Obj outgoingS3Obj conduit

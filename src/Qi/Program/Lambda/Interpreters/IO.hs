@@ -49,7 +49,6 @@ import qualified Data.Text.IO                          as T
 import           GHC.Exts                              (fromList)
 import           Network.AWS                           hiding (Request,
                                                         Response, send)
-import           Network.AWS.CloudWatchLogs
 import           Network.AWS.Data.Body                 (RsBody (..), fuseStream)
 import           Network.AWS.DynamoDB
 import           Network.AWS.S3
