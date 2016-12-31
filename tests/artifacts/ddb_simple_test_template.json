@@ -1,0 +1,84 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Resources": {
+        "thingsDynamoDBTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+                "AttributeDefinitions": [
+                    {
+                        "AttributeType": "S",
+                        "AttributeName": "name"
+                    }
+                ],
+                "ProvisionedThroughput": {
+                    "ReadCapacityUnits": "2",
+                    "WriteCapacityUnits": "2"
+                },
+                "KeySchema": [
+                    {
+                        "KeyType": "HASH",
+                        "AttributeName": "name"
+                    }
+                ],
+                "TableName": "testApp_things"
+            }
+        },
+        "lambdaBasicExecutionIAMRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": {
+                        "Effect": "Allow",
+                        "Action": "sts:AssumeRole",
+                        "Principal": {
+                            "Service": "lambda.amazonaws.com"
+                        }
+                    },
+                    "Version": "2012-10-17"
+                },
+                "Path": "/",
+                "RoleName": "testApp_LambdaBasicExecutionRole",
+                "Policies": [
+                    {
+                        "PolicyDocument": {
+                            "Statement": {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "logs:CreateLogGroup",
+                                    "logs:DescribeLogGroups",
+                                    "logs:CreateLogStream",
+                                    "logs:DescribeLogStreams",
+                                    "logs:PutLogEvents",
+                                    "s3:GetObject",
+                                    "s3:PutObject",
+                                    "s3:ListMultipartUploadParts",
+                                    "s3:AbortMultipartUpload",
+                                    "dynamodb:Scan",
+                                    "dynamodb:Query",
+                                    "dynamodb:GetItem",
+                                    "dynamodb:PutItem",
+                                    "dynamodb:DeleteItem",
+                                    "dynamodb:GetRecords",
+                                    "dynamodb:GetShardIterator",
+                                    "dynamodb:DescribeStream",
+                                    "dynamodb:ListStreams",
+                                    "cognito-idp:CreateUserPool",
+                                    "cognito-idp:DeleteUserPool",
+                                    "cognito-idp:CreateUserPoolClient",
+                                    "cognito-idp:CreateUserPoolClient",
+                                    "cognito-identity:CreateIdentityPool",
+                                    "cognito-identity:DeleteIdentityPool"
+                                ],
+                                "Resource": "*"
+                            },
+                            "Version": "2012-10-17"
+                        },
+                        "PolicyName": "testApp_LambdaExecutionPolicy"
+                    }
+                ]
+            }
+        }
+    },
+    "Outputs": {},
+    "Description": "Example"
+}
