@@ -61,6 +61,7 @@ dependencies:
   - yaml >= 0.8 && < 0.9
   - amazonka-s3-streaming >= 0.1 && < 0.2
   - extra >= 1.4 && < 1.5
+  - ansi-terminal >= 0.6 && < 0.7
 
 library:
   source-dirs:
@@ -94,12 +95,12 @@ executables:
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-  qmuli-fold-s3-content:
-    main: Main.hs
-    source-dirs: examples/fold-s3-content/src
-    dependencies:
-      - base >= 4.8 && < 5
-      - qmuli
+  # qmuli-fold-s3-content:
+    # main: Main.hs
+    # source-dirs: examples/fold-s3-content/src
+    # dependencies:
+      # - base >= 4.8 && < 5
+      # - qmuli
   qmuli-stream-s3-objects:
     main: Main.hs
     source-dirs: examples/stream-s3-objects/src
@@ -118,12 +119,12 @@ executables:
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-  qmuli-dynamodb-stream:
-    main: Main.hs
-    source-dirs: examples/dynamodb-stream/src
-    dependencies:
-      - base >= 4.8 && < 5
-      - qmuli
+  # qmuli-dynamodb-stream:
+    # main: Main.hs
+    # source-dirs: examples/dynamodb-stream/src
+    # dependencies:
+      # - base >= 4.8 && < 5
+      # - qmuli
   # qmuli-cognito:
     # main: Main.hs
     # source-dirs: examples/cognito/src
