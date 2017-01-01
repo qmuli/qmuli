@@ -58,6 +58,7 @@ extra-deps:
 - amazonka-dynamodb-1.4.5
 - amazonka-cognito-identity-1.4.5
 - amazonka-cognito-idp-1.4.5
+- amazonka-lambda-1.4.5
 - managed-1.0.5
 - aeson-1.0.2.1
 - http-conduit-2.2.3

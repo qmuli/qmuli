@@ -2,6 +2,7 @@
 
 module Qi.Dispatcher (
     invokeLambda
+  , updateLambdas
   , deployApp
   , createCfStack
   , updateCfStack
@@ -28,6 +29,7 @@ import           Turtle                        (FilePath, fromString, liftIO,
 import qualified Qi.Amazonka                   as A
 import           Qi.Config.AWS                 (Config, getAll, getPhysicalName,
                                                 namePrefix)
+import           Qi.Config.AWS.Lambda          (Lambda)
 import           Qi.Config.AWS.S3              (S3Bucket)
 import qualified Qi.Config.CF                  as CF
 import           Qi.Dispatcher.Build           (build)
@@ -36,7 +38,7 @@ import           Qi.Dispatcher.CF              (createStack, deleteStack,
                                                 waitOnStackCreated,
                                                 waitOnStackDeleted,
                                                 waitOnStackUpdated)
-import           Qi.Dispatcher.Lambda          (invokeLambda)
+import qualified Qi.Dispatcher.Lambda          as Lambda (invoke, update)
 import           Qi.Dispatcher.S3              (clearBuckets, createBucket,
                                                 putObject)
 import           Qi.Util                       (printPending, printSuccess)
@@ -58,6 +60,18 @@ runAmazonka
   :: AWS a
   -> Dispatcher a
 runAmazonka = liftIO . A.runAmazonka
+
+
+
+invokeLambda = Lambda.invoke
+
+updateLambdas :: Dispatcher ()
+updateLambdas = do
+  withConfig $ \config -> do
+    let appName = config^.namePrefix
+    printSuccess "updating the lambdas..."
+    runAmazonka . Lambda.update appName $ map (getPhysicalName config) (getAll config :: [Lambda])
+
 
 renderCfTemplate :: Dispatcher ()
 renderCfTemplate =
@@ -95,6 +109,7 @@ createCfStack =
     liftIO $ waitOnStackCreated appName
     printSuccess "stack was successfully created"
 
+
 updateCfStack :: Dispatcher ()
 updateCfStack =
   withAppName $ \appName -> do
@@ -102,6 +117,8 @@ updateCfStack =
     runAmazonka $ updateStack appName
     printPending "waiting on the stack to be updated..."
     liftIO $ waitOnStackUpdated appName
+    -- TODO: make lambda updating concurrent with the above stack update?
+    updateLambdas
     printSuccess "stack was successfully updated"
 
 describeCfStack :: Dispatcher ()

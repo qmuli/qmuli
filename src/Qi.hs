@@ -54,7 +54,8 @@ withNameAndConfig appName configProgram = do
       "cf":"destroy":[]   -> destroyCfStack $ return ()
       "cf":"cycle":[]     -> cycleStack
 
-      "lbd":lbdName:event:[] -> invokeLambda lbdName event
+      "lbd":"update":[]       -> updateLambdas
+      "lbd":lbdName:event:[]  -> invokeLambda lbdName event
 
       _ -> liftIO . putStrLn $ "Unexpected arguments: '" ++ show args ++ "'"
 
