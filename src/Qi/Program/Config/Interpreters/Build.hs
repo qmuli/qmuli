@@ -41,40 +41,51 @@ interpret
   -> QiConfig ()
 interpret program =
   case view program of
-    (RS3Bucket name) :>>= is ->
+
+    RGenericLambda name lbdProgramFunc profile :>>= is ->
+      interpret . is =<< rGenericLambda name lbdProgramFunc profile
+
+    RS3Bucket name :>>= is ->
       interpret . is =<< rS3Bucket name
 
-    (RS3BucketLambda name bucketId lbdProgramFunc profile) :>>= is ->
+    RS3BucketLambda name bucketId lbdProgramFunc profile :>>= is ->
       interpret . is =<< rS3BucketLambda name bucketId lbdProgramFunc profile
 
-    (RDdbTable name hashAttrDef profile) :>>= is ->
+    RDdbTable name hashAttrDef profile :>>= is ->
       interpret . is =<< rDdbTable name hashAttrDef profile
 
-    (RDdbStreamLambda name tableId lbd profile) :>>= is ->
+    RDdbStreamLambda name tableId lbd profile :>>= is ->
       interpret . is =<< rDdbStreamLambda name tableId lbd profile
 
-    (RApi name) :>>= is ->
+    RApi name :>>= is ->
       interpret . is =<< rApi name
 
-    (RApiAuthorizer name cognitoId apiId) :>>= is ->
+    RApiAuthorizer name cognitoId apiId :>>= is ->
       interpret . is =<< rApiAuthorizer name cognitoId apiId
 
-    (RApiResource name parentId) :>>= is ->
+    RApiResource name parentId :>>= is ->
       interpret . is =<< rApiResource name parentId
 
-    (RApiMethodLambda name verb apiResourceId methodProfile lbdProgramFunc lbdProfile) :>>= is ->
+    RApiMethodLambda name verb apiResourceId methodProfile lbdProgramFunc lbdProfile :>>= is ->
       interpret . is =<< rApiMethodLambda name verb apiResourceId methodProfile lbdProgramFunc lbdProfile
 
-    (RCustomResource name lbdProgramFunc profile) :>>= is ->
+    RCustomResource name lbdProgramFunc profile :>>= is ->
       interpret . is =<< rCustomResource name lbdProgramFunc profile
 
-    (RCwEventLambda name ruleProfile lbdProgramFunc lbdProfile) :>>= is ->
+    RCwEventLambda name ruleProfile lbdProgramFunc lbdProfile :>>= is ->
       interpret . is =<< rCwEventLambda name ruleProfile lbdProgramFunc lbdProfile
 
     Return _ ->
       return def
 
   where
+
+-- Lambda
+    rGenericLambda name lbdProgramFunc profile = do
+      newLambdaId <- getNextId
+      let newLambda = GenericLambda name profile lbdProgramFunc
+      lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
+      return newLambdaId
 
 -- S3
     rS3Bucket name = do
@@ -88,7 +99,6 @@ interpret program =
 
 
     rS3BucketLambda name bucketId lbdProgramFunc profile = do
-
       newLambdaId <- getNextId
       let newLambda = S3BucketLambda name profile lbdProgramFunc
           modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll newLambdaId):)
@@ -112,7 +122,6 @@ interpret program =
 
 
     rDdbStreamLambda name tableId lbdProgramFunc profile = do
-
       newLambdaId <- getNextId
       let newLambda = DdbStreamLambda name profile lbdProgramFunc
 

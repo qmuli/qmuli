@@ -255,7 +255,7 @@ spec = describe "Template" $ do
           let properties = getValueUnderKey "Properties" resource
 
           it "specifies MemorySize" $
-            properties `shouldContainKVPair` ("MemorySize", String "1024")
+            properties `shouldContainKVPair` ("MemorySize", String "128")
 
           it "specifies Runtime" $
             properties `shouldContainKVPair` ("Runtime", String "nodejs4.3")

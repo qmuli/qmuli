@@ -24,12 +24,20 @@ import           Qi.Program.Lambda.Interface           (ApiLambdaProgram,
                                                         CfLambdaProgram,
                                                         CwLambdaProgram,
                                                         DdbStreamLambdaProgram,
+                                                        GenericLambdaProgram,
                                                         S3LambdaProgram)
 
 
 type ConfigProgram a = Program ConfigInstruction a
 
 data ConfigInstruction a where
+
+-- Lambda
+  RGenericLambda
+    :: Text
+    -> GenericLambdaProgram
+    -> LambdaProfile
+    -> ConfigInstruction LambdaId
 
 -- S3
   RS3Bucket
@@ -97,6 +105,9 @@ data ConfigInstruction a where
     -> CwLambdaProgram
     -> LambdaProfile
     -> ConfigInstruction LambdaId
+
+
+genericLambda name lbd = singleton . RGenericLambda name lbd
 
 s3Bucket = singleton . RS3Bucket
 

@@ -13,24 +13,18 @@ import           Data.Text                  (Text)
 import qualified Data.Text                  as T
 import           GHC.Generics
 import           Network.AWS                (AWS, send)
-import           Network.AWS.CloudFormation (Capability (CapabilityNamedIAM), StackStatus (SSCreateComplete, SSDeleteComplete),
+import           Network.AWS.CloudFormation (Capability (CapabilityNamedIAM), StackStatus (SSCreateComplete, SSDeleteComplete, SSUpdateComplete),
                                              StackStatus, csCapabilities,
                                              csTemplateURL, dStackName,
                                              dsRetainResources, dsrsStacks,
                                              lsrsStackSummaries, oOutputKey,
                                              oOutputValue, sOutputs,
                                              sStackStatus, ssStackName,
-                                             ssStackStatus)
+                                             ssStackStatus, usCapabilities,
+                                             usTemplateURL)
 import qualified Network.AWS.CloudFormation as CF
 import           Qi.Amazonka                (runAmazonka)
 
-
-deleteStack
-  :: Text
-  -> AWS ()
-deleteStack name =
-  void . send $ CF.deleteStack name
-                  & dsRetainResources .~ []
 
 createStack
   :: Text
@@ -39,6 +33,23 @@ createStack name =
   void . send $ CF.createStack name
             & csTemplateURL ?~ T.concat ["https://s3.amazonaws.com/", name, "/cf.json"]
             & csCapabilities .~ [CapabilityNamedIAM]
+
+
+updateStack
+  :: Text
+  -> AWS ()
+updateStack name =
+  void . send $ CF.updateStack name
+            & usTemplateURL ?~ T.concat ["https://s3.amazonaws.com/", name, "/cf.json"]
+            & usCapabilities .~ [CapabilityNamedIAM]
+
+
+deleteStack
+  :: Text
+  -> AWS ()
+deleteStack name =
+  void . send $ CF.deleteStack name
+                  & dsRetainResources .~ []
 
 
 data StackDescription = StackDescription {
@@ -66,6 +77,7 @@ describeStack name = do
 
 
 waitOnStackCreated name = waitOnStackStatus name SSCreateComplete False
+waitOnStackUpdated name = waitOnStackStatus name SSUpdateComplete False
 waitOnStackDeleted name = waitOnStackStatus name SSDeleteComplete True
 
 waitOnStackStatus

@@ -5,6 +5,7 @@
 module Qi.Config.AWS.Lambda where
 
 import           Control.Lens
+import           Data.Aeson                  (Value)
 import qualified Data.ByteString.Lazy.Char8  as LBS
 import           Data.Default                (Default, def)
 import           Data.HashMap.Strict         (HashMap)
@@ -22,7 +23,12 @@ import           Qi.Program.Lambda.Interface (CompleteLambdaProgram)
 
 
 data Lambda =
-    S3BucketLambda {
+    GenericLambda {
+    _lbdName                 :: Text
+  , _lbdProfile              :: LambdaProfile
+  , _lbdGenericLambdaProgram :: Value -> CompleteLambdaProgram
+  }
+  | S3BucketLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
   , _lbdS3BucketLambdaProgram :: S3Event -> CompleteLambdaProgram
@@ -98,7 +104,7 @@ data LambdaProfile = LambdaProfile {
 
 instance Default LambdaProfile where
   def = LambdaProfile {
-      _lpMemorySize     = M1024
+      _lpMemorySize     = M128
     , _lpTimeoutSeconds = 30
     }
 

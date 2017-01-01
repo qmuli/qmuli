@@ -2,11 +2,13 @@
 
 module Qi.Dispatcher (
     invokeLambda
+  , updateLambdas
   , deployApp
   , createCfStack
+  , updateCfStack
   , describeCfStack
   , destroyCfStack
-  , go
+  , cycleStack
   , renderCfTemplate
   ) where
 
@@ -27,14 +29,16 @@ import           Turtle                        (FilePath, fromString, liftIO,
 import qualified Qi.Amazonka                   as A
 import           Qi.Config.AWS                 (Config, getAll, getPhysicalName,
                                                 namePrefix)
+import           Qi.Config.AWS.Lambda          (Lambda)
 import           Qi.Config.AWS.S3              (S3Bucket)
 import qualified Qi.Config.CF                  as CF
 import           Qi.Dispatcher.Build           (build)
 import           Qi.Dispatcher.CF              (createStack, deleteStack,
-                                                describeStack,
+                                                describeStack, updateStack,
                                                 waitOnStackCreated,
-                                                waitOnStackDeleted)
-import           Qi.Dispatcher.Lambda          (invokeLambda)
+                                                waitOnStackDeleted,
+                                                waitOnStackUpdated)
+import qualified Qi.Dispatcher.Lambda          as Lambda (invoke, update)
 import           Qi.Dispatcher.S3              (clearBuckets, createBucket,
                                                 putObject)
 import           Qi.Util                       (printPending, printSuccess)
@@ -57,6 +61,18 @@ runAmazonka
   -> Dispatcher a
 runAmazonka = liftIO . A.runAmazonka
 
+
+
+invokeLambda = Lambda.invoke
+
+updateLambdas :: Dispatcher ()
+updateLambdas = do
+  withConfig $ \config -> do
+    let appName = config^.namePrefix
+    printSuccess "updating the lambdas..."
+    runAmazonka . Lambda.update appName $ map (getPhysicalName config) (getAll config :: [Lambda])
+
+
 renderCfTemplate :: Dispatcher ()
 renderCfTemplate =
    withConfig $ liftIO . LBS.putStr . CF.render
@@ -66,6 +82,7 @@ deployApp =
   withConfig $ \config -> do
     let appName = config^.namePrefix
 
+    printSuccess "deploying the app..."
     content <- liftIO $ do
       (_, execFilename) <- splitExecutablePath -- get the current executable filename
       lambdaPackagePath <- fromString <$> build "." execFilename
@@ -93,6 +110,17 @@ createCfStack =
     printSuccess "stack was successfully created"
 
 
+updateCfStack :: Dispatcher ()
+updateCfStack =
+  withAppName $ \appName -> do
+    printSuccess "updating the stack..."
+    runAmazonka $ updateStack appName
+    printPending "waiting on the stack to be updated..."
+    liftIO $ waitOnStackUpdated appName
+    -- TODO: make lambda updating concurrent with the above stack update?
+    updateLambdas
+    printSuccess "stack was successfully updated"
+
 describeCfStack :: Dispatcher ()
 describeCfStack =
   withAppName $ liftIO . LBS.putStrLn . encodePretty
@@ -118,10 +146,9 @@ destroyCfStack action =
     printSuccess "stack was successfully destroyed"
 
 
-go :: Dispatcher ()
-go = do
+cycleStack :: Dispatcher ()
+cycleStack = do
     destroyCfStack $ do
-      printSuccess "deploying the app..."
       deployApp
     createCfStack
     printSuccess "all done!"

@@ -22,8 +22,8 @@ success
   -> CompleteLambdaProgram
 success v =
   respond 200 $ case v of
-    Object _ -> v
     String _ -> object [ ("message", v) ]
+    _        -> v
 
 created = respond 201
 

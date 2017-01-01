@@ -31,6 +31,7 @@ type LambdaProgram = Program LambdaInstruction
 
 type CompleteLambdaProgram = LambdaProgram LBS.ByteString
 
+type GenericLambdaProgram   = Value           -> CompleteLambdaProgram
 type ApiLambdaProgram       = ApiMethodEvent  -> CompleteLambdaProgram
 type S3LambdaProgram        = S3Event         -> CompleteLambdaProgram
 type CfLambdaProgram        = CfEvent         -> CompleteLambdaProgram
