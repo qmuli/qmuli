@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Qi.Dispatcher (
@@ -11,22 +10,16 @@ module Qi.Dispatcher (
   , renderCfTemplate
   ) where
 
-import           Control.Concurrent            (threadDelay)
 import           Control.Lens
 import           Control.Monad                 (void, (<=<))
 import           Control.Monad.IO.Class        (liftIO)
 import           Control.Monad.Trans.Reader    (ReaderT, ask, runReaderT)
-import           Data.Aeson                    (ToJSON)
 import           Data.Aeson.Encode.Pretty      (encodePretty)
 import qualified Data.ByteString.Lazy.Char8    as LBS
-import           Data.Maybe                    (fromJust, listToMaybe)
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
-import           GHC.Generics
 import           Network.AWS                   (AWS, send)
-import           Network.AWS.CloudFormation
 import           Prelude                       hiding (FilePath, log)
-import           System.Console.ANSI
 import           System.Environment.Executable (splitExecutablePath)
 import           Turtle                        (FilePath, fromString, liftIO,
                                                 sh, toText)
@@ -37,9 +30,14 @@ import           Qi.Config.AWS                 (Config, getAll, getPhysicalName,
 import           Qi.Config.AWS.S3              (S3Bucket)
 import qualified Qi.Config.CF                  as CF
 import           Qi.Dispatcher.Build           (build)
+import           Qi.Dispatcher.CF              (createStack, deleteStack,
+                                                describeStack,
+                                                waitOnStackCreated,
+                                                waitOnStackDeleted)
 import           Qi.Dispatcher.Lambda          (invokeLambda)
 import           Qi.Dispatcher.S3              (clearBuckets, createBucket,
                                                 putObject)
+import           Qi.Util                       (printPending, printSuccess)
 
 
 type Dispatcher = ReaderT Config IO
@@ -89,38 +87,16 @@ createCfStack :: Dispatcher ()
 createCfStack =
   withAppName $ \appName -> do
     printSuccess "creating the stack..."
-
-    runAmazonka $ do
-      void . send $ createStack appName
-                  & csTemplateURL ?~ T.concat ["https://s3.amazonaws.com/", appName, "/cf.json"]
-                  & csCapabilities .~ [CapabilityNamedIAM]
-
+    runAmazonka $ createStack appName
     printPending "waiting on the stack to be created..."
-    waitOnStackStatus SSCreateComplete False
+    liftIO $ waitOnStackCreated appName
     printSuccess "stack was successfully created"
 
 
-data StackDescription = StackDescription {
-    sdStatus  :: Text
-  , sdOutputs :: [(Text, Text)]
-  } deriving (Generic, Show)
-instance ToJSON StackDescription
-
 describeCfStack :: Dispatcher ()
 describeCfStack =
-  withAppName $ \appName -> do
-    output <- runAmazonka $ do
-      r <- send $ describeStacks
-                    & dStackName ?~ appName
-      case listToMaybe $ r^.dsrsStacks of
-        Just stack ->
-          return $ StackDescription {
-              sdStatus = T.pack . show $ stack^.sStackStatus
-            , sdOutputs = map (\o -> (fromJust $ o^.oOutputKey, fromJust $ o^.oOutputValue)) $ stack^.sOutputs
-            }
-        Nothing ->
-          error "Error: no stack description was returned"
-    liftIO . LBS.putStrLn $ encodePretty output
+  withAppName $ liftIO . LBS.putStrLn . encodePretty
+                  <=< runAmazonka . describeStack
 
 
 destroyCfStack
@@ -131,15 +107,14 @@ destroyCfStack action =
     let appName = config^.namePrefix
 
     printSuccess "destroying the stack..."
-
     runAmazonka $ do
       clearBuckets $ map (getPhysicalName config) (getAll config :: [S3Bucket])
-      void . send $ deleteStack appName
-                  & dsRetainResources .~ []
+      deleteStack appName
 
     action
+
     printPending "waiting on the stack to be destroyed..."
-    waitOnStackStatus SSDeleteComplete True
+    liftIO $ waitOnStackDeleted appName
     printSuccess "stack was successfully destroyed"
 
 
@@ -153,34 +128,4 @@ go = do
 
 
 
-waitOnStackStatus
-  :: StackStatus
-  -> Bool
-  -> Dispatcher ()
-waitOnStackStatus status absentOk =
-  withConfig wait
-  where
-    wait config = do
-      let appName = config^.namePrefix
-      stacks <- filter ((==appName) . fst)
-                . map (\ss -> (ss^.ssStackName, ss^.ssStackStatus))
-                . (^.lsrsStackSummaries)
-                <$> runAmazonka (send listStacks)
-      case listToMaybe stacks of
-        Just (_, s) | s == status -> return ()
-        Just (_, _) -> loop -- wait for the stack state to change
-        Nothing -> if absentOk -- no mention of the stack in the log
-                    then return () -- it's fine, don't wait any longer
-                    else loop -- keep waiting for the stack to appear in the log
-        where
-          loop = waitASecond >> wait config
-          waitASecond = liftIO $ threadDelay 10000000
 
-
-printSuccess = printVivid Green
-printPending = printVivid Yellow
-printVivid color t = liftIO $ do
-  setSGR [SetColor Foreground Vivid color]
-  putStr t
-  setSGR [Reset]
-  putStr "\n"
