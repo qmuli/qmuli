@@ -23,8 +23,7 @@ import qualified Data.Text                     as T
 import           Network.AWS                   (AWS, send)
 import           Prelude                       hiding (FilePath, log)
 import           System.Environment.Executable (splitExecutablePath)
-import           Turtle                        (FilePath, fromString, liftIO,
-                                                sh, toText)
+import           Turtle                        (FilePath, fromString, toText)
 
 import qualified Qi.Amazonka                   as A
 import           Qi.Config.AWS                 (Config, getAll, getPhysicalName,
