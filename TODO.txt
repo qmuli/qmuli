@@ -1,0 +1,39 @@
+read up on:
+  - CW alerts
+  - explore Serverless and how it approaches things (for inspiration and education)
+
+on the fresh brain: 
+  fun experimentation:
+    - better combinators for Config - connecting things together. Try using typeclasses to constrain combinators.
+
+  figure out:
+    - how to call lambda straight from the ng2 app with auth
+      - make possible defining standalone lambdas
+    - use CW alerts
+    - how to test qmuli apps
+
+  fix:
+    - logging!
+    - qmuli.yaml
+    
+
+
+features:
+  - add more DDB functionality
+
+
+use cases:
+  - followup
+    - auth, JWT
+  - use cases from Imagen:
+    - copying data from DDB table to an S3 object or to another DDB table
+
+
+brain-dead tasks:
+  - test cover the rest of stuff
+  - document code to put on hackage
+
+
+documentation:
+  - blog posts
+    - setup a blog

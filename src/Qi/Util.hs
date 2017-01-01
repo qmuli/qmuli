@@ -4,6 +4,7 @@
 
 module Qi.Util where
 
+import           Control.Monad.IO.Class      (MonadIO, liftIO)
 import           Data.Aeson                  (Result (Error, Success),
                                               Value (Number, Object, String),
                                               encode, object)
@@ -11,6 +12,7 @@ import qualified Data.ByteString.Lazy.Char8  as LBS
 import           Data.HashMap.Strict         (HashMap)
 import           Data.Text                   (Text)
 import qualified Data.Text                   as T
+import           System.Console.ANSI
 
 import           Qi.Program.Lambda.Interface (CompleteLambdaProgram)
 
@@ -60,6 +62,26 @@ withSuccess code f =
       internalError $ "Error: unexpected response status: " ++ show unexpected
 
 
+printSuccess
+  :: MonadIO m
+  => String
+  -> m ()
+printSuccess = printVivid Green
 
+printPending
+  :: MonadIO m
+  => String
+  -> m ()
+printPending = printVivid Yellow
 
+printVivid
+  :: MonadIO m
+  => Color
+  -> String
+  -> m ()
+printVivid color s = liftIO $ do
+  setSGR [SetColor Foreground Vivid color]
+  putStr s
+  setSGR [Reset]
+  putStr "\n"
 

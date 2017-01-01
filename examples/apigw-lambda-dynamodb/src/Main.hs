@@ -37,7 +37,7 @@ import           Types
 
 -- Used the curl commands below to test-drive the endpoints (substitute your unique api stage url first):
 {-
-export API="https://sfvkiwib24.execute-api.us-east-1.amazonaws.com/v1"
+export API="https://honp5qvhqd.execute-api.us-east-1.amazonaws.com/v1"
 curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"cup\", \"shape\": \"round\", \"size\": 3}" "$API/things"
 curl -v -X GET "$API/things/cup"
 curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"chair\", \"shape\": \"square\", \"size\": 10}" "$API/things"
@@ -95,7 +95,7 @@ main = withConfig config
       -> ApiLambdaProgram
     get ddbTableId event =
       withPathParam "thingId" event $ \tid -> do
-        say $ T.concat ["getting record with thingId:", tid, "..."]
+        say $ T.concat ["getting record with thingId: '", tid, "'..."]
         r <- getDdbRecord ddbTableId $ byNameKey tid
         withSuccess (r^.girsResponseStatus) $
           result
@@ -120,7 +120,7 @@ main = withConfig config
       -> ApiLambdaProgram
     delete ddbTableId event = do
       withPathParam "thingId" event $ \tid -> do
-        say $ T.concat ["deletting record with thingId:", tid, "..."]
+        say $ T.concat ["deletting record with thingId: '", tid, "'..."]
         r <- deleteDdbRecord ddbTableId $ byNameKey tid
         withSuccess (r^.dirsResponseStatus) $
           success "successfully deleted thing"

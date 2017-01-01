@@ -4,10 +4,10 @@ module Util where
 
 import           Control.Lens
 import           Data.Aeson
-import           Data.Aeson.Lens  (key)
-import           Data.Maybe       (fromJust, isJust)
-import           Data.Text        (Text)
-import           Test.Tasty.Hspec (shouldBe)
+import           Data.Aeson.Lens     (key)
+import           Data.Maybe          (fromJust, isJust)
+import           Data.Text           (Text)
+import           Test.Tasty.Hspec    (shouldBe)
 
 
 shouldContainKey
@@ -29,3 +29,7 @@ getValueUnderKey
 getValueUnderKey k t = fromJust $ t ^? key k
 
 ref lname = object [("Ref", String lname)]
+
+
+
+

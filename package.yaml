@@ -101,24 +101,24 @@ executables:
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-  qmuli-stream-s3-objects:
-    main: Main.hs
-    source-dirs: examples/stream-s3-objects/src
-    dependencies:
-      - base >= 4.8 && < 5
-      - qmuli
+  # qmuli-stream-s3-objects:
+    # main: Main.hs
+    # source-dirs: examples/stream-s3-objects/src
+    # dependencies:
+      # - base >= 4.8 && < 5
+      # - qmuli
   # qmuli-apigw-lambda-s3:
     # main: Main.hs
     # source-dirs: examples/apigw-lambda-s3/src
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-  # qmuli-apigw-lambda-dynamodb:
-    # main: Main.hs
-    # source-dirs: examples/apigw-lambda-dynamodb/src
-    # dependencies:
-      # - base >= 4.8 && < 5
-      # - qmuli
+  qmuli-apigw-lambda-dynamodb:
+    main: Main.hs
+    source-dirs: examples/apigw-lambda-dynamodb/src
+    dependencies:
+      - base >= 4.8 && < 5
+      - qmuli
   # qmuli-dynamodb-stream:
     # main: Main.hs
     # source-dirs: examples/dynamodb-stream/src
