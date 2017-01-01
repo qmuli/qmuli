@@ -114,7 +114,7 @@ main = withConfig config
 Compiling this qmulus results in a multi-purpose executable binary, which can be used as a CLI tool for management tasks like provisioning
 as well as the binary executable that gets packaged and used in all lambdas.
 
-Note: see more involved [DynamoDB backed RESTful API example](https://github.com/qmuli/qmuli/blob/master/examples/apigw-lambda-dynamodb/src/Main.hs)
+Note: for how to use currently available functionality and AWS integrations, see [examples](https://github.com/qmuli/qmuli/blob/master/examples/) 
 
 Getting started
 ---------------
@@ -128,6 +128,7 @@ order to build everything necessary for a successful deployment.
 ```sh
 git clone --recursive -j8 https://github.com/qmuli/qmuli.git
 cd qmuli
+<uncomment the examples you want to build in package.yaml>
 stack install
 ```
 
@@ -154,9 +155,28 @@ To monitor the status of the stack and view the stack outputs:
 `simple-s3-copy <same-globally-unique-name-as-above> cf describe`
 
 
+To deploy updates to CF stack:
+
+`simple-s3-copy <same-globally-unique-name-as-above> cf update` (this also implicitly updates all lambdas with the current code)
+
+
+To updates all lambdas with the current code separately from updating the CF stack:
+
+`simple-s3-copy <same-globally-unique-name-as-above> lbd update`
+
+
+###NOTE: commands below are dangerous because they destroy all the CF stack resources including S3 buckets and their content
+
 To destroy a stack:
 
 `simple-s3-copy <same-globally-unique-name-as-above> cf destroy`
+
+
+To cycle a stack: destroy it, rebuild, deploy and re-create:
+
+`simple-s3-copy <same-globally-unique-name-as-above> cf cycle`
+
+this command is useful when doing iterative development on a qmulus 
 
 
 ###Troubleshooting

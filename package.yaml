@@ -114,24 +114,30 @@ executables:
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-  qmuli-apigw-lambda-dynamodb:
-    main: Main.hs
-    source-dirs: examples/apigw-lambda-dynamodb/src
-    dependencies:
-      - base >= 4.8 && < 5
-      - qmuli
+  # qmuli-apigw-lambda-dynamodb:
+    # main: Main.hs
+    # source-dirs: examples/apigw-lambda-dynamodb/src
+    # dependencies:
+      # - base >= 4.8 && < 5
+      # - qmuli
   # qmuli-dynamodb-stream:
     # main: Main.hs
     # source-dirs: examples/dynamodb-stream/src
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-  # qmuli-cognito:
+  # qmuli-cognito-apigw-lambda:
     # main: Main.hs
-    # source-dirs: examples/cognito/src
+    # source-dirs: examples/cognito-apigw-lambda/src
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
+  qmuli-cognito-lambda:
+    main: Main.hs
+    source-dirs: examples/cognito-lambda/src
+    dependencies:
+      - base >= 4.8 && < 5
+      - qmuli
   # qmuli-cw-events:
     # main: Main.hs
     # source-dirs: examples/cw-events/src
