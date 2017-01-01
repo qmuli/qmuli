@@ -49,9 +49,10 @@ withNameAndConfig appName configProgram = do
       "cf":"template":[]  -> renderCfTemplate
       "cf":"deploy":[]    -> deployApp
       "cf":"create":[]    -> createCfStack
+      "cf":"update":[]    -> updateCfStack
       "cf":"describe":[]  -> describeCfStack
       "cf":"destroy":[]   -> destroyCfStack $ return ()
-      "cf":"go":[]        -> go
+      "cf":"cycle":[]     -> cycleStack
 
       "lbd":lbdName:event:[] -> invokeLambda lbdName event
 
