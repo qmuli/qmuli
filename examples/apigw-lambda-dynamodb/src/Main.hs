@@ -37,12 +37,12 @@ import           Types
 
 -- Used the curl commands below to test-drive the endpoints (substitute your unique api stage url first):
 {-
-export API="https://honp5qvhqd.execute-api.us-east-1.amazonaws.com/v1"
+export API="https://5p07mx81w8.execute-api.us-east-1.amazonaws.com/v1"
 curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"cup\", \"shape\": \"round\", \"size\": 3}" "$API/things"
 curl -v -X GET "$API/things/cup"
 curl -v -X POST -H "Content-Type: application/json" -d "{\"name\": \"chair\", \"shape\": \"square\", \"size\": 10}" "$API/things"
 curl -v -X GET "$API/things"
-curl -v -X DELETE "$API/things/mycup"
+curl -v -X DELETE "$API/things/cup"
 curl -v -X GET "$API/things"
 -}
 

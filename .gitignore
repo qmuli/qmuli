@@ -13,3 +13,4 @@ qmuli-stream-s3-objects
 qmuli-dynamodb-stream
 *.zip
 TAGS
+tests/artifacts/*

@@ -73,7 +73,6 @@ main = withConfig config
     config :: ConfigProgram ()
     config = do
 
-
       -- create an "input" s3 bucket
       incoming <- s3Bucket "incoming"
 
@@ -84,7 +83,7 @@ main = withConfig config
       -- upon an S3 "Put" event.
       -- Attach the lambda to the "incoming" bucket such way so each time a file is uploaded to
       -- the bucket, the lambda is called with the information about the newly uploaded file.
-      -- The lambda creation function takes the Lambda name, s3BucketId to attach to, lambda 
+      -- The lambda creation function takes the Lambda name, s3BucketId to attach to, lambda
       -- function itself and a lambda profile, that specifies attributes like memory size and
       -- timeout, and has meaningful defaults for those.
       void $ s3BucketLambda "copyS3Object" incoming (copyContentsLambda outgoing) $
@@ -92,18 +91,23 @@ main = withConfig config
 
     copyContentsLambda
       :: S3BucketId
-      -> S3Event
-      -> LambdaProgram ()
-    copyContentsLambda sinkBucketId event = do
+      -> S3LambdaProgram
+    copyContentsLambda sinkBucketId = lbd
+      where
+        lbd event = do
+          let incomingS3Obj = event ^. s3eObject
+              outgoingS3Obj = s3oBucketId .~ sinkBucketId $ incomingS3Obj
 
-      let incomingS3Obj = event ^. s3eObject
-          outgoingS3Obj = s3oBucketId .~ sinkBucketId $ incomingS3Obj
+          -- get the content of the newly uploaded file
+          content <- getS3ObjectContent incomingS3Obj
 
-      -- get the content of the newly uploaded file
-      content <- getS3ObjectContent incomingS3Obj
+          -- emit log messages that end up in the appropriate cloudwatch group/stream
+          say "hello there!"
 
-      -- write the content into a new file in the "output" bucket
-      putS3ObjectContent outgoingS3Obj content
+          -- write the content into a new file in the "output" bucket
+          putS3ObjectContent outgoingS3Obj content
+
+          success "lambda had executed successfully"
 
 ```
 

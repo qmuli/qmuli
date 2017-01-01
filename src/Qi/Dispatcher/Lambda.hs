@@ -6,7 +6,7 @@ module Qi.Dispatcher.Lambda (invokeLambda) where
 import           Control.Lens
 import           Control.Monad.IO.Class              (liftIO)
 import           Control.Monad.Trans.Reader          (ReaderT, ask)
-import           Data.Aeson                          (eitherDecode)
+import           Data.Aeson                          (Value, eitherDecode)
 import           Data.Aeson.Types                    (parseEither)
 import qualified Data.ByteString.Lazy.Char8          as LBS
 import qualified Data.HashMap.Strict                 as SHM
@@ -62,6 +62,9 @@ lbdIOMap config = SHM.fromList $ map toLbdIOPair $ getAll config
       :: Lambda
       -> String
       -> Either String CompleteLambdaProgram
+
+    parseLambdaEvent GenericLambda{_lbdGenericLambdaProgram} eventJson =
+      _lbdGenericLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String Value)
 
     parseLambdaEvent S3BucketLambda{_lbdS3BucketLambdaProgram} eventJson =
       _lbdS3BucketLambdaProgram <$> (parseEither (`S3Event.parse` config) =<< eitherDecode (LBS.pack eventJson))
