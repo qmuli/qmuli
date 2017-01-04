@@ -40,6 +40,9 @@ type DdbStreamLambdaProgram = DdbStreamEvent  -> CompleteLambdaProgram
 
 data LambdaInstruction a where
 
+  GetAppName
+    :: LambdaInstruction Text
+
   Http
     :: Request
     -> ManagerSettings
@@ -101,6 +104,11 @@ data LambdaInstruction a where
 
 
 -- HTTP client
+
+getAppName
+  :: LambdaProgram Text
+getAppName =
+  singleton $ GetAppName
 
 http
   :: Request

@@ -22,10 +22,7 @@ main = withConfig config
   where
     config :: ConfigProgram ()
     config = do
-      cognito <- customResource "cognitoPoolProvider"
-              (cognitoPoolProviderLambda "MyIdentityPool" "MyUserPool" "MyClient") def
-
-
+      cognito <- customResource "cognitoPoolProvider" cognitoPoolProviderLambda def
       void $ genericLambda "greet" greetLambda def
 
 

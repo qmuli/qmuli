@@ -36,8 +36,8 @@ packages:
     git: https://github.com/ababkin/stratosphere.git
     commit: 598330b6276ca4d6fb9f8bfd66f089324402ae7e
 - location:
-    git: https://github.com/axman6/amazonka-s3-streaming.git
-    commit: 8ebd148a263012fe82931841d78d77025374b67f
+    git: https://github.com/ababkin/amazonka-s3-streaming.git
+    commit: 52b891e44d22e3f82a4d004ddab5612e64fe68ef
 - 'system-extra'
 # - location:
     # git: https://github.com/lykahb/groundhog.git
@@ -59,6 +59,7 @@ extra-deps:
 - amazonka-cognito-identity-1.4.5
 - amazonka-cognito-idp-1.4.5
 - amazonka-lambda-1.4.5
+- amazonka-iam-1.4.5
 - managed-1.0.5
 - aeson-1.0.2.1
 - http-conduit-2.2.3

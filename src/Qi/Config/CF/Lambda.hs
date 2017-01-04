@@ -34,6 +34,7 @@ toResources config = foldMap toAllLambdaResources $ getAll config
               principal
           where
             principal = case lbd of
+              GenericLambda{}   -> "lambda.amazonaws.com"
               S3BucketLambda{}  -> "s3.amazonaws.com"
               ApiLambda{}       -> "apigateway.amazonaws.com"
               CfCustomLambda{}  -> "*" -- TODO: not sure whether we even need the permission for CF Custom Resource
@@ -48,7 +49,7 @@ toResources config = foldMap toAllLambdaResources $ getAll config
               "index.handler"
               (GetAtt Role.lambdaBasicExecutionIAMRoleLogicalName "Arn")
               (Literal NodeJS43)
-            & lfFunctionName ?~ (Literal lambdaName)
+            & lfFunctionName ?~ Literal lambdaName
             & lfMemorySize ?~ Literal memorySize
             & lfTimeout ?~ Literal timeOut
           )

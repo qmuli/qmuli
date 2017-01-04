@@ -17,6 +17,10 @@ import           Qi.Config.AWS
 lambdaBasicExecutionIAMRoleLogicalName :: Text
 lambdaBasicExecutionIAMRoleLogicalName = "lambdaBasicExecutionIAMRole"
 
+authenticatedIAMRoleLogicalName :: Text
+authenticatedIAMRoleLogicalName = "authenticatedIAMRole"
+
+
 toResources
   :: Config
   -> Resources
@@ -29,65 +33,73 @@ toResources config = Resources [lbdRoleRes]
       & iamrRoleName ?~ (Literal $ "LambdaBasicExecutionRole" `underscoreNamePrefixWith` config)
       & iamrPath ?~ "/"
 
-    executePolicy =
-      iamRolePolicy
-      [ ("Version", "2012-10-17")
-      , ("Statement", statement)
-      ] $
-      Literal $ "LambdaExecutionPolicy" `underscoreNamePrefixWith` config
-
-
       where
-        statement = object
-          [ ("Effect", "Allow")
-          , ("Action", actions)
-          , ("Resource", "*")
+        rolePolicyDocumentObject =
+          [ ("Version", "2012-10-17")
+          , ("Statement", statement)
           ]
 
-        actions = Array
-          [ "logs:CreateLogGroup"
-          , "logs:DescribeLogGroups"
-          , "logs:CreateLogStream"
-          , "logs:DescribeLogStreams"
-          , "logs:PutLogEvents"
+          where
+            statement = object
+              [ ("Effect", "Allow")
+              , ("Principal", principal)
+              , ("Action", "sts:AssumeRole")
+              ]
 
-          , "s3:GetObject"
-          , "s3:PutObject"
-          , "s3:ListMultipartUploadParts"
-          , "s3:AbortMultipartUpload"
+            principal = object
+              [ ("Service", "lambda.amazonaws.com") ]
 
-          , "dynamodb:Scan"
-          , "dynamodb:Query"
-          , "dynamodb:GetItem"
-          , "dynamodb:PutItem"
-          , "dynamodb:DeleteItem"
-
-          , "dynamodb:GetRecords"
-          , "dynamodb:GetShardIterator"
-          , "dynamodb:DescribeStream"
-          , "dynamodb:ListStreams"
-
-          , "cognito-idp:CreateUserPool"
-          , "cognito-idp:DeleteUserPool"
-          , "cognito-idp:CreateUserPoolClient"
-          , "cognito-idp:CreateUserPoolClient"
-
-          , "cognito-identity:CreateIdentityPool"
-          , "cognito-identity:DeleteIdentityPool"
-          ]
+        executePolicy =
+          iamRolePolicy
+          [ ("Version", "2012-10-17")
+          , ("Statement", statement)
+          ] $
+          Literal $ "LambdaExecutionPolicy" `underscoreNamePrefixWith` config
 
 
-    rolePolicyDocumentObject =
-      [ ("Version", "2012-10-17")
-      , ("Statement", statement)
-      ]
+          where
+            statement = object
+              [ ("Effect", "Allow")
+              , ("Action", actions)
+              , ("Resource", "*")
+              ]
 
-      where
-        statement = object
-          [ ("Effect", "Allow")
-          , ("Principal", principal)
-          , ("Action", "sts:AssumeRole")
-          ]
+            actions = Array
+              [ "logs:CreateLogGroup"
+              , "logs:DescribeLogGroups"
+              , "logs:CreateLogStream"
+              , "logs:DescribeLogStreams"
+              , "logs:PutLogEvents"
 
-        principal = object
-          [ ("Service", "lambda.amazonaws.com") ]
+              , "s3:GetObject"
+              , "s3:PutObject"
+              , "s3:ListMultipartUploadParts"
+              , "s3:AbortMultipartUpload"
+
+              , "dynamodb:Scan"
+              , "dynamodb:Query"
+              , "dynamodb:GetItem"
+              , "dynamodb:PutItem"
+              , "dynamodb:DeleteItem"
+
+              , "dynamodb:GetRecords"
+              , "dynamodb:GetShardIterator"
+              , "dynamodb:DescribeStream"
+              , "dynamodb:ListStreams"
+
+              , "cognito-idp:CreateUserPool"
+              , "cognito-idp:DeleteUserPool"
+              , "cognito-idp:CreateUserPoolClient"
+
+              , "cognito-identity:CreateIdentityPool"
+              , "cognito-identity:DeleteIdentityPool"
+              , "cognito-identity:SetIdentityPoolRoles"
+
+              , "iam:CreateRole"
+              , "iam:DeleteRole"
+              , "iam:PassRole"
+              , "iam:PutRolePolicy"
+              , "iam:DeleteRolePolicy"
+              ]
+
+

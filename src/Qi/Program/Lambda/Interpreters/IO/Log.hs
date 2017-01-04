@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Qi.Program.Lambda.Interpreters.IO.Log (
-    LogChan
+    LogQueue
   , queueLogEntry
   , signalLogEnd
   , forkIOSync
@@ -13,7 +13,9 @@ module Qi.Program.Lambda.Interpreters.IO.Log (
 import           Control.Applicative        ((<*>))
 import           Control.Concurrent         hiding (yield)
 import           Control.Concurrent.MVar
-import           Control.Concurrent.STM
+import           Control.Concurrent.STM     (STM, TBQueue, atomically,
+                                             isEmptyTBQueue, readTBQueue,
+                                             writeTBQueue)
 import           Control.Exception.Base     (SomeException)
 import           Control.Lens               hiding (view)
 import           Control.Monad              (void, (<=<))
@@ -47,7 +49,7 @@ import           Qi.Amazonka                (currentRegion)
 import           Qi.Config.AWS
 
 
-type LogChan = TChan (Maybe InputLogEvent)
+type LogQueue = TBQueue (Maybe InputLogEvent)
 
 toInputLogEvent
   :: Text
@@ -58,38 +60,38 @@ toInputLogEvent entry = do
   return $ inputLogEvent ts entry
 
 queueLogEntry
-  :: LogChan
+  :: LogQueue
   -> Text
   -> IO ()
-queueLogEntry chan =
-  atomically . writeTChan chan . Just <=< toInputLogEvent
+queueLogEntry q =
+  atomically . writeTBQueue q . Just <=< toInputLogEvent
 
 signalLogEnd
-  :: LogChan
+  :: LogQueue
   -> IO ()
-signalLogEnd chan =
-  atomically $ writeTChan chan Nothing
+signalLogEnd q =
+  atomically $ writeTBQueue q Nothing
 
-readAllAvailableTChan
-  :: TChan a
+readAllAvailableTBQueue
+  :: TBQueue a
   -> STM [a]
-readAllAvailableTChan chan =
+readAllAvailableTBQueue q =
   readWithLimit limit
   where
     limit = 100
     readWithLimit 0 = pure []
     readWithLimit count =
-      ifM (isEmptyTChan chan)
+      ifM (isEmptyTBQueue q)
         (pure [])
-        $ (:) <$> readTChan chan <*> readWithLimit (count - 1)
+        $ (:) <$> readTBQueue q <*> readWithLimit (count - 1)
 
 
 cloudWatchLoggerWorker
   :: Text
   -> Config
-  -> LogChan
+  -> LogQueue
   -> IO ()
-cloudWatchLoggerWorker lbdName config chan = do
+cloudWatchLoggerWorker lbdName config q = do
   {- logger <- newLogger Debug stdout -}
   {- stdLoggerEnv <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion -}
   noLoggerEnv <- newEnv Discover <&> set envRegion currentRegion
@@ -134,7 +136,7 @@ cloudWatchLoggerWorker lbdName config chan = do
         -- CW Logs limits: https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/cloudwatch_limits_cwl.html
         -- wait for 250ms to rate-limit the log sending
         threadDelay $ 250 * 1000 -- takes microseconds
-        atomically $ readAllAvailableTChan chan
+        atomically $ readAllAvailableTBQueue q
 
       let msgs = catMaybes maybeMsgs
       -- is there a terminating Nothing at the end of messages list retrieved from the channel?

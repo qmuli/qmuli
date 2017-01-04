@@ -25,6 +25,7 @@ dependencies:
   - amazonka-cognito-idp >= 1.4.5 && < 1.5
   - amazonka-core >= 1.4.5 && < 1.5
   - amazonka-dynamodb >= 1.4.5 && < 1.5
+  - amazonka-iam >= 1.4.5 && < 1.5
   - amazonka-lambda >= 1.4.5 && < 1.5
   - amazonka-s3 >= 1.4.5 && < 1.5
   - base >= 4.8 && < 5

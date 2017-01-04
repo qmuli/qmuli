@@ -57,6 +57,7 @@ import           Network.AWS.S3.StreamingUpload
 import           Network.HTTP.Client                   (ManagerSettings,
                                                         Request, Response,
                                                         httpLbs, newManager)
+import           System.IO                             (stdout)
 import           System.Mem                            (performMajorGC)
 
 import           Qi.Amazonka                           (currentRegion)
@@ -87,92 +88,127 @@ newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
 liftAWSFromResourceIO = liftAWS . lift
 
 
+data LoggerType = NoLogger | StdOutLogger | CwLogger
+
+loggerType :: LoggerType
+loggerType = CwLogger
+
+withEnv
+  :: Text
+  -> Config
+  -> (Env -> (Text -> QiAWS ()) -> IO ())
+  -> IO ()
+withEnv lbdName config action =
+  case loggerType of
+    CwLogger -> do
+      logQueue <- liftIO . atomically $ newTBQueue 1000
+      loggerDone <- liftIO . forkIOSync $ cloudWatchLoggerWorker lbdName config logQueue
+
+      let cloudWatchLogger :: Logger
+          cloudWatchLogger level bd = do
+            let prefix = LBS.fromChunks ["[lambda][amazonka][]", "[", BS.pack $ show level, "] "]
+                msg = fromLazyByteString prefix <> bd
+            queueLogEntry logQueue . decodeUtf8 . LBS.toStrict $ toLazyByteString msg
+
+      env <- newEnv Discover <&> set envRegion currentRegion . set envLogger cloudWatchLogger
+
+
+      let logMessage = liftIO . queueLogEntry logQueue . T.append "[Message] "
+      action env logMessage
+
+      signalLogEnd logQueue
+      takeMVar loggerDone -- wait on the logger to finish logging messages
+
+    StdOutLogger -> do
+      logger <- newLogger Debug stdout
+      env <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion
+
+      let logMessage = liftIO . putStrLn . T.unpack . T.append "[Message] "
+      action env logMessage
+
+    NoLogger -> do
+      env <- newEnv Discover <&> set envRegion currentRegion
+      action env . const $ return ()
+
+
 run
   :: Text
   -> Config
   -> LambdaProgram LBS.ByteString
   -> IO ()
 run lbdName config program = do
-  logChan     <- liftIO $ atomically newTChan
-  loggerDone  <- liftIO . forkIOSync $ cloudWatchLoggerWorker lbdName config logChan
+  withEnv lbdName config $ \env logMessage ->
+    runResourceT . runAWST env . unQiAWS $
+      void . liftIO . LBS.putStr =<< go logMessage program
 
-  let cloudWatchLogger :: Logger
-      cloudWatchLogger level bd = do
-        let prefix = LBS.fromChunks ["[lambda][amazonka][]", "[", BS.pack $ show level, "] "]
-            msg = fromLazyByteString prefix <> bd
-        queueLogEntry logChan . decodeUtf8 . LBS.toStrict $ toLazyByteString msg
-
-  cloudWatchLoggerEnv <- newEnv Discover <&> set envRegion currentRegion . set envLogger cloudWatchLogger
-
-  runResourceT . runAWST cloudWatchLoggerEnv . unQiAWS $ do
-    output <- go logChan program
-    liftIO $ LBS.putStr output
-
-  signalLogEnd logChan
-  takeMVar loggerDone -- wait on the logger to finish logging messages
 
   where
     go
-      :: LogChan
+      :: (Text -> QiAWS ())
       -> LambdaProgram a
       -> QiAWS a
-    go logChan = interpret
+    go logMessage = interpret
       where
-        logMessage
-          :: Text
-          -> QiAWS ()
-        logMessage msg = liftIO . queueLogEntry logChan $ T.append "[Message] " msg
-
         interpret
           :: LambdaProgram a
           -> QiAWS a
         interpret program =
           case view program of
 
+            GetAppName :>>= is ->
+              getAppName >>= interpret . is
+
 -- Http
-            (Http request ms) :>>= is ->
-               http request ms >>= interpret . is
+            Http request ms :>>= is ->
+              http request ms >>= interpret . is
 
 -- Amazonka
-            (AmazonkaSend cmd) :>>= is ->
+            AmazonkaSend cmd :>>= is ->
               amazonkaSend cmd >>= interpret . is
 
 -- S3
-            (GetS3ObjectContent s3Obj) :>>= is ->
+            GetS3ObjectContent s3Obj :>>= is ->
               getS3ObjectContent s3Obj >>= interpret . is
 
-            (StreamFromS3Object s3Obj sink) :>>= is ->
+            StreamFromS3Object s3Obj sink :>>= is ->
               streamFromS3Object s3Obj sink >>= interpret . is
 
-            (StreamS3Objects inS3Obj outS3Obj conduit) :>>= is ->
+            StreamS3Objects inS3Obj outS3Obj conduit :>>= is ->
               streamS3Objects inS3Obj outS3Obj conduit >>= interpret . is
 
-            (PutS3ObjectContent s3Obj content) :>>= is ->
+            PutS3ObjectContent s3Obj content :>>= is ->
               putS3ObjectContent s3Obj content >>= interpret . is
 
 -- DDB
-            (ScanDdbRecords ddbTableId) :>>= is ->
+            ScanDdbRecords ddbTableId :>>= is ->
               scanDdbRecords ddbTableId >>= interpret . is
 
-            (QueryDdbRecords ddbTableId keyCond expAttrs) :>>= is ->
+            QueryDdbRecords ddbTableId keyCond expAttrs :>>= is ->
               queryDdbRecords ddbTableId keyCond expAttrs >>= interpret . is
 
-            (GetDdbRecord ddbTableId keys) :>>= is ->
+            GetDdbRecord ddbTableId keys :>>= is ->
               getDdbRecord ddbTableId keys >>= interpret . is
 
-            (PutDdbRecord ddbTableId item) :>>= is ->
+            PutDdbRecord ddbTableId item :>>= is ->
               putDdbRecord ddbTableId item >>= interpret . is
 
-            (DeleteDdbRecord ddbTableId key) :>>= is ->
+            DeleteDdbRecord ddbTableId key :>>= is ->
               deleteDdbRecord ddbTableId key >>= interpret . is
 
 -- Util
-            (Say text) :>>= is ->
+            Say text :>>= is ->
               say text >>= interpret . is
 
             Return x ->
               return x
 
+
+
+
+        getAppName
+          :: QiAWS Text
+        getAppName =
+          return $ config^.namePrefix
 
 -- Http
 
