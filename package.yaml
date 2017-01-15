@@ -133,12 +133,12 @@ executables:
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-  qmuli-cognito-lambda:
-    main: Main.hs
-    source-dirs: examples/cognito-lambda/src
-    dependencies:
-      - base >= 4.8 && < 5
-      - qmuli
+  # qmuli-cognito-lambda:
+    # main: Main.hs
+    # source-dirs: examples/cognito-lambda/src
+    # dependencies:
+      # - base >= 4.8 && < 5
+      # - qmuli
   # qmuli-cw-events:
     # main: Main.hs
     # source-dirs: examples/cw-events/src

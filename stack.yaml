@@ -13,7 +13,7 @@ packages:
     commit: 598330b6276ca4d6fb9f8bfd66f089324402ae7e
 - location:
     git: https://github.com/ababkin/amazonka-s3-streaming.git
-    commit: 52b891e44d22e3f82a4d004ddab5612e64fe68ef
+    commit: f6b81ee546e7c12231a4e8d2893749de68f2b1cb
 - 'system-extra'
 # - location:
     # git: https://github.com/lykahb/groundhog.git
@@ -36,7 +36,7 @@ extra-deps:
 # - amazonka-cognito-idp-1.4.5
 # - amazonka-lambda-1.4.5
 # - amazonka-iam-1.4.5
-# - amazonka-s3-streaming-0.1.0.4
+- amazonka-s3-streaming-0.1.0.4
 # - managed-1.0.5
 # - aeson-1.0.2.1
 # - http-conduit-2.2.3
