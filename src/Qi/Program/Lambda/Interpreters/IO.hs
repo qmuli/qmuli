@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
 
 module Qi.Program.Lambda.Interpreters.IO (run) where
 
@@ -69,6 +70,9 @@ import           Qi.Config.Identifier                  (DdbTableId)
 import           Qi.Program.Lambda.Interface           (LambdaInstruction (..),
                                                         LambdaProgram)
 import           Qi.Program.Lambda.Interpreters.IO.Log
+
+import Data.Time.Clock.POSIX (getPOSIXTime)
+
 
 
 newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
@@ -329,7 +333,13 @@ run lbdName config program = do
           -> DdbAttrs
           -> QiAWS PutItemResponse
         putDdbRecord ddbTableId item = do
-          send $ putItem tableName & piItem .~ item
+          (startTs :: Int) <- round <$> liftIO getPOSIXTime 
+          r <- send $ putItem tableName & piItem .~ item
+          liftIO $ do
+            (endTs :: Int) <- round <$> getPOSIXTime
+            putStr "putDdbRecord time: "
+            print (endTs - startTs)
+          return r
 
           where
             tableName = getPhysicalName config $ getById config ddbTableId
