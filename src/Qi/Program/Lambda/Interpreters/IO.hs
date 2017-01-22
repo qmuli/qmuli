@@ -7,8 +7,8 @@
 {-# LANGUAGE OverloadedLists            #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
 
 module Qi.Program.Lambda.Interpreters.IO (run) where
 
@@ -16,7 +16,7 @@ import           Control.Concurrent                    hiding (yield)
 import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
 import           Control.Lens                          hiding (view)
-import           Control.Monad                         (void, (<=<))
+import           Control.Monad                         (void, when, (<=<))
 import           Control.Monad.Base                    (MonadBase)
 import           Control.Monad.Catch                   (MonadCatch, MonadThrow)
 import           Control.Monad.IO.Class                (MonadIO, liftIO)
@@ -70,8 +70,8 @@ import           Qi.Config.Identifier                  (DdbTableId)
 import           Qi.Program.Lambda.Interface           (LambdaInstruction (..),
                                                         LambdaProgram)
 import           Qi.Program.Lambda.Interpreters.IO.Log
+import           Qi.Util                               (time)
 
-import Data.Time.Clock.POSIX (getPOSIXTime)
 
 
 
@@ -96,6 +96,7 @@ data LoggerType = NoLogger | StdOutLogger | CwLogger
 
 loggerType :: LoggerType
 loggerType = CwLogger
+{- loggerType = NoLogger -}
 
 withEnv
   :: Text
@@ -116,12 +117,12 @@ withEnv lbdName config action =
 
       env <- newEnv Discover <&> set envRegion currentRegion . set envLogger cloudWatchLogger
 
-
       let logMessage = liftIO . queueLogEntry logQueue . T.append "[Message] "
       action env logMessage
 
       signalLogEnd logQueue
-      takeMVar loggerDone -- wait on the logger to finish logging messages
+      when (config^.waitOnLogger) $
+        takeMVar loggerDone -- wait on the logger to finish logging messages
 
     StdOutLogger -> do
       logger <- newLogger Debug stdout
@@ -267,17 +268,12 @@ run lbdName config program = do
                 toBucketName = getPhysicalName config $ getById config $ toS3Obj^.s3oBucketId
                 sink = streamUpload $ createMultipartUpload (BucketName toBucketName) (ObjectKey toObjKey)
                 conduit = transPipe interpret cond
-                -- not sure if this will help with memory leaks
-                {- gcConduit = awaitForever $ \i -> do -}
-                              {- liftIO $ performMajorGC -}
-                              {- yield i -}
 
             source <- transPipe liftAWSFromResourceIO . fst <$> (
                       liftAWSFromResourceIO . unwrapResumable . _streamBody . (^.gorsBody)
                   =<< (send $ getObject (BucketName fromBucketName) $ ObjectKey fromObjKey)
                 )
 
-            {- void $ source =$= gcConduit =$= conduit $$ sink -}
             void $ source =$= conduit $$ sink
 
         putS3ObjectContent
@@ -333,13 +329,7 @@ run lbdName config program = do
           -> DdbAttrs
           -> QiAWS PutItemResponse
         putDdbRecord ddbTableId item = do
-          (startTs :: Int) <- round <$> liftIO getPOSIXTime 
-          r <- send $ putItem tableName & piItem .~ item
-          liftIO $ do
-            (endTs :: Int) <- round <$> getPOSIXTime
-            putStr "putDdbRecord time: "
-            print (endTs - startTs)
-          return r
+          send $ putItem tableName & piItem .~ item
 
           where
             tableName = getPhysicalName config $ getById config ddbTableId

@@ -3,18 +3,20 @@
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
 # resolver: lts-7.15
-resolver: nightly-2017-01-14
+resolver: nightly-2017-01-17
 
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
 - location:
-    git: https://github.com/ababkin/stratosphere.git
-    commit: 598330b6276ca4d6fb9f8bfd66f089324402ae7e
+    git: https://github.com/frontrowed/stratosphere.git
+    commit: 7b3d92b29a7661cc3a11fa8338c9eff4c215edf7
 - location:
-    git: https://github.com/ababkin/amazonka-s3-streaming.git
-    commit: f6b81ee546e7c12231a4e8d2893749de68f2b1cb
-- 'system-extra'
+    git: https://github.com/abailly/system-extra.git
+    commit: 6223138579dc3473cbf84fa323af64380db114cf
+# - location:
+    # git: https://github.com/ababkin/amazonka-s3-streaming.git
+    # commit: f6b81ee546e7c12231a4e8d2893749de68f2b1cb
 # - location:
     # git: https://github.com/lykahb/groundhog.git
     # commit: fa62710364d55fdbc6de5a4a33f3a8d0d9d125dd
@@ -25,8 +27,7 @@ packages:
   # - groundhog-postgresql
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
-extra-deps: []
-# - amazonka-s3-streaming-0.1.0.4
+extra-deps: [] 
 
 # Override default flag values for local packages and extra-deps
 flags: {}
@@ -49,6 +50,7 @@ ghc-options:
 
   "qmuli-stream-s3-objects": -static -threaded
   "qmuli-fold-s3-content": -static -threaded
+  "qmuli-apigw-lambda-dynamodb": -static -threaded
 
 apply-ghc-options: locals # all local packages, the default
 # rebuild-ghc-options: true

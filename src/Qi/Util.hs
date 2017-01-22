@@ -12,6 +12,7 @@ import qualified Data.ByteString.Lazy.Char8  as LBS
 import           Data.HashMap.Strict         (HashMap)
 import           Data.Text                   (Text)
 import qualified Data.Text                   as T
+import           Data.Time.Clock.POSIX       (getPOSIXTime)
 import           System.Console.ANSI
 
 import           Qi.Program.Lambda.Interface (CompleteLambdaProgram)
@@ -85,3 +86,16 @@ printVivid color s = liftIO $ do
   setSGR [Reset]
   putStr "\n"
 
+
+
+getCurrentMilliseconds :: IO Int
+getCurrentMilliseconds = fromIntegral . round . (* 1000) <$> getPOSIXTime
+
+time label action = do
+      before <- liftIO getCurrentMilliseconds
+      x <- action
+      liftIO $ do
+        after <- getCurrentMilliseconds
+        putStr $ label ++ " - turnaround in milliseconds: "
+        print (after - before)
+      return x

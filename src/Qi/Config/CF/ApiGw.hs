@@ -22,6 +22,7 @@ import qualified Qi.Config.AWS.Lambda.Accessors              as Lambda
 import           Qi.Config.Identifier
 import           Stratosphere                                hiding (Delete,
                                                               name)
+import           Stratosphere.Types                          (AuthorizerType (..))
 import           Text.Heredoc
 
 toResources config = Resources . foldMap toStagedApiResources $ getAllWithIds config

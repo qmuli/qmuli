@@ -47,6 +47,7 @@ import           System.IO                  (hPutStrLn, stderr)
 
 import           Qi.Amazonka                (currentRegion)
 import           Qi.Config.AWS
+import           Qi.Util                    (time)
 
 
 type LogQueue = TBQueue (Maybe InputLogEvent)
@@ -104,6 +105,8 @@ cloudWatchLoggerWorker lbdName config q = do
     groupName = config^.namePrefix
     streamName = lbdName
 
+    -- TODO: this ensuring takes way too long, about 1s - this is unacceptable for lambdas
+    -- that finish in much shorter time
     ensureLogStream = do
       groups <- paginate describeLogGroups $$ CL.foldMap (^.dlgrsLogGroups)
       case listToMaybe $ filter ( (== Just groupName) . (^.lgLogGroupName) ) groups of
@@ -132,19 +135,24 @@ cloudWatchLoggerWorker lbdName config q = do
       :: Maybe Text
       -> AWS ()
     loop nextToken = do
-      maybeMsgs <- liftIO $ do
-        -- CW Logs limits: https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/cloudwatch_limits_cwl.html
-        -- wait for 250ms to rate-limit the log sending
-        threadDelay $ 250 * 1000 -- takes microseconds
+      -- wait for 50 ms before trying to dequeue messages, so we dont have to wait the full 200ms
+      -- in case lambda takes less than that to finish
+      liftIO . threadDelay $ 50 * 1000 -- takes microseconds
+
+      maybeMsgs <- liftIO $
         atomically $ readAllAvailableTBQueue q
 
       let msgs = catMaybes maybeMsgs
       -- is there a terminating Nothing at the end of messages list retrieved from the channel?
       if length msgs /= length maybeMsgs
         then do
-          endSignal <- liftIO $ toInputLogEvent "Logger exitting..."
-          void $ sendIfAny (msgs ++ [endSignal]) nextToken
-        else
+          {- endSignal <- liftIO $ toInputLogEvent "Logger exitting..." -}
+          {- void $ sendIfAny (msgs ++ [endSignal]) nextToken -}
+          void $ sendIfAny msgs nextToken
+        else do
+          -- CW Logs limits: https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/cloudwatch_limits_cwl.html
+          -- wait for 200ms (including the 50ms above) to rate-limit the log sending
+          liftIO . threadDelay $ 150 * 1000 -- takes microseconds
           loop =<< sendIfAny msgs nextToken
 
 -- this allows to wait on the forked child thread
