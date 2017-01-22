@@ -41,7 +41,7 @@ instance Default Config where
   def = Config {
       _namePrefix   = "qmuli"
     , _nextId       = 0  -- global autoincrement id state
-    , _waitOnLogger = False
+    , _waitOnLogger = True
     , _s3Config     = def
     , _apiGwConfig  = def
     , _lbdConfig    = def
