@@ -8,9 +8,9 @@ resolver: nightly-2017-03-25
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
-- location:
-    git: https://github.com/frontrowed/stratosphere.git
-    commit: 538041ec37a67877776d23f3b84cfc26fe0d0e47
+# - location:
+    # git: https://github.com/frontrowed/stratosphere.git
+    # commit: 538041ec37a67877776d23f3b84cfc26fe0d0e47
 - location:
     git: https://github.com/abailly/system-extra.git
     commit: 6223138579dc3473cbf84fa323af64380db114cf
