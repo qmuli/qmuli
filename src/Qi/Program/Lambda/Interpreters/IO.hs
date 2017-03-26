@@ -263,18 +263,18 @@ run lbdName config program = do
           fromS3Obj@S3Object{_s3oKey  = S3Key fromObjKey}
           toS3Obj@S3Object{_s3oKey    = S3Key toObjKey}
           cond = do
+            fail $ "s3 streams are not implemented"
+            {- let fromBucketName = getPhysicalName config $ getById config $ fromS3Obj^.s3oBucketId -}
+                {- toBucketName = getPhysicalName config $ getById config $ toS3Obj^.s3oBucketId -}
+                {- sink = streamUpload $ createMultipartUpload (BucketName toBucketName) (ObjectKey toObjKey) -}
+                {- conduit = transPipe interpret cond -}
 
-            let fromBucketName = getPhysicalName config $ getById config $ fromS3Obj^.s3oBucketId
-                toBucketName = getPhysicalName config $ getById config $ toS3Obj^.s3oBucketId
-                sink = streamUpload $ createMultipartUpload (BucketName toBucketName) (ObjectKey toObjKey)
-                conduit = transPipe interpret cond
+            {- source <- transPipe liftAWSFromResourceIO . fst <$> ( -}
+                      {- liftAWSFromResourceIO . unwrapResumable . _streamBody . (^.gorsBody) -}
+                  {- =<< (send $ getObject (BucketName fromBucketName) $ ObjectKey fromObjKey) -}
+                {- ) -}
 
-            source <- transPipe liftAWSFromResourceIO . fst <$> (
-                      liftAWSFromResourceIO . unwrapResumable . _streamBody . (^.gorsBody)
-                  =<< (send $ getObject (BucketName fromBucketName) $ ObjectKey fromObjKey)
-                )
-
-            void $ source =$= conduit $$ sink
+            {- void $ source =$= conduit $$ sink -}
 
         putS3ObjectContent
           :: S3Object
