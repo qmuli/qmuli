@@ -11,6 +11,7 @@ import qualified Data.ByteString                 as BS
 import qualified Data.ByteString.Lazy            as LBS
 import           Data.Conduit
 import           Data.Text                       (Text)
+import           Data.Time.Clock                 (UTCTime)
 import           Network.AWS                     hiding (Request, Response)
 import           Network.AWS.DynamoDB.DeleteItem
 import           Network.AWS.DynamoDB.GetItem
@@ -39,6 +40,9 @@ type CwLambdaProgram        = CwEvent         -> CompleteLambdaProgram
 type DdbStreamLambdaProgram = DdbStreamEvent  -> CompleteLambdaProgram
 
 data LambdaInstruction a where
+
+  GetAppName
+    :: LambdaInstruction Text
 
   Http
     :: Request
@@ -99,8 +103,15 @@ data LambdaInstruction a where
     :: Text
     -> LambdaInstruction ()
 
+  GetCurrentTime
+    :: LambdaInstruction UTCTime
 
 -- HTTP client
+
+getAppName
+  :: LambdaProgram Text
+getAppName =
+  singleton $ GetAppName
 
 http
   :: Request
@@ -176,10 +187,15 @@ deleteDdbRecord
   -> LambdaProgram DeleteItemResponse
 deleteDdbRecord ddbTableId = singleton . DeleteDdbRecord ddbTableId
 
+
 -- Util
 
 say
   :: Text
   -> LambdaProgram ()
 say = singleton . Say
+
+getCurrentTime
+  :: LambdaProgram UTCTime
+getCurrentTime = singleton GetCurrentTime
 

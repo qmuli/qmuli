@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Qi.Program.Lambda.Interpreters.IO.Log (
-    LogChan
+    LogQueue
   , queueLogEntry
   , signalLogEnd
   , forkIOSync
@@ -13,7 +13,9 @@ module Qi.Program.Lambda.Interpreters.IO.Log (
 import           Control.Applicative        ((<*>))
 import           Control.Concurrent         hiding (yield)
 import           Control.Concurrent.MVar
-import           Control.Concurrent.STM
+import           Control.Concurrent.STM     (STM, TBQueue, atomically,
+                                             isEmptyTBQueue, readTBQueue,
+                                             writeTBQueue)
 import           Control.Exception.Base     (SomeException)
 import           Control.Lens               hiding (view)
 import           Control.Monad              (void, (<=<))
@@ -45,9 +47,10 @@ import           System.IO                  (hPutStrLn, stderr)
 
 import           Qi.Amazonka                (currentRegion)
 import           Qi.Config.AWS
+import           Qi.Util                    (time)
 
 
-type LogChan = TChan (Maybe InputLogEvent)
+type LogQueue = TBQueue (Maybe InputLogEvent)
 
 toInputLogEvent
   :: Text
@@ -58,38 +61,38 @@ toInputLogEvent entry = do
   return $ inputLogEvent ts entry
 
 queueLogEntry
-  :: LogChan
+  :: LogQueue
   -> Text
   -> IO ()
-queueLogEntry chan =
-  atomically . writeTChan chan . Just <=< toInputLogEvent
+queueLogEntry q =
+  atomically . writeTBQueue q . Just <=< toInputLogEvent
 
 signalLogEnd
-  :: LogChan
+  :: LogQueue
   -> IO ()
-signalLogEnd chan =
-  atomically $ writeTChan chan Nothing
+signalLogEnd q =
+  atomically $ writeTBQueue q Nothing
 
-readAllAvailableTChan
-  :: TChan a
+readAllAvailableTBQueue
+  :: TBQueue a
   -> STM [a]
-readAllAvailableTChan chan =
+readAllAvailableTBQueue q =
   readWithLimit limit
   where
     limit = 100
     readWithLimit 0 = pure []
     readWithLimit count =
-      ifM (isEmptyTChan chan)
+      ifM (isEmptyTBQueue q)
         (pure [])
-        $ (:) <$> readTChan chan <*> readWithLimit (count - 1)
+        $ (:) <$> readTBQueue q <*> readWithLimit (count - 1)
 
 
 cloudWatchLoggerWorker
   :: Text
   -> Config
-  -> LogChan
+  -> LogQueue
   -> IO ()
-cloudWatchLoggerWorker lbdName config chan = do
+cloudWatchLoggerWorker lbdName config q = do
   {- logger <- newLogger Debug stdout -}
   {- stdLoggerEnv <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion -}
   noLoggerEnv <- newEnv Discover <&> set envRegion currentRegion
@@ -102,6 +105,8 @@ cloudWatchLoggerWorker lbdName config chan = do
     groupName = config^.namePrefix
     streamName = lbdName
 
+    -- TODO: this ensuring takes way too long, about 1s - this is unacceptable for lambdas
+    -- that finish in much shorter time
     ensureLogStream = do
       groups <- paginate describeLogGroups $$ CL.foldMap (^.dlgrsLogGroups)
       case listToMaybe $ filter ( (== Just groupName) . (^.lgLogGroupName) ) groups of
@@ -130,19 +135,24 @@ cloudWatchLoggerWorker lbdName config chan = do
       :: Maybe Text
       -> AWS ()
     loop nextToken = do
-      maybeMsgs <- liftIO $ do
-        -- CW Logs limits: https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/cloudwatch_limits_cwl.html
-        -- wait for 250ms to rate-limit the log sending
-        threadDelay $ 250 * 1000 -- takes microseconds
-        atomically $ readAllAvailableTChan chan
+      -- wait for 50 ms before trying to dequeue messages, so we dont have to wait the full 200ms
+      -- in case lambda takes less than that to finish
+      liftIO . threadDelay $ 50 * 1000 -- takes microseconds
+
+      maybeMsgs <- liftIO $
+        atomically $ readAllAvailableTBQueue q
 
       let msgs = catMaybes maybeMsgs
       -- is there a terminating Nothing at the end of messages list retrieved from the channel?
       if length msgs /= length maybeMsgs
         then do
-          endSignal <- liftIO $ toInputLogEvent "Logger exitting..."
-          void $ sendIfAny (msgs ++ [endSignal]) nextToken
-        else
+          {- endSignal <- liftIO $ toInputLogEvent "Logger exitting..." -}
+          {- void $ sendIfAny (msgs ++ [endSignal]) nextToken -}
+          void $ sendIfAny msgs nextToken
+        else do
+          -- CW Logs limits: https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/cloudwatch_limits_cwl.html
+          -- wait for 200ms (including the 50ms above) to rate-limit the log sending
+          liftIO . threadDelay $ 150 * 1000 -- takes microseconds
           loop =<< sendIfAny msgs nextToken
 
 -- this allows to wait on the forked child thread

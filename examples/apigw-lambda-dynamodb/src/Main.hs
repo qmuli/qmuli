@@ -14,12 +14,13 @@ import           Network.AWS.DynamoDB.DeleteItem
 import           Network.AWS.DynamoDB.GetItem
 import           Network.AWS.DynamoDB.PutItem
 import           Network.AWS.DynamoDB.Scan
-import           Prelude                         hiding (scan)
 
 import           Qi                              (withConfig)
 import           Qi.Config.AWS.ApiGw             (ApiVerb (Delete, Get, Post))
 import           Qi.Config.AWS.DDB               (DdbAttrDef (..),
                                                   DdbAttrType (..))
+import           Qi.Config.AWS.Lambda            (LambdaMemorySize (..),
+                                                  lpMemorySize)
 import           Qi.Config.Identifier            (DdbTableId)
 import           Qi.Program.Config.Interface     (ConfigProgram, api,
                                                   apiMethodLambda, apiResource,
@@ -54,25 +55,27 @@ main = withConfig config
     config = do
       thingsTable <- ddbTable "things" (DdbAttrDef "name" S) def
 
+      let apiLambdaConfig = def & lpMemorySize .~ M1536
+
       -- create a REST API
       api "world" >>= \world ->
         -- create a "things" resource
         apiResource "things" world >>= \things -> do
           -- create a GET method that is attached to the "scan" lambda
           apiMethodLambda "scanThings" Get
-            things def (scan thingsTable) def
+            things def (scan thingsTable) apiLambdaConfig
 
           apiMethodLambda "putThing" Post
-            things def (put thingsTable) def
+            things def (put thingsTable) apiLambdaConfig
 
           -- create a "thingId" slug resource under "things"
           apiResource "{thingId}" things >>= \thing -> do
 
             apiMethodLambda "getThing" Get
-              thing def (get thingsTable) def
+              thing def (get thingsTable) apiLambdaConfig
 
             apiMethodLambda "deleteThing" Delete
-              thing def (delete thingsTable) def
+              thing def (delete thingsTable) apiLambdaConfig
 
       return ()
 

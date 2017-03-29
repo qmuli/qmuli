@@ -32,7 +32,7 @@ import           Util
 configProgram :: ConfigProgram ()
 configProgram = do
   cognito <- customResource "cognitoPoolProvider"
-    (cognitoPoolProviderLambda "MyIdentityPool" "MyUserPool" "MyClient") def
+    cognitoPoolProviderLambda def
 
 
   api "world" >>= \world -> do

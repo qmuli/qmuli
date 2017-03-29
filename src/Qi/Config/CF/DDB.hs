@@ -1,6 +1,5 @@
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Qi.Config.CF.DDB (toResources) where
@@ -9,6 +8,7 @@ import           Control.Lens
 import           Data.Aeson           (Value (Array), object)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict  as SHM
+import           Data.Monoid          ((<>))
 import           Data.Text            (Text)
 import qualified Data.Text            as T
 import           Stratosphere         hiding (name)
@@ -49,10 +49,23 @@ toResources config = Resources . foldMap toDdbTableResources $ getAll config
             dynamoDBTableAttributeDefinition
               (Literal $ table^.dtHashAttrDef.daName)
               (Literal . toAttrType $ table^.dtHashAttrDef.daType)
-          ]
+          ] <> case table^.dtProfile.dtpRangeKey of
+                Just rangeKey ->
+                  [dynamoDBTableAttributeDefinition
+                    (Literal $ rangeKey^.daName)
+                    (Literal . toAttrType $ rangeKey^.daType)
+                  ]
+                Nothing ->
+                  []
+
         keySchema = [
             dynamoDBTableKeySchema (Literal $ table^.dtHashAttrDef.daName) $ Literal HASH
-          ]
+          ] <> case table^.dtProfile.dtpRangeKey of
+                Just rangeKey ->
+                  [dynamoDBTableKeySchema (Literal $ rangeKey^.daName) $ Literal RANGE]
+                Nothing ->
+                  []
+
         provisionedThroughput =
           dynamoDBTableProvisionedThroughput
             (Literal . Integer' $ provCap^.dpcRead)

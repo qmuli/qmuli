@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedLists            #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 
 module Qi.Program.Lambda.Interpreters.IO (run) where
@@ -15,7 +16,7 @@ import           Control.Concurrent                    hiding (yield)
 import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
 import           Control.Lens                          hiding (view)
-import           Control.Monad                         (void, (<=<))
+import           Control.Monad                         (void, when, (<=<))
 import           Control.Monad.Base                    (MonadBase)
 import           Control.Monad.Catch                   (MonadCatch, MonadThrow)
 import           Control.Monad.IO.Class                (MonadIO, liftIO)
@@ -46,6 +47,8 @@ import           Data.Text                             (Text)
 import qualified Data.Text                             as T
 import           Data.Text.Encoding                    (decodeUtf8)
 import qualified Data.Text.IO                          as T
+import           Data.Time.Clock                       (UTCTime)
+import qualified Data.Time.Clock                       as C
 import           GHC.Exts                              (fromList)
 import           Network.AWS                           hiding (Request,
                                                         Response, send)
@@ -57,6 +60,7 @@ import           Network.AWS.S3.StreamingUpload
 import           Network.HTTP.Client                   (ManagerSettings,
                                                         Request, Response,
                                                         httpLbs, newManager)
+import           System.IO                             (stdout)
 import           System.Mem                            (performMajorGC)
 
 import           Qi.Amazonka                           (currentRegion)
@@ -68,6 +72,9 @@ import           Qi.Config.Identifier                  (DdbTableId)
 import           Qi.Program.Lambda.Interface           (LambdaInstruction (..),
                                                         LambdaProgram)
 import           Qi.Program.Lambda.Interpreters.IO.Log
+import           Qi.Util                               (time)
+
+
 
 
 newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
@@ -87,92 +94,131 @@ newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
 liftAWSFromResourceIO = liftAWS . lift
 
 
+data LoggerType = NoLogger | StdOutLogger | CwLogger
+
+loggerType :: LoggerType
+loggerType = CwLogger
+{- loggerType = NoLogger -}
+
+withEnv
+  :: Text
+  -> Config
+  -> (Env -> (Text -> QiAWS ()) -> IO ())
+  -> IO ()
+withEnv lbdName config action =
+  case loggerType of
+    CwLogger -> do
+      logQueue <- liftIO . atomically $ newTBQueue 1000
+      loggerDone <- liftIO . forkIOSync $ cloudWatchLoggerWorker lbdName config logQueue
+
+      let cloudWatchLogger :: Logger
+          cloudWatchLogger level bd = do
+            let prefix = LBS.fromChunks ["[lambda][amazonka][]", "[", BS.pack $ show level, "] "]
+                msg = fromLazyByteString prefix <> bd
+            queueLogEntry logQueue . decodeUtf8 . LBS.toStrict $ toLazyByteString msg
+
+      env <- newEnv Discover <&> set envRegion currentRegion . set envLogger cloudWatchLogger
+
+      let logMessage = liftIO . queueLogEntry logQueue . T.append "[Message] "
+      action env logMessage
+
+      signalLogEnd logQueue
+      when (config^.waitOnLogger) $
+        takeMVar loggerDone -- wait on the logger to finish logging messages
+
+    StdOutLogger -> do
+      logger <- newLogger Debug stdout
+      env <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion
+
+      let logMessage = liftIO . putStrLn . T.unpack . T.append "[Message] "
+      action env logMessage
+
+    NoLogger -> do
+      env <- newEnv Discover <&> set envRegion currentRegion
+      action env . const $ return ()
+
+
 run
   :: Text
   -> Config
   -> LambdaProgram LBS.ByteString
   -> IO ()
 run lbdName config program = do
-  logChan     <- liftIO $ atomically newTChan
-  loggerDone  <- liftIO . forkIOSync $ cloudWatchLoggerWorker lbdName config logChan
+  withEnv lbdName config $ \env logMessage ->
+    runResourceT . runAWST env . unQiAWS $
+      void . liftIO . LBS.putStr =<< go logMessage program
 
-  let cloudWatchLogger :: Logger
-      cloudWatchLogger level bd = do
-        let prefix = LBS.fromChunks ["[lambda][amazonka][]", "[", BS.pack $ show level, "] "]
-            msg = fromLazyByteString prefix <> bd
-        queueLogEntry logChan . decodeUtf8 . LBS.toStrict $ toLazyByteString msg
-
-  cloudWatchLoggerEnv <- newEnv Discover <&> set envRegion currentRegion . set envLogger cloudWatchLogger
-
-  runResourceT . runAWST cloudWatchLoggerEnv . unQiAWS $ do
-    output <- go logChan program
-    liftIO $ LBS.putStr output
-
-  signalLogEnd logChan
-  takeMVar loggerDone -- wait on the logger to finish logging messages
 
   where
     go
-      :: LogChan
+      :: (Text -> QiAWS ())
       -> LambdaProgram a
       -> QiAWS a
-    go logChan = interpret
+    go logMessage = interpret
       where
-        logMessage
-          :: Text
-          -> QiAWS ()
-        logMessage msg = liftIO . queueLogEntry logChan $ T.append "[Message] " msg
-
         interpret
           :: LambdaProgram a
           -> QiAWS a
         interpret program =
           case view program of
 
+            GetAppName :>>= is ->
+              getAppName >>= interpret . is
+
 -- Http
-            (Http request ms) :>>= is ->
-               http request ms >>= interpret . is
+            Http request ms :>>= is ->
+              http request ms >>= interpret . is
 
 -- Amazonka
-            (AmazonkaSend cmd) :>>= is ->
+            AmazonkaSend cmd :>>= is ->
               amazonkaSend cmd >>= interpret . is
 
 -- S3
-            (GetS3ObjectContent s3Obj) :>>= is ->
+            GetS3ObjectContent s3Obj :>>= is ->
               getS3ObjectContent s3Obj >>= interpret . is
 
-            (StreamFromS3Object s3Obj sink) :>>= is ->
+            StreamFromS3Object s3Obj sink :>>= is ->
               streamFromS3Object s3Obj sink >>= interpret . is
 
-            (StreamS3Objects inS3Obj outS3Obj conduit) :>>= is ->
+            StreamS3Objects inS3Obj outS3Obj conduit :>>= is ->
               streamS3Objects inS3Obj outS3Obj conduit >>= interpret . is
 
-            (PutS3ObjectContent s3Obj content) :>>= is ->
+            PutS3ObjectContent s3Obj content :>>= is ->
               putS3ObjectContent s3Obj content >>= interpret . is
 
 -- DDB
-            (ScanDdbRecords ddbTableId) :>>= is ->
+            ScanDdbRecords ddbTableId :>>= is ->
               scanDdbRecords ddbTableId >>= interpret . is
 
-            (QueryDdbRecords ddbTableId keyCond expAttrs) :>>= is ->
+            QueryDdbRecords ddbTableId keyCond expAttrs :>>= is ->
               queryDdbRecords ddbTableId keyCond expAttrs >>= interpret . is
 
-            (GetDdbRecord ddbTableId keys) :>>= is ->
+            GetDdbRecord ddbTableId keys :>>= is ->
               getDdbRecord ddbTableId keys >>= interpret . is
 
-            (PutDdbRecord ddbTableId item) :>>= is ->
+            PutDdbRecord ddbTableId item :>>= is ->
               putDdbRecord ddbTableId item >>= interpret . is
 
-            (DeleteDdbRecord ddbTableId key) :>>= is ->
+            DeleteDdbRecord ddbTableId key :>>= is ->
               deleteDdbRecord ddbTableId key >>= interpret . is
 
 -- Util
-            (Say text) :>>= is ->
+            Say text :>>= is ->
               say text >>= interpret . is
+
+            GetCurrentTime :>>= is ->
+              getCurrentTime >>= interpret . is
 
             Return x ->
               return x
 
+
+
+
+        getAppName
+          :: QiAWS Text
+        getAppName =
+          return $ config^.namePrefix
 
 -- Http
 
@@ -222,23 +268,18 @@ run lbdName config program = do
           fromS3Obj@S3Object{_s3oKey  = S3Key fromObjKey}
           toS3Obj@S3Object{_s3oKey    = S3Key toObjKey}
           cond = do
+            fail $ "s3 streams are not implemented"
+            {- let fromBucketName = getPhysicalName config $ getById config $ fromS3Obj^.s3oBucketId -}
+                {- toBucketName = getPhysicalName config $ getById config $ toS3Obj^.s3oBucketId -}
+                {- sink = streamUpload $ createMultipartUpload (BucketName toBucketName) (ObjectKey toObjKey) -}
+                {- conduit = transPipe interpret cond -}
 
-            let fromBucketName = getPhysicalName config $ getById config $ fromS3Obj^.s3oBucketId
-                toBucketName = getPhysicalName config $ getById config $ toS3Obj^.s3oBucketId
-                sink = streamUpload $ createMultipartUpload (BucketName toBucketName) (ObjectKey toObjKey)
-                conduit = transPipe interpret cond
-                -- not sure if this will help with memory leaks
-                {- gcConduit = awaitForever $ \i -> do -}
-                              {- liftIO $ performMajorGC -}
-                              {- yield i -}
+            {- source <- transPipe liftAWSFromResourceIO . fst <$> ( -}
+                      {- liftAWSFromResourceIO . unwrapResumable . _streamBody . (^.gorsBody) -}
+                  {- =<< (send $ getObject (BucketName fromBucketName) $ ObjectKey fromObjKey) -}
+                {- ) -}
 
-            source <- transPipe liftAWSFromResourceIO . fst <$> (
-                      liftAWSFromResourceIO . unwrapResumable . _streamBody . (^.gorsBody)
-                  =<< (send $ getObject (BucketName fromBucketName) $ ObjectKey fromObjKey)
-                )
-
-            {- void $ source =$= gcConduit =$= conduit $$ sink -}
-            void $ source =$= conduit $$ sink
+            {- void $ source =$= conduit $$ sink -}
 
         putS3ObjectContent
           :: S3Object
@@ -315,3 +356,7 @@ run lbdName config program = do
           -> QiAWS ()
         say = logMessage
 
+
+        getCurrentTime
+          :: QiAWS UTCTime
+        getCurrentTime = liftIO C.getCurrentTime

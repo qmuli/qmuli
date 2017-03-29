@@ -26,20 +26,22 @@ import           Qi.Config.Identifier
 
 
 data Config = Config {
-    _namePrefix  :: Text
-  , _nextId      :: Int
-  , _s3Config    :: S3Config
-  , _apiGwConfig :: ApiGwConfig
-  , _lbdConfig   :: LambdaConfig
-  , _ddbConfig   :: DdbConfig
-  , _cfConfig    :: CfConfig
-  , _cwConfig    :: CwConfig
+    _namePrefix   :: Text
+  , _nextId       :: Int
+  , _waitOnLogger :: Bool
+  , _s3Config     :: S3Config
+  , _apiGwConfig  :: ApiGwConfig
+  , _lbdConfig    :: LambdaConfig
+  , _ddbConfig    :: DdbConfig
+  , _cfConfig     :: CfConfig
+  , _cwConfig     :: CwConfig
 }
 
 instance Default Config where
   def = Config {
       _namePrefix   = "qmuli"
     , _nextId       = 0  -- global autoincrement id state
+    , _waitOnLogger = True
     , _s3Config     = def
     , _apiGwConfig  = def
     , _lbdConfig    = def
