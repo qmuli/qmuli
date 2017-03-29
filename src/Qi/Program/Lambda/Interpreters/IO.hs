@@ -47,6 +47,8 @@ import           Data.Text                             (Text)
 import qualified Data.Text                             as T
 import           Data.Text.Encoding                    (decodeUtf8)
 import qualified Data.Text.IO                          as T
+import           Data.Time.Clock                       (UTCTime)
+import qualified Data.Time.Clock                       as C
 import           GHC.Exts                              (fromList)
 import           Network.AWS                           hiding (Request,
                                                         Response, send)
@@ -204,6 +206,9 @@ run lbdName config program = do
             Say text :>>= is ->
               say text >>= interpret . is
 
+            GetCurrentTime :>>= is ->
+              getCurrentTime >>= interpret . is
+
             Return x ->
               return x
 
@@ -351,3 +356,7 @@ run lbdName config program = do
           -> QiAWS ()
         say = logMessage
 
+
+        getCurrentTime
+          :: QiAWS UTCTime
+        getCurrentTime = liftIO C.getCurrentTime
