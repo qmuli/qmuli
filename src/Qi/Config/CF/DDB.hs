@@ -68,8 +68,8 @@ toResources config = Resources . foldMap toDdbTableResources $ getAll config
 
         provisionedThroughput =
           dynamoDBTableProvisionedThroughput
-            (Literal . Integer' $ provCap^.dpcRead)
-            (Literal . Integer' $ provCap^.dpcWrite)
+            (Literal $ provCap^.dpcRead)
+            (Literal $ provCap^.dpcWrite)
           where
             provCap = table^.dtProfile.dtpProvCap
 
