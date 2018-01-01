@@ -9,7 +9,8 @@ module Qi.Util.Cognito where
 import           Control.Lens                                             hiding
                                                                            (view,
                                                                            (.=))
-import           Control.Monad.Trans.Either                               (EitherT (..))
+import           Control.Monad.Trans.Except                               (ExceptT (..),
+                                                                           runExceptT)
 import           Data.Aeson                                               hiding (Result)
 import qualified Data.ByteString.Char8                                    as BS
 import qualified Data.ByteString.Lazy.Char8                               as LBS
@@ -56,11 +57,11 @@ cognitoPoolProviderLambda =
   where
     createHandler = do
       say "creating the custom Cognito resource..."
-      runEitherT $ do
+      runExceptT $ do
 
-        upid <- EitherT tryCreateUserPool
-        cid  <- EitherT $ tryCreateUserPoolClient upid
-        (ipid, arid) <- EitherT $ tryCreateIdentityPool upid cid
+        upid <- ExceptT tryCreateUserPool
+        cid  <- ExceptT $ tryCreateUserPoolClient upid
+        (ipid, arid) <- ExceptT $ tryCreateIdentityPool upid cid
         return $ Result {
             rId = Just $ T.intercalate "|" [upid, ipid, arid]
           , rAttrs = SHM.fromList [
@@ -84,10 +85,10 @@ cognitoPoolProviderLambda =
     deleteHandler ids = do
       say "deleting the custom Cognito resource..."
       let [upid, ipid, arid] = T.splitOn "|" ids
-      runEitherT $ do
-        EitherT $ tryDeleteUserPool upid
-        EitherT $ tryDeleteIdentityPool ipid
-        EitherT $ tryDeleteAuthenticatedRole arid
+      runExceptT $ do
+        ExceptT $ tryDeleteUserPool upid
+        ExceptT $ tryDeleteIdentityPool ipid
+        ExceptT $ tryDeleteAuthenticatedRole arid
       return . Right $ Result {
           rId = Just ids
         , rAttrs = SHM.fromList []

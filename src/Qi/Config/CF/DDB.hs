@@ -31,11 +31,11 @@ toResources config = Resources . foldMap toDdbTableResources $ getAll config
       resource lname $
         DynamoDBTableProperties $
         dynamoDBTable
-          attributeDefinitions
           keySchema
           provisionedThroughput
           & ddbtTableName ?~ (Literal pname)
           & ddbtStreamSpecification .~ streamSpec
+          & ddbtAttributeDefinitions ?~ attributeDefinitions
 
       where
         streamSpec = const (dynamoDBTableStreamSpecification $ Literal NEW_AND_OLD_IMAGES)
