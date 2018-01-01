@@ -1,5 +1,4 @@
-# resolver: lts-7.15
-resolver: nightly-2017-07-25
+resolver: nightly-2018-01-01
 
 packages:
 - '.'
@@ -9,9 +8,14 @@ packages:
 - location:
     git: https://github.com/abailly/system-extra.git
     commit: 6223138579dc3473cbf84fa323af64380db114cf
-# - location:
-    # git: https://github.com/ababkin/amazonka-s3-streaming.git
-    # commit: f6b81ee546e7c12231a4e8d2893749de68f2b1cb
+  extra-dep: true
+    
+- location:
+    git: https://github.com/ababkin/amazonka-s3-streaming.git
+    commit: eea41aef8f06cd834f3578a412737a4ee155588a
+  extra-dep: true
+
+
 # - location:
     # git: https://github.com/lykahb/groundhog.git
     # commit: fa62710364d55fdbc6de5a4a33f3a8d0d9d125dd
@@ -22,8 +26,8 @@ packages:
   # - groundhog-postgresql
 
 extra-deps:
-  - aeson-1.2.1.0
-  - stratosphere-0.7.1
+  - aeson-1.2.3.0
+  - stratosphere-0.14.0
 
 flags: {}
 
@@ -42,9 +46,9 @@ ghc-options:
     -Wno-unused-matches 
     -Wno-unused-do-bind
 
-  "qmuli-stream-s3-objects": -static -threaded
-  "qmuli-fold-s3-content": -static -threaded
-  "qmuli-apigw-lambda-dynamodb": -static -threaded
+    # "qmuli-stream-s3-objects": -static -threaded
+    # "qmuli-fold-s3-content": -static -threaded
+    # "qmuli-apigw-lambda-dynamodb": -static -threaded
 
 apply-ghc-options: locals # all local packages, the default
 # rebuild-ghc-options: true
