@@ -31,6 +31,7 @@ import           Network.AWS.CognitoIdentityProvider.Types                (Verif
                                                                            upctClientId,
                                                                            uptId)
 import           Network.AWS.IAM                                          hiding (String)
+import           Protolude
 
 import           Qi.Config.AWS.CF
 import           Qi.Program.Lambda.Interface                              (LambdaProgram,

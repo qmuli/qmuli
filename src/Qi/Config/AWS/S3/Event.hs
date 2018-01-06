@@ -7,30 +7,34 @@ import           Control.Lens
 import           Data.Aeson
 import           Data.Aeson.Types
 import           Data.Hashable
-import           Data.Text                  (Text)
 import qualified Data.Text                  as T
+import           Protolude
 
+import           Control.Monad.Fail         (fail)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.S3
 import           Qi.Config.AWS.S3.Accessors
-
 
 parse
   :: Value
   -> Config
   -> Parser S3Event
 parse (Object e) config = do
-    s3 <- (.: "s3") =<< head <$> e .: "Records"
-    bucketName  <- (.: "name") =<< s3 .: "bucket"
-    key         <- (.: "key")  =<< s3 .: "object"
+  firstRecord <- headMay <$> e .: "Records"
+  case firstRecord of
+    Nothing -> fail "no records"
+    Just record -> do
+      s3          <- record .: "s3"
+      bucketName  <- (.: "name") =<< s3 .: "bucket"
+      key         <- (.: "key")  =<< s3 .: "object"
 
-    return . S3Event $ S3Object (getIdByName config $ removeDotNamePrefix bucketName) (S3Key key)
+      pure . S3Event $ S3Object (getIdByName config $ removeDotNamePrefix bucketName) (S3Key key)
 
 removeDotNamePrefix
-  :: String
+  :: Text
   -> Text
-removeDotNamePrefix name = T.pack $ drop prefixLength name
+removeDotNamePrefix name = T.drop prefixLength name
   where
-    prefixLength = 1 + length (takeWhile (/='.') name)
+    prefixLength = 1 + T.length (T.takeWhile (/='.') name)
 
 

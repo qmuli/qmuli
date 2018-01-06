@@ -5,6 +5,7 @@
 module Qi.Config.CF (render) where
 
 import qualified Data.ByteString.Lazy as LBS
+import           Protolude
 import           Stratosphere         hiding (name)
 
 import           Qi.Config.AWS

@@ -8,9 +8,8 @@ import           Control.Lens
 import           Data.Aeson           (Value (Array), object)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict  as SHM
-import           Data.Monoid          ((<>))
-import           Data.Text            (Text)
 import qualified Data.Text            as T
+import           Protolude            hiding (getAll)
 import           Stratosphere         hiding (name)
 
 import           Qi.Config.AWS

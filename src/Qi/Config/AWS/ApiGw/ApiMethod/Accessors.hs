@@ -8,6 +8,7 @@ import           Data.Char            (isAlphaNum)
 import qualified Data.HashMap.Strict  as SHM
 import           Data.Text            (Text)
 import qualified Data.Text            as T
+import           Protolude
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.ApiGw

@@ -4,9 +4,9 @@
 
 module Qi.Config.AWS.ApiGw.ApiMethod.Event where
 
-import           Control.Applicative ((<$>), (<*>), (<|>))
 import           Data.Aeson
 import           Data.Aeson.Types
+import           Protolude
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.ApiGw (ApiMethodEvent (..), RequestBody (..),
@@ -14,21 +14,22 @@ import           Qi.Config.AWS.ApiGw (ApiMethodEvent (..), RequestBody (..),
 
 
 parse
-  :: Value
-  -> Config
+  :: Config
+  -> Value
   -> Parser ApiMethodEvent
-parse (Object e) _ = ApiMethodEvent <$> paramsParser <*> bodyParser
+parse _ = withObject "ApiMethodEvent" eventObjectParser
   where
-    paramsParser :: Parser RequestParams
-    paramsParser = do
-      params  <- e .: "params"
-      path    <- params .: "path"
-      headers <- params .: "header"
-      return $ RequestParams path headers
+    eventObjectParser o = ApiMethodEvent <$> paramsParser <*> bodyParser
 
-    bodyParser = jsonParser <|> plainTextParser <|> pure EmptyBody
-    jsonParser = JsonBody <$> e .: "body-json"
-    plainTextParser = PlainTextBody <$> e .: "body-plaintext"
+      where
+        paramsParser :: Parser RequestParams
+        paramsParser = do
+          params  <- o .: "params"
+          path    <- params .: "path"
+          headers <- params .: "header"
+          return $ RequestParams path headers
 
-parse _ _ =
-  fail "event must be a json object"
+        bodyParser = jsonParser <|> plainTextParser <|> pure EmptyBody
+        jsonParser = JsonBody <$> o .: "body-json"
+        plainTextParser = PlainTextBody <$> o .: "body-plaintext"
+

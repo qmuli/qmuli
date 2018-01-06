@@ -4,6 +4,7 @@ module Qi.Config.AWS.ApiGw.ApiResource.Accessors where
 
 import           Control.Lens
 import qualified Data.HashMap.Strict  as SHM
+import           Protolude
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.ApiGw

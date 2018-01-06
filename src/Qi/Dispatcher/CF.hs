@@ -23,6 +23,7 @@ import           Network.AWS.CloudFormation (Capability (CapabilityNamedIAM), St
                                              ssStackStatus, usCapabilities,
                                              usTemplateURL)
 import qualified Network.AWS.CloudFormation as CF
+import           Protolude
 import           Qi.Amazonka                (runAmazonka)
 
 
@@ -72,7 +73,7 @@ describeStack name = do
         , sdOutputs = map (\o -> (fromJust $ o^.oOutputKey, fromJust $ o^.oOutputValue)) $ stack^.sOutputs
         }
     Nothing ->
-      error "Error: no stack description was returned"
+      panic "Error: no stack description was returned"
 
 
 

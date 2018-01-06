@@ -10,20 +10,13 @@ module Qi.Program.Lambda.Interpreters.IO.Log (
   , cloudWatchLoggerWorker
   ) where
 
-import           Control.Applicative        ((<*>))
 import           Control.Concurrent         hiding (yield)
-import           Control.Concurrent.MVar
 import           Control.Concurrent.STM     (STM, TBQueue, atomically,
                                              isEmptyTBQueue, readTBQueue,
                                              writeTBQueue)
 import           Control.Exception.Base     (SomeException)
-import           Control.Lens               hiding (view)
-import           Control.Monad              (void, (<=<))
-import           Control.Monad.Extra        (ifM)
-import           Control.Monad.IO.Class     (liftIO)
-import           Control.Monad.Reader.Class (MonadReader)
+import           Control.Lens               hiding (view, (<&>))
 import           Control.Monad.Trans.AWS    (AWST, runAWST, send)
-import           Control.Monad.Trans.Class  (lift)
 import           Data.Binary.Builder        (fromLazyByteString,
                                              toLazyByteString)
 import qualified Data.ByteString.Char8      as BS
@@ -35,15 +28,14 @@ import qualified Data.Conduit.List          as CL
 import           Data.Default               (def)
 import           Data.List.NonEmpty         (NonEmpty)
 import           Data.Maybe                 (catMaybes, listToMaybe)
-import           Data.Text                  (Text)
 import qualified Data.Text                  as T
-import           Data.Text.Encoding         (decodeUtf8)
 import           Data.Time.Clock.POSIX      (getPOSIXTime)
 import           GHC.Exts                   (fromList)
 import           Network.AWS                hiding (Request, Response, send)
 import           Network.AWS.CloudWatchLogs
 import           Network.AWS.Data.Body      (RsBody (..), fuseStream)
-import           System.IO                  (hPutStrLn, stderr)
+import           Protolude
+import           System.IO                  (stderr)
 
 import           Qi.Amazonka                (currentRegion)
 import           Qi.Config.AWS
@@ -163,8 +155,8 @@ forkIOSync io = do
   mvar <- newEmptyMVar
   forkFinally io $ either
                       (\(e :: SomeException) -> do
-                        hPutStrLn stderr "Error occured in the CloudWatch Logger:"
-                        hPutStrLn stderr $ show e
+                        hPutStrLn stderr ("Error occured in the CloudWatch Logger:" :: Text)
+                        hPutStrLn stderr $ (show e :: Text)
                         putMVar mvar ()
                       )
                       (putMVar mvar)

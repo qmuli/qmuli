@@ -5,15 +5,15 @@
 module Qi.Util.ApiGw where
 
 import           Control.Lens                hiding (view, (.=))
-import           Control.Monad               ((<=<))
 import           Data.Aeson
 import           Data.Aeson.Types            (typeMismatch)
 import qualified Data.ByteString.Char8       as BS
 import qualified Data.ByteString.Lazy.Char8  as LBS
 import qualified Data.HashMap.Strict         as SHM
-import           Data.Text                   (Text)
 import qualified Data.Text                   as T
 import           Network.AWS.DynamoDB        (AttributeValue)
+
+import           Protolude
 
 import           Qi.Config.AWS.ApiGw         (ApiMethodEvent (..),
                                               ApiVerb (Delete, Get, Post),
@@ -23,7 +23,6 @@ import           Qi.Config.AWS.DDB           (DdbAttrDef (..), DdbAttrType (..),
                                               DdbProvCap (..))
 import           Qi.Program.Lambda.Interface (LambdaProgram)
 import           Qi.Util
-
 
 
 withPathParam name event f = case SHM.lookup name $ event^.aeParams.rpPath of

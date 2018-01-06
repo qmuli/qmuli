@@ -17,6 +17,7 @@ import qualified Data.HashMap.Strict  as SHM
 import           Data.Text            (Text)
 import qualified Data.Text            as T
 import           GHC.Generics
+import           Protolude
 
 import           Qi.Config.Identifier
 

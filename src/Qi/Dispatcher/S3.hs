@@ -21,6 +21,8 @@ import qualified Network.AWS.S3               as S3
 import           Network.AWS.S3.DeleteObjects
 import           Network.AWS.S3.ListBuckets
 import           Network.AWS.S3.ListObjectsV
+import           Protolude
+
 
 createBucket
   :: Text

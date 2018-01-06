@@ -13,6 +13,7 @@ import qualified Data.HashMap.Strict         as SHM
 import           Data.Text                   (Text)
 import           Stratosphere
 
+import           Protolude
 import           Qi.Config.AWS.ApiGw         (ApiMethodEvent)
 import           Qi.Config.AWS.CF            (CfEvent)
 import           Qi.Config.AWS.CW            (CwEvent)

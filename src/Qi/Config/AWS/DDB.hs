@@ -12,7 +12,9 @@ import           Data.HashMap.Strict  (HashMap)
 import qualified Data.HashMap.Strict  as SHM
 import           Data.Text            (Text)
 import qualified Data.Text            as T
+import           GHC.Show             (Show (..))
 import           Network.AWS.DynamoDB (AttributeValue)
+import           Protolude
 
 import           Qi.Config.Identifier
 

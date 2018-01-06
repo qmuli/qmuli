@@ -4,14 +4,14 @@
 
 module Qi.Amazonka (runAmazonka, currentRegion) where
 
-import           Control.Lens
+import           Control.Lens            (set)
 import           Control.Monad.Trans.AWS (runAWST, send)
 import           Data.Aeson              (FromJSON (..), Value (Object),
                                           eitherDecode, (.:))
 import           Data.Aeson.Types        (typeMismatch, withObject)
 import           Data.Either             (either)
 import           Network.AWS             hiding (send)
-import           Safe                    (readMay)
+import           Protolude
 import           System.IO               (stdout)
 import           Text.Heredoc
 
@@ -28,8 +28,8 @@ instance FromJSON CurrentRegion where
 currentRegion :: Region
 currentRegion = unCurrentRegion $
   either
-    (error . ("could not parse qmuli.yaml: " ++) )
-    id
+    (panic . ("could not parse qmuli.yaml: " <>) . toS)
+    identity
     $ eitherDecode qmuliConfig
 
 

@@ -19,8 +19,12 @@ extra-source-files:
 library:
   source-dirs:
     - src
+  default-extensions:
+    - NoImplicitPrelude
+    - OverloadedStrings
   exposed-modules:
     - Qi
+    - Qi.Options
     - Qi.Config.AWS
     - Qi.Config.AWS.ApiGw
     - Qi.Config.AWS.CF
@@ -71,11 +75,13 @@ library:
     - lens
     - lens-aeson
     - mtl
+    - protolude
     - text
     - time
     - transformers
     - transformers-base
     - operational
+    - optparse-applicative
     - process
     - resourcet
     - safe

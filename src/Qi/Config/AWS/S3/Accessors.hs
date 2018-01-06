@@ -8,6 +8,7 @@ import           Data.Hashable
 import qualified Data.HashMap.Strict  as SHM
 import           Data.Text            (Text)
 import qualified Data.Text            as T
+import           Protolude
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.S3
@@ -21,7 +22,7 @@ getIdByName
 getIdByName config bucketName =
   case SHM.lookup bucketName bucketNameToIdMap of
     Just bid -> bid
-    Nothing  -> error $ "Could not find s3 bucket id with name: " ++ show bucketName
+    Nothing  -> panic $ "Could not find s3 bucket id with name: " <> show bucketName
   where
     bucketNameToIdMap = config ^. s3Config . s3Buckets . s3idxNameToId
 

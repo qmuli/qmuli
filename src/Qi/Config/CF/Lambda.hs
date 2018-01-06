@@ -6,8 +6,8 @@ module Qi.Config.CF.Lambda (toResources) where
 
 import           Data.Aeson                     (Value (Array), object)
 import qualified Data.HashMap.Strict            as SHM
-import           Data.Text                      (Text)
 import qualified Data.Text                      as T
+import           Protolude                      hiding (getAll)
 import           Stratosphere                   hiding (name)
 
 import           Qi.Config.AWS
