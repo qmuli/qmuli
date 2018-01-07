@@ -20,6 +20,7 @@ import           Network.AWS.DynamoDB.Query
 import           Network.AWS.DynamoDB.Scan
 import           Network.HTTP.Client
 
+import           Protolude
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.CW

@@ -51,7 +51,6 @@ ghc-options:
     # "qmuli-apigw-lambda-dynamodb": -static -threaded
 
 apply-ghc-options: locals # all local packages, the default
-# rebuild-ghc-options: true
 
 build:
   library-profiling: false
@@ -60,28 +59,4 @@ build:
   prefetch: false
   keep-going: false
 
-  # # NOTE: global usage of haddock can cause build failures when documentation is
-  # # incorrectly formatted.  This could also affect scripts which use stack.
-  # haddock: false
-  # haddock-arguments: ""
-  # open-haddocks: false    # --open
-  # haddock-deps: false     # if unspecified, defaults to true if haddock is set
-  # haddock-internal: false
-  
-# Control whether we use the GHC we find on the path
-# system-ghc: true
 
-# Require a specific version of stack, using version ranges
-# require-stack-version: -any # Default
-# require-stack-version: >= 1.0.0
-
-# Override the architecture used by stack, especially useful on Windows
-# arch: i386
-# arch: x86_64
-
-# Extra directories used by stack for building
-# extra-include-dirs: [/path/to/dir]
-# extra-lib-dirs: [/path/to/dir]
-
-# Allow a newer minor version of GHC than the snapshot specifies
-# compiler-check: newer-minor

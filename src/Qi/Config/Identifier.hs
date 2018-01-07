@@ -4,6 +4,7 @@
 module Qi.Config.Identifier where
 
 import           Data.Hashable
+import           Protolude
 
 
 class ParentResource a where

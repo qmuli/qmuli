@@ -10,6 +10,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict  as SHM
 import           Data.Text            (Text)
 import qualified Data.Text            as T
+import           Protolude            hiding (getAll)
 import           Stratosphere         hiding (S3Bucket, name)
 
 import           Qi.Config.AWS

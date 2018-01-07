@@ -14,8 +14,7 @@ import           Control.Monad.State.Class   (MonadState)
 import           Control.Monad.State.Strict  (State)
 import           Data.Default                (def)
 import qualified Data.HashMap.Strict         as SHM
-import           Data.Monoid                 ((<>))
-import           Data.Text                   (Text)
+import           Protolude                   hiding (State)
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.ApiGw
@@ -27,6 +26,7 @@ import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
 import           Qi.Program.Config.Interface hiding (apiResource)
+
 
 newtype QiConfig a = QiConfig {unQiConfig :: State Config a}
   deriving (

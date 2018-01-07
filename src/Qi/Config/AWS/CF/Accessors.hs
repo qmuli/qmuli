@@ -6,8 +6,8 @@ module Qi.Config.AWS.CF.Accessors where
 import           Control.Lens
 import           Data.Hashable
 import qualified Data.HashMap.Strict            as SHM
-import           Data.Text                      (Text)
 import qualified Data.Text                      as T
+import           Protolude
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.CF

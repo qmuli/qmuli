@@ -15,6 +15,7 @@ import qualified Data.HashMap.Strict       as SHM
 import           Data.Maybe                (fromMaybe)
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
+import           Protolude
 
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.CF
@@ -113,7 +114,7 @@ class (Eq rid, Show rid, Hashable rid) => CfResource r rid | rid -> r, r -> rid 
     -> r
   getById config rid =
     fromMaybe
-      (error $ "Could not reference resource with id: " ++ show rid)
+      (panic $ "Could not reference resource with id: " <> show rid)
       $ SHM.lookup rid $ getMap config
 
   getLogicalName

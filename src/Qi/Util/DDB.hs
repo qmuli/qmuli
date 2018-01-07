@@ -10,6 +10,7 @@ import qualified Data.HashMap.Strict  as SHM
 import           Data.Text            (Text)
 import qualified Data.Text            as T
 import           Network.AWS.DynamoDB (AttributeValue, attributeValue, avN, avS)
+import           Protolude
 
 
 class FromAttrs a where
@@ -40,7 +41,7 @@ parseNumberAttr attrName hm =
   maybe
     (Error $ "could not parse attribute: " ++ T.unpack attrName)
     return
-    $ (fmap (read . T.unpack) . (^.avN)) =<< SHM.lookup attrName hm
+    $ ((readMaybe . toS) <=< (^.avN)) =<< SHM.lookup attrName hm
 
 
 stringAttr

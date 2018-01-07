@@ -4,9 +4,6 @@
 module Qi.Dispatcher.Lambda (invoke, update) where
 
 import           Control.Lens
-import           Control.Monad                       (forM_)
-import           Control.Monad.IO.Class              (liftIO)
-import           Control.Monad.Trans.Reader          (ReaderT, ask)
 import           Data.Aeson                          (Value, eitherDecode)
 import           Data.Aeson.Types                    (parseEither)
 import qualified Data.ByteString.Lazy.Char8          as LBS
@@ -16,6 +13,7 @@ import qualified Data.Text                           as T
 import           Network.AWS                         (AWS, send)
 import           Network.AWS.Lambda                  (uS3Bucket, uS3Key,
                                                       updateFunctionCode)
+import           Protolude                           hiding (getAll)
 
 import           Qi.Config.AWS
 import qualified Qi.Config.AWS.ApiGw.ApiMethod.Event as ApiMethodEvent (parse)
@@ -40,15 +38,15 @@ update appName names =
             & uS3Key ?~ "lambda.zip"
 
 invoke
-  :: String
-  -> String
+  :: Text
+  -> Text
   -> ReaderT Config IO ()
 invoke name event = do
   config <- ask
   liftIO $ do
-    case SHM.lookup (T.pack name) $ lbdIOMap config of
+    case SHM.lookup name $ lbdIOMap config of
       Nothing ->
-        putStrLn $ "No lambda with name '" ++ name ++ "' was found"
+        putStrLn $ "No lambda with name '" <> name <> "' was found"
       Just lbdIO ->
         lbdIO event
 
@@ -56,7 +54,7 @@ lbdIOMap config = SHM.fromList $ map toLbdIOPair $ getAll config
   where
     toLbdIOPair
       :: Lambda
-      -> (Text, String -> IO ())
+      -> (Text, Text -> IO ())
     toLbdIOPair lbd = (name, lbdIO name lbd)
       where
         name = lbd^.lbdName
@@ -64,36 +62,36 @@ lbdIOMap config = SHM.fromList $ map toLbdIOPair $ getAll config
         lbdIO
           :: Text
           -> Lambda
-          -> String
+          -> Text
           -> IO ()
         lbdIO name lbd eventJson =
           either
-            (\err -> fail $ concat ["Could not parse event: ", show eventJson, ", error was: ", err])
+            (\err -> panic $ "Could not parse event: " <> eventJson <> ", error was: " <> toS err)
             (LIO.run name config)
             (parseLambdaEvent lbd eventJson)
 
     parseLambdaEvent
       :: Lambda
-      -> String
-      -> Either String CompleteLambdaProgram
+      -> Text
+      -> Either [Char] CompleteLambdaProgram
 
     parseLambdaEvent GenericLambda{_lbdGenericLambdaProgram} eventJson =
-      _lbdGenericLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String Value)
+      _lbdGenericLambdaProgram <$> (eitherDecode (toS eventJson) :: Either [Char] Value)
 
     parseLambdaEvent S3BucketLambda{_lbdS3BucketLambdaProgram} eventJson =
-      _lbdS3BucketLambdaProgram <$> (parseEither (`S3Event.parse` config) =<< eitherDecode (LBS.pack eventJson))
+      _lbdS3BucketLambdaProgram <$> (parseEither (`S3Event.parse` config) =<< eitherDecode (toS eventJson))
 
     parseLambdaEvent ApiLambda{_lbdApiMethodLambdaProgram} eventJson =
-      _lbdApiMethodLambdaProgram <$> (parseEither (`ApiMethodEvent.parse` config) =<< eitherDecode (LBS.pack eventJson))
+      _lbdApiMethodLambdaProgram <$> (parseEither (ApiMethodEvent.parse config) =<< eitherDecode (toS eventJson))
 
     parseLambdaEvent CfCustomLambda{_lbdCfCustomLambdaProgram} eventJson =
-      _lbdCfCustomLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String CfEvent)
+      _lbdCfCustomLambdaProgram <$> (eitherDecode (toS eventJson) :: Either [Char] CfEvent)
 
     parseLambdaEvent CwEventLambda{_lbdCwEventLambdaProgram} eventJson =
-      _lbdCwEventLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String CwEvent)
+      _lbdCwEventLambdaProgram <$> (eitherDecode (toS eventJson) :: Either [Char] CwEvent)
 
     parseLambdaEvent DdbStreamLambda{_lbdDdbStreamLambdaProgram} eventJson =
-      _lbdDdbStreamLambdaProgram <$> (eitherDecode (LBS.pack eventJson) :: Either String DdbStreamEvent)
+      _lbdDdbStreamLambdaProgram <$> (eitherDecode (toS eventJson) :: Either [Char] DdbStreamEvent)
 
 
 

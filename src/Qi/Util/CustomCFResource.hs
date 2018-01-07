@@ -12,13 +12,13 @@ import           Data.Aeson.Types            (fieldLabelModifier, typeMismatch)
 import qualified Data.ByteString.Char8       as BS
 import qualified Data.ByteString.Lazy.Char8  as LBS
 import qualified Data.HashMap.Strict         as SHM
-import           Data.Text                   (Text)
 import qualified Data.Text                   as T
 import           GHC.Generics
 
 import           Network.HTTP.Client         (Request (..), RequestBody (..),
                                               parseRequest_)
 import           Network.HTTP.Client.TLS     (tlsManagerSettings)
+import           Protolude
 
 import           Qi.Config.AWS.CF
 import           Qi.Program.Lambda.Interface (LambdaProgram, amazonkaSend, http)

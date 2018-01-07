@@ -12,6 +12,7 @@ import           Data.HashMap.Strict                   (HashMap)
 import qualified Data.HashMap.Strict                   as SHM
 import           Data.Text                             (Text)
 import qualified Data.Text                             as T
+import           Protolude
 
 import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ApiMethodProfile)
 import           Qi.Config.Identifier

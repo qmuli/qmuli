@@ -15,3 +15,6 @@ qmuli-dynamodb-stream
 *.zip
 TAGS
 tests/artifacts/*
+hscope.out
+codex.tags
+

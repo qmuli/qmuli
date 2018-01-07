@@ -8,7 +8,7 @@ module Qi.Config.CF.Role (
   ) where
 
 import           Data.Aeson    (Value (Array), object)
-import           Data.Text     (Text)
+import           Protolude
 import           Stratosphere  hiding (name)
 
 import           Qi.Config.AWS

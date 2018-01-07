@@ -9,8 +9,13 @@ import           Data.Aeson                                  (Value (Bool),
                                                               object)
 import qualified Data.ByteString.Lazy                        as LBS
 import qualified Data.HashMap.Strict                         as SHM
-import           Data.Text                                   (Text)
 import qualified Data.Text                                   as T
+import           Protolude
+import           Stratosphere                                hiding (Delete,
+                                                              name)
+import           Stratosphere.Types                          (AuthorizerType (..))
+import           Text.Heredoc
+
 import           Qi.Config.AWS
 import           Qi.Config.AWS.ApiGw
 import qualified Qi.Config.AWS.ApiGw.ApiAuthorizer.Accessors as ApiAuthorizer
@@ -20,10 +25,7 @@ import           Qi.Config.AWS.ApiGw.ApiMethod.Profile       (ampAuthId)
 import qualified Qi.Config.AWS.ApiGw.ApiResource.Accessors   as ApiResource
 import qualified Qi.Config.AWS.Lambda.Accessors              as Lambda
 import           Qi.Config.Identifier
-import           Stratosphere                                hiding (Delete,
-                                                              name)
-import           Stratosphere.Types                          (AuthorizerType (..))
-import           Text.Heredoc
+
 
 toResources config = Resources . foldMap toStagedApiResources $ getAllWithIds config
 

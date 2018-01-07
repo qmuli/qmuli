@@ -13,10 +13,8 @@
 module Qi.Program.Lambda.Interpreters.IO (run) where
 
 import           Control.Concurrent                    hiding (yield)
-import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
 import           Control.Lens                          hiding (view)
-import           Control.Monad                         (void, when, (<=<))
 import           Control.Monad.Base                    (MonadBase)
 import           Control.Monad.Catch                   (MonadCatch, MonadThrow)
 import           Control.Monad.IO.Class                (MonadIO, liftIO)
@@ -24,9 +22,6 @@ import           Control.Monad.Operational             (ProgramViewT ((:>>=), Re
                                                         singleton, view)
 import           Control.Monad.Reader.Class            (MonadReader)
 import           Control.Monad.Trans.AWS               (AWST, runAWST, send)
-import           Control.Monad.Trans.Class             (lift)
-import           Control.Monad.Trans.Reader            (ReaderT, ask, asks,
-                                                        runReaderT)
 import           Control.Monad.Trans.Resource          (MonadResource,
                                                         ResourceT)
 import           Data.Aeson                            (Value (..), encode,
@@ -42,8 +37,6 @@ import           Data.Conduit                          (Conduit, Sink,
 import           Data.Conduit.Binary                   (sinkLbs)
 import qualified Data.Conduit.List                     as CL
 import           Data.Default                          (def)
-import           Data.Monoid                           ((<>))
-import           Data.Text                             (Text)
 import qualified Data.Text                             as T
 import           Data.Text.Encoding                    (decodeUtf8)
 import qualified Data.Text.IO                          as T
@@ -60,6 +53,7 @@ import           Network.AWS.S3.StreamingUpload
 import           Network.HTTP.Client                   (ManagerSettings,
                                                         Request, Response,
                                                         httpLbs, newManager)
+import           Protolude                             hiding ((<&>))
 import           System.IO                             (stdout)
 import           System.Mem                            (performMajorGC)
 
@@ -268,7 +262,7 @@ run lbdName config program = do
           fromS3Obj@S3Object{_s3oKey  = S3Key fromObjKey}
           toS3Obj@S3Object{_s3oKey    = S3Key toObjKey}
           cond = do
-            fail $ "s3 streams are not implemented"
+            panic "s3 streams are not implemented"
             {- let fromBucketName = getPhysicalName config $ getById config $ fromS3Obj^.s3oBucketId -}
                 {- toBucketName = getPhysicalName config $ getById config $ toS3Obj^.s3oBucketId -}
                 {- sink = streamUpload $ createMultipartUpload (BucketName toBucketName) (ObjectKey toObjKey) -}

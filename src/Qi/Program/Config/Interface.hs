@@ -9,7 +9,7 @@ import           Control.Monad.State.Strict            (State)
 import           Data.ByteString                       (ByteString)
 import qualified Data.ByteString.Lazy.Char8            as LBS
 import           Data.Default                          (Default, def)
-import           Data.Text                             (Text)
+import           Protolude
 
 import           Qi.Config.AWS                         (Config)
 import           Qi.Config.AWS.ApiGw

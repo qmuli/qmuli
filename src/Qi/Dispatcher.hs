@@ -13,15 +13,11 @@ module Qi.Dispatcher (
   ) where
 
 import           Control.Lens
-import           Control.Monad                 (void, (<=<))
-import           Control.Monad.IO.Class        (liftIO)
-import           Control.Monad.Trans.Reader    (ReaderT, ask, runReaderT)
 import           Data.Aeson.Encode.Pretty      (encodePretty)
 import qualified Data.ByteString.Lazy.Char8    as LBS
-import           Data.Text                     (Text)
 import qualified Data.Text                     as T
 import           Network.AWS                   (AWS, send)
-import           Prelude                       hiding (FilePath, log)
+import           Protolude                     hiding (FilePath, getAll)
 import           System.Environment.Executable (splitExecutablePath)
 import           Turtle                        (FilePath, fromString, toText)
 
@@ -84,8 +80,8 @@ deployApp =
     printSuccess "deploying the app..."
     content <- liftIO $ do
       (_, execFilename) <- splitExecutablePath -- get the current executable filename
-      lambdaPackagePath <- fromString <$> build "." execFilename
-      LBS.readFile . T.unpack $ toTextIgnore lambdaPackagePath
+      lambdaPackagePath <- fromString <$> build "." (toS execFilename)
+      LBS.readFile . toS $ toTextIgnore lambdaPackagePath
 
     runAmazonka $ do
       createBucket appName

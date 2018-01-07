@@ -10,9 +10,9 @@ import           Data.Aeson                  (Result (Error, Success),
                                               encode, object)
 import qualified Data.ByteString.Lazy.Char8  as LBS
 import           Data.HashMap.Strict         (HashMap)
-import           Data.Text                   (Text)
 import qualified Data.Text                   as T
 import           Data.Time.Clock.POSIX       (getPOSIXTime)
+import           Protolude
 import           System.Console.ANSI
 
 import           Qi.Program.Lambda.Interface (CompleteLambdaProgram)
@@ -43,7 +43,7 @@ respond status content =
     ]
 
 result
-  :: (String -> b)
+  :: ([Char] -> b)
   -> (a -> b)
   -> Result a
   -> b
@@ -60,31 +60,31 @@ withSuccess code f =
   case code of
     200         -> f
     unexpected  ->
-      internalError $ "Error: unexpected response status: " ++ show unexpected
+      internalError $ "Error: unexpected response status: " <> show unexpected
 
 
 printSuccess
   :: MonadIO m
-  => String
+  => Text
   -> m ()
 printSuccess = printVivid Green
 
 printPending
   :: MonadIO m
-  => String
+  => Text
   -> m ()
 printPending = printVivid Yellow
 
 printVivid
   :: MonadIO m
   => Color
-  -> String
+  -> Text
   -> m ()
 printVivid color s = liftIO $ do
   setSGR [SetColor Foreground Vivid color]
   putStr s
   setSGR [Reset]
-  putStr "\n"
+  putStr ("\n" :: Text)
 
 
 
