@@ -1,3 +1,7 @@
+machine:
+  environment:
+    PATH: /usr/bin
+
 checkout:
   post:
     - git submodule sync
@@ -5,8 +9,8 @@ checkout:
 
 dependencies:
   cache_directories: []
-    #- "~/.stack"
-    #- ".stack-work"
+    - "~/.stack"
+    - ".stack-work"
   pre:
     - curl -L https://github.com/commercialhaskell/stack/releases/download/v1.6.5/stack-1.6.5-linux-x86_64.tar.gz | tar zx -C /tmp
     - sudo mv /tmp/stack-1.6.5-linux-x86_64/stack /usr/bin
