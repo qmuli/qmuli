@@ -9,7 +9,7 @@ module Qi.Config.CF.Role (
 
 import           Data.Aeson    (Value (Array), object)
 import           Protolude
-import           Stratosphere  hiding (name)
+import           Stratosphere
 
 import           Qi.Config.AWS
 
@@ -17,8 +17,8 @@ import           Qi.Config.AWS
 lambdaBasicExecutionIAMRoleLogicalName :: Text
 lambdaBasicExecutionIAMRoleLogicalName = "lambdaBasicExecutionIAMRole"
 
-authenticatedIAMRoleLogicalName :: Text
-authenticatedIAMRoleLogicalName = "authenticatedIAMRole"
+-- authenticatedIAMRoleLogicalName :: Text
+-- authenticatedIAMRoleLogicalName = "authenticatedIAMRole"
 
 
 toResources

@@ -26,10 +26,16 @@ success v =
     String _ -> object [ ("message", v) ]
     _        -> v
 
+created :: Value -> CompleteLambdaProgram
 created = respond 201
 
+argumentsError :: [Char] -> CompleteLambdaProgram
 argumentsError = respond 400 . String . T.pack
+
+notFoundError :: [Char] -> CompleteLambdaProgram
 notFoundError = respond 404 . String . T.pack
+
+internalError :: [Char] -> CompleteLambdaProgram
 internalError = respond 500 . String . T.pack
 
 respond
@@ -89,8 +95,13 @@ printVivid color s = liftIO $ do
 
 
 getCurrentMilliseconds :: IO Int
-getCurrentMilliseconds = fromIntegral . round . (* 1000) <$> getPOSIXTime
+getCurrentMilliseconds = (fromIntegral :: Integer -> Int) . round . (* 1000) <$> getPOSIXTime
 
+time
+  :: MonadIO m
+  => [Char]
+  -> m b
+  -> m b
 time label action = do
       before <- liftIO getCurrentMilliseconds
       x <- action

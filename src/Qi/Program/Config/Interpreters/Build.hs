@@ -42,14 +42,14 @@ interpret
 interpret program =
   case view program of
 
-    RGenericLambda name lbdProgramFunc profile :>>= is ->
-      interpret . is =<< rGenericLambda name lbdProgramFunc profile
+    RGenericLambda name programFunc profile :>>= is ->
+      interpret . is =<< rGenericLambda name programFunc profile
 
     RS3Bucket name :>>= is ->
       interpret . is =<< rS3Bucket name
 
-    RS3BucketLambda name bucketId lbdProgramFunc profile :>>= is ->
-      interpret . is =<< rS3BucketLambda name bucketId lbdProgramFunc profile
+    RS3BucketLambda name bucketId programFunc profile :>>= is ->
+      interpret . is =<< rS3BucketLambda name bucketId programFunc profile
 
     RDdbTable name hashAttrDef profile :>>= is ->
       interpret . is =<< rDdbTable name hashAttrDef profile
@@ -66,14 +66,14 @@ interpret program =
     RApiResource name parentId :>>= is ->
       interpret . is =<< rApiResource name parentId
 
-    RApiMethodLambda name verb apiResourceId methodProfile lbdProgramFunc lbdProfile :>>= is ->
-      interpret . is =<< rApiMethodLambda name verb apiResourceId methodProfile lbdProgramFunc lbdProfile
+    RApiMethodLambda name verb apiResourceId methodProfile programFunc profile :>>= is ->
+      interpret . is =<< rApiMethodLambda name verb apiResourceId methodProfile programFunc profile
 
-    RCustomResource name lbdProgramFunc profile :>>= is ->
-      interpret . is =<< rCustomResource name lbdProgramFunc profile
+    RCustomResource name programFunc profile :>>= is ->
+      interpret . is =<< rCustomResource name programFunc profile
 
-    RCwEventLambda name ruleProfile lbdProgramFunc lbdProfile :>>= is ->
-      interpret . is =<< rCwEventLambda name ruleProfile lbdProgramFunc lbdProfile
+    RCwEventLambda name ruleProfile programFunc profile :>>= is ->
+      interpret . is =<< rCwEventLambda name ruleProfile programFunc profile
 
     Return _ ->
       return def
@@ -81,9 +81,9 @@ interpret program =
   where
 
 -- Lambda
-    rGenericLambda name lbdProgramFunc profile = do
+    rGenericLambda name programFunc profile = do
       newLambdaId <- getNextId
-      let newLambda = GenericLambda name profile lbdProgramFunc
+      let newLambda = GenericLambda name profile programFunc
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
       return newLambdaId
 
@@ -98,9 +98,9 @@ interpret program =
       return newS3BucketId
 
 
-    rS3BucketLambda name bucketId lbdProgramFunc profile = do
+    rS3BucketLambda name bucketId programFunc profile = do
       newLambdaId <- getNextId
-      let newLambda = S3BucketLambda name profile lbdProgramFunc
+      let newLambda = S3BucketLambda name profile programFunc
           modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll newLambdaId):)
 
       s3Config.s3Buckets.s3idxIdToS3Bucket %= SHM.adjust modifyBucket bucketId
@@ -121,9 +121,9 @@ interpret program =
       return newDdbTableId
 
 
-    rDdbStreamLambda name tableId lbdProgramFunc profile = do
+    rDdbStreamLambda name tableId programFunc profile = do
       newLambdaId <- getNextId
-      let newLambda = DdbStreamLambda name profile lbdProgramFunc
+      let newLambda = DdbStreamLambda name profile programFunc
 
       ddbConfig.dcTables %= SHM.adjust (dtStreamHandler .~ Just newLambdaId) tableId
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
@@ -168,9 +168,9 @@ interpret program =
       return newApiResourceId
 
 
-    rApiMethodLambda name verb apiResourceId methodProfile lbdProgramFunc lbdProfile = do
+    rApiMethodLambda name verb apiResourceId methodProfile programFunc profile = do
       newLambdaId <- getNextId
-      let newLambda = ApiLambda name lbdProfile lbdProgramFunc
+      let newLambda = ApiLambda name profile programFunc
           apiMethodConfig = ApiMethodConfig {
               amcVerb     = verb
             , amcProfile  = methodProfile
@@ -182,12 +182,12 @@ interpret program =
       return newLambdaId
 
 
-    rCustomResource name lbdProgramFunc profile = do
+    rCustomResource name programFunc profile = do
       newLambdaId <- getNextId
       let newCustom = Custom newLambdaId
           (newCustomId, cfConfigModifier) = CF.insert newCustom
 
-          newLambda = CfCustomLambda name profile lbdProgramFunc
+          newLambda = CfCustomLambda name profile programFunc
 
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
       cfConfig %= cfConfigModifier
@@ -195,11 +195,11 @@ interpret program =
       return newCustomId
 
 
-    rCwEventLambda name ruleProfile lbdProgramFunc lbdProfile = do
+    rCwEventLambda name ruleProfile programFunc profile = do
       newEventsRuleId <- getNextId
       newLambdaId     <- getNextId
 
-      let newLambda = CwEventLambda name lbdProfile lbdProgramFunc
+      let newLambda = CwEventLambda name profile programFunc
           newEventsRule = CwEventsRule {
             _cerName    = name
           , _cerProfile = ruleProfile

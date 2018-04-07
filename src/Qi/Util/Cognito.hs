@@ -150,10 +150,10 @@ cognitoPoolProviderLambda =
 
       let doc = decodeUtf8 . LBS.toStrict . encode $ object [
               ("Version", "2012-10-17")
-            , ("Statement", statement)
+            , ("Statement", stmnt)
             ]
 
-          statement = object [
+          stmnt = object [
               ("Effect", "Allow")
             , ("Principal", principal)
             , ("Action", "sts:AssumeRoleWithWebIdentity")
@@ -181,10 +181,10 @@ cognitoPoolProviderLambda =
 
           let policyDoc = decodeUtf8 . LBS.toStrict . encode $ object [
                   ("Version", "2012-10-17")
-                , ("Statement", Array [statement, statement2])
+                , ("Statement", Array [stmnt', stmnt''])
                 ]
 
-              statement = object [
+              stmnt' = object [
                   ("Effect", "Allow")
                 , ("Action", Array [
                       "mobileanalytics:PutEvents"
@@ -195,7 +195,7 @@ cognitoPoolProviderLambda =
                 , ("Resource", Array ["*"])
                 ]
 
-              statement2 = object [
+              stmnt'' = object [
                   ("Effect", "Allow")
                 , ("Action", Array [
                       "lambda:*"

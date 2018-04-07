@@ -12,19 +12,23 @@ import qualified Data.ByteString.Lazy.Char8  as LBS
 import qualified Data.HashMap.Strict         as SHM
 import qualified Data.Text                   as T
 import           Network.AWS.DynamoDB        (AttributeValue)
-
 import           Protolude
-
 import           Qi.Config.AWS.ApiGw         (ApiMethodEvent (..),
                                               ApiVerb (Delete, Get, Post),
                                               RequestBody (..), aeBody,
                                               aeParams, rpPath)
 import           Qi.Config.AWS.DDB           (DdbAttrDef (..), DdbAttrType (..),
                                               DdbProvCap (..))
-import           Qi.Program.Lambda.Interface (LambdaProgram)
+import           Qi.Program.Lambda.Interface (CompleteLambdaProgram,
+                                              LambdaProgram)
 import           Qi.Util
 
 
+withPathParam
+  :: Text
+  -> ApiMethodEvent
+  -> (Text -> CompleteLambdaProgram)
+  -> CompleteLambdaProgram
 withPathParam name event f = case SHM.lookup name $ event^.aeParams.rpPath of
   Just (String x) -> f x
   Just unexpected ->
@@ -40,8 +44,8 @@ withDeserializedBody
 withDeserializedBody event f = case event^.aeBody of
   JsonBody jb ->
     result
-      (internalError . ("Error: fromJson: " ++))
+      (internalError . ("Error: fromJson: " <>))
       f
       $ fromJSON jb
   unexpected  ->
-    argumentsError $ "Unexpected request body: " ++ show unexpected
+    argumentsError $ "Unexpected request body: " <> show unexpected

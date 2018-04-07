@@ -8,7 +8,7 @@ import           Data.Aeson                     (Value (Array), object)
 import qualified Data.HashMap.Strict            as SHM
 import qualified Data.Text                      as T
 import           Protolude                      hiding (getAll)
-import           Stratosphere                   hiding (name)
+import           Stratosphere
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.DDB
@@ -16,6 +16,7 @@ import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.Lambda.Accessors
 import qualified Qi.Config.CF.Role              as Role
 
+toResources :: Config -> Resources
 toResources config = foldMap toAllLambdaResources $ getAll config
   where
     toAllLambdaResources :: Lambda -> Resources

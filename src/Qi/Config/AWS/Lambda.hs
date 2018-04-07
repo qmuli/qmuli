@@ -86,6 +86,7 @@ instance Enum LambdaMemorySize where
   toEnum 512  = M512
   toEnum 1024 = M1024
   toEnum 1536 = M1536
+  toEnum x    = panic $ "no such memory configuration: " <> show x
 
   fromEnum M128  = 128
   fromEnum M192  = 192

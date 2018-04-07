@@ -34,8 +34,6 @@ build srcDir exeTarget = do
                                                           , otherReadMode, otherExecuteMode
                                                           ]
 
-      deployDir = ".deploy"
-
       packLambda :: FilePath -> FilePath -> IO ()
       packLambda source target = do
         writeFile "index.js" [there|./js/index.js|]

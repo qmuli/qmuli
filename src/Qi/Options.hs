@@ -91,11 +91,8 @@ lbdCmd =
     lbdUpdateCmd :: Mod CommandFields LbdCommand
     lbdUpdateCmd =
         command "update"
-      $ info lbdUpdateCmdParser
+      $ info (pure LbdUpdate)
       $ fullDesc <> progDesc "Perform operations on a single node"
-      where
-        lbdUpdateCmdParser = pure LbdUpdate
-
 
 
 -- | A version of 'execParser' which shows full help on error.

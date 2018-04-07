@@ -57,15 +57,17 @@ runAmazonka
 runAmazonka = liftIO . A.runAmazonka
 
 
-
+invokeLambda
+  :: Text
+  -> Text
+  -> ReaderT Config IO ()
 invokeLambda = Lambda.invoke
 
 updateLambdas :: Dispatcher ()
-updateLambdas = do
-  withConfig $ \config -> do
-    let appName = config^.namePrefix
-    printSuccess "updating the lambdas..."
-    runAmazonka . Lambda.update appName $ map (getPhysicalName config) (getAll config :: [Lambda])
+updateLambdas = withConfig $ \config -> do
+  let appName = config^.namePrefix
+  printSuccess "updating the lambdas..."
+  runAmazonka . Lambda.update appName $ map (getPhysicalName config) (getAll config :: [Lambda])
 
 
 renderCfTemplate :: Dispatcher ()

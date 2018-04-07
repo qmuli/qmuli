@@ -1,10 +1,15 @@
+#resolver: lts-11.3
 resolver: nightly-2018-01-01
+
+
 
 packages:
 - '.'
-# - location:
-    # git: https://github.com/frontrowed/stratosphere.git
-    # commit: 538041ec37a67877776d23f3b84cfc26fe0d0e47
+- location:
+    git: https://github.com/frontrowed/stratosphere.git
+    commit: 1df7b9b215c231d0e3b93e81ed3dcc842d887c78
+  extra-dep: true
+
 - location:
     git: https://github.com/abailly/system-extra.git
     commit: 6223138579dc3473cbf84fa323af64380db114cf
@@ -12,39 +17,29 @@ packages:
     
 - location:
     git: https://github.com/ababkin/amazonka-s3-streaming.git
-    commit: eea41aef8f06cd834f3578a412737a4ee155588a
+    commit: 4fc25d1b20007bef3b8b2924751fe0fc3033e1f5
   extra-dep: true
-
-
-# - location:
-    # git: https://github.com/lykahb/groundhog.git
-    # commit: fa62710364d55fdbc6de5a4a33f3a8d0d9d125dd
-  # subdirs: 
-  # - groundhog
-  # - groundhog-th
-  # - groundhog-sqlite
-  # - groundhog-postgresql
 
 extra-deps:
   - aeson-1.2.3.0
-  - stratosphere-0.14.0
+    #  - stratosphere-0.21.0
 
 flags: {}
 
 extra-package-dbs: []
 
-# docker:
-  # enable: true
-
 ghc-options:
-  "*": 
+  "$locals": 
     # -O*
     # -funfolding-use-threshold=16 -O2 -optc-O3
     -O
-    -W 
+    -Wall
     -Wno-unused-imports 
     -Wno-unused-matches 
     -Wno-unused-do-bind
+    -threaded
+    -Werror
+    #-static 
 
     # "qmuli-stream-s3-objects": -static -threaded
     # "qmuli-fold-s3-content": -static -threaded

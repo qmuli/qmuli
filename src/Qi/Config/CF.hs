@@ -6,8 +6,6 @@ module Qi.Config.CF (render) where
 
 import qualified Data.ByteString.Lazy as LBS
 import           Protolude
-import           Stratosphere         hiding (name)
-
 import           Qi.Config.AWS
 import qualified Qi.Config.CF.ApiGw   as ApiGw
 import qualified Qi.Config.CF.CF      as CF
@@ -16,6 +14,7 @@ import qualified Qi.Config.CF.DDB     as DDB
 import qualified Qi.Config.CF.Lambda  as Lambda
 import qualified Qi.Config.CF.Role    as Role
 import qualified Qi.Config.CF.S3      as S3
+import           Stratosphere
 
 
 render
@@ -24,9 +23,9 @@ render
 render config = encodeTemplate $
   template
     (toResources config)
-    & description ?~ "Example"
-    & formatVersion ?~ "2010-09-09"
-    & outputs ?~ toOutputs config
+    & templateDescription ?~ "Example"
+    & templateFormatVersion ?~ "2010-09-09"
+    & templateOutputs ?~ toOutputs config
 
 toResources
   :: Config

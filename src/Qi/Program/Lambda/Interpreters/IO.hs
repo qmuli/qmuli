@@ -85,6 +85,7 @@ newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
     , MonadAWS
     )
 
+liftAWSFromResourceIO :: ResourceT IO a -> QiAWS a
 liftAWSFromResourceIO = liftAWS . lift
 
 
@@ -99,11 +100,11 @@ withEnv
   -> Config
   -> (Env -> (Text -> QiAWS ()) -> IO ())
   -> IO ()
-withEnv lbdName config action =
+withEnv name config action =
   case loggerType of
     CwLogger -> do
       logQueue <- liftIO . atomically $ newTBQueue 1000
-      loggerDone <- liftIO . forkIOSync $ cloudWatchLoggerWorker lbdName config logQueue
+      loggerDone <- liftIO . forkIOSync $ cloudWatchLoggerWorker name config logQueue
 
       let cloudWatchLogger :: Logger
           cloudWatchLogger level bd = do
@@ -137,8 +138,8 @@ run
   -> Config
   -> LambdaProgram LBS.ByteString
   -> IO ()
-run lbdName config program = do
-  withEnv lbdName config $ \env logMessage ->
+run name config program = do
+  withEnv name config $ \env logMessage ->
     runResourceT . runAWST env . unQiAWS $
       void . liftIO . LBS.putStr =<< go logMessage program
 
@@ -153,15 +154,15 @@ run lbdName config program = do
         interpret
           :: LambdaProgram a
           -> QiAWS a
-        interpret program =
-          case view program of
+        interpret program' =
+          case view program' of
 
             GetAppName :>>= is ->
               getAppName >>= interpret . is
 
 -- Http
-            Http request ms :>>= is ->
-              http request ms >>= interpret . is
+            Http req ms :>>= is ->
+              http req ms >>= interpret . is
 
 -- Amazonka
             AmazonkaSend cmd :>>= is ->
@@ -220,9 +221,9 @@ run lbdName config program = do
           :: Request
           -> ManagerSettings
           -> QiAWS (Response LBS.ByteString)
-        http request ms = liftIO $ do
-          manager <- newManager ms
-          httpLbs request manager
+        http req ms = liftIO $ do
+          mgr <- newManager ms
+          httpLbs req mgr
 
 -- Amazonka
         amazonkaSend

@@ -118,8 +118,8 @@ http
   :: Request
   -> ManagerSettings
   -> LambdaProgram (Response LBS.ByteString)
-http request =
-  singleton . Http request
+http req =
+  singleton . Http req
 
 -- Amazonka
 
