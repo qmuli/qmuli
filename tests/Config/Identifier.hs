@@ -3,20 +3,20 @@
 module Config.Identifier where
 
 import           Control.Lens
-import           Control.Monad                        (void)
 import           Control.Monad.State.Strict           (runState)
 import           Data.Default                         (def)
 import qualified Data.HashMap.Strict                  as SHM
-import           Test.Tasty.Hspec
-
+import           Protolude                            hiding (runState)
 import           Qi.Config.AWS                        (Config, namePrefix,
                                                        s3Config)
 import           Qi.Config.AWS.S3                     (s3Buckets,
                                                        s3idxIdToS3Bucket)
 import           Qi.Program.Config.Interface          (ConfigProgram, s3Bucket)
 import qualified Qi.Program.Config.Interpreters.Build as CB
+import           Test.Tasty.Hspec
 
 
+appName :: Text
 appName = "testName"
 
 configProgram :: ConfigProgram ()

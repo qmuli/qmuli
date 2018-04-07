@@ -15,13 +15,66 @@ extra-source-files:
   - README.md
   - stack.yaml
 
+default-extensions:
+  - NoImplicitPrelude
+  - OverloadedStrings
+
+dependencies:
+  - aeson
+  - aeson-pretty
+  - amazonka
+  - amazonka-cloudformation
+  - amazonka-cloudwatch-logs
+  - amazonka-cognito-identity
+  - amazonka-cognito-idp
+  - amazonka-core
+  - amazonka-dynamodb
+  - amazonka-iam
+  - amazonka-lambda
+  - amazonka-s3
+  - amazonka-s3-streaming
+  - base
+  - binary
+  - bytestring
+  - conduit
+  - conduit-extra
+  - data-default
+  - directory
+  - either
+  - exceptions
+  - executable-path
+  - jwt
+  - hashable
+  - heredoc
+  - http-client
+  - http-client-tls
+  - lens
+  - lens-aeson
+  - mtl
+  - protolude
+  - text
+  - time
+  - transformers
+  - transformers-base
+  - operational
+  - optparse-applicative
+  - process
+  - resourcet
+  - safe
+  - stm
+  - stratosphere
+  - system-extra
+  - turtle
+  - unix
+  - unordered-containers
+  - yaml
+  - extra
+  - ansi-terminal
+
 
 library:
   source-dirs:
     - src
-  default-extensions:
-    - NoImplicitPrelude
-    - OverloadedStrings
   exposed-modules:
     - Qi
     - Qi.Options
@@ -43,57 +96,6 @@ library:
     - Qi.Util.CustomCFResource
     - Qi.Util.DDB
     - Qi.Program.Config.Interpreters.Build
-  dependencies:
-    - aeson
-    - aeson-pretty
-    - amazonka
-    - amazonka-cloudformation
-    - amazonka-cloudwatch-logs
-    - amazonka-cognito-identity
-    - amazonka-cognito-idp
-    - amazonka-core
-    - amazonka-dynamodb
-    - amazonka-iam
-    - amazonka-lambda
-    - amazonka-s3
-    - amazonka-s3-streaming
-    - base
-    - binary
-    - bytestring
-    - conduit
-    - conduit-extra
-    - data-default
-    - directory
-    - either
-    - exceptions
-    - executable-path
-    - jwt
-    - hashable
-    - heredoc
-    - http-client
-    - http-client-tls
-    - lens
-    - lens-aeson
-    - mtl
-    - protolude
-    - text
-    - time
-    - transformers
-    - transformers-base
-    - operational
-    - optparse-applicative
-    - process
-    - resourcet
-    - safe
-    - stm
-    - stratosphere
-    - system-extra
-    - turtle
-    - unix
-    - unordered-containers
-    - yaml
-    - extra
-    - ansi-terminal
 
 flags:
   build-examples:
@@ -171,17 +173,7 @@ tests:
     source-dirs:
       - tests
     dependencies:
-      - aeson
-      - aeson-pretty
-      - base
-      - bytestring
-      - data-default
-      - heredoc
-      - lens
-      - lens-aeson
-      - mtl
       - qmuli
-      - stratosphere
       - tasty
       - tasty-hspec
       - text

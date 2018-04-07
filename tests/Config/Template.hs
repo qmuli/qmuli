@@ -9,6 +9,7 @@ import           Test.Tasty.Hspec
 import           Qi.Program.Config.Interface (ConfigProgram, api, apiResource)
 
 import           Config                      (getConfig, getTemplate)
+import           Protolude
 import           Util
 
 

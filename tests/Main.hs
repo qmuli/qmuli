@@ -14,6 +14,7 @@ import qualified Config.DDB.Simple                as DDB.Simple
 import qualified Config.DDB.Stream                as DDB.Stream
 import qualified Config.Identifier                as Id
 import qualified Config.Template                  as Template
+import           Protolude
 
 main :: IO ()
 main = do

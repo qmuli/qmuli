@@ -11,14 +11,14 @@ import           Data.Aeson.Encode.Pretty    (encodePretty)
 import           Data.Aeson.Lens             (key, nth)
 import qualified Data.ByteString.Lazy.Char8  as LBS
 import           Data.Default                (def)
-import           Test.Tasty.Hspec
-
 import           Qi.Config.AWS.DDB           (DdbAttrDef (..), DdbAttrType (..),
                                               DdbProvCap (..))
 import           Qi.Program.Config.Interface (ConfigProgram, ddbTable)
+import           Test.Tasty.Hspec
 
 import           Config                      (getConfig, getOutputs,
                                               getResources, getTemplate)
+import           Protolude
 import           Util
 
 
@@ -29,11 +29,12 @@ configProgram = do
   return ()
 
 
-expectedDdbTableLogicalName = "thingsDynamoDBTable"
 
 spec :: Spec
 spec = describe "Template" $ do
     let template = getTemplate $ getConfig configProgram
+        expectedDdbTableLogicalName = "thingsDynamoDBTable"
+
     it "saves test template" $
       LBS.writeFile "tests/artifacts/ddb_simple_test_template.json" $ encodePretty template
 

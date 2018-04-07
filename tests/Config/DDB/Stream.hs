@@ -21,6 +21,7 @@ import           Qi.Program.Lambda.Interface (DdbStreamLambdaProgram)
 
 import           Config                      (getConfig, getOutputs,
                                               getResources, getTemplate)
+import           Protolude
 import           Util
 
 
@@ -33,7 +34,7 @@ handler
   :: DdbStreamLambdaProgram
 handler _ = undefined
 
-
+expectedLambdaPhysicalName, expectedDdbTableLogicalName, expectedDdbTableEventSourceMappingLogicalName :: Text
 expectedLambdaPhysicalName = "testApp_ddbStreamLambda"
 expectedDdbTableLogicalName = "thingsDynamoDBTable"
 expectedDdbTableEventSourceMappingLogicalName = "thingsDynamoDBTableEventSourceMapping"
