@@ -21,15 +21,15 @@ packages:
   extra-dep: true
 
 extra-deps:
-  - aeson-1.2.3.0
-    #  - stratosphere-0.21.0
+  - aeson-1.3.0.0
+  - text-1.2.3.0
 
 flags: {}
 
 extra-package-dbs: []
 
 ghc-options:
-  "$locals": 
+  "qmuli": 
     # -O*
     # -funfolding-use-threshold=16 -O2 -optc-O3
     -O

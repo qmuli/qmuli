@@ -23,12 +23,12 @@ main = do
 
   where
     specs = [
-        testSpec "Template"    Template.spec
-      , testSpec "Identifier"  Id.spec
+        testSpec "Template"                   Template.spec
+      , testSpec "Identifier"                 Id.spec
       , testSpec "ApiGw Simple"               ApiGw.Simple.spec
       , testSpec "ApiGw UserPools Authorizer" ApiGw.UserPoolsAuthorizer.spec
-      , testSpec "DDB Simple"               DDB.Simple.spec
-      , testSpec "DDB Stream"               DDB.Stream.spec
+      , testSpec "DDB Simple"                 DDB.Simple.spec
+      , testSpec "DDB Stream"                 DDB.Stream.spec
       ]
 
 {- decode json `shouldBe` Just createEvent -}

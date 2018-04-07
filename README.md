@@ -5,7 +5,7 @@ pronounced as [**cumuli**: plural for heap, accumulation](http://www.merriam-web
 ![CircleCI Status](https://circleci.com/gh/qmuli/qmuli.svg?style=shield&circle-token=:circle-token)
 
 
-###TL;DR: [Serverless AWS framework](https://serverless.com/) for [Haskell](https://www.haskell.org/)
+#### TL;DR: [Serverless AWS framework](https://serverless.com/) for [Haskell](https://www.haskell.org/)
 
 
 Purpose
@@ -119,12 +119,10 @@ Note: for how to use currently available functionality and AWS integrations, see
 Getting started
 ---------------
 
-Thanks to [the recent addition of a dockerized Lambda build](https://github.com/qmuli/qmuli/pull/5/commits), a qmulus **now does not need** to be 
-built on an Amazon Linux AMI in order to be compatible with running it on AWS Lambda. One only needs a system with `stack` and `docker` installed in 
-order to build everything necessary for a successful deployment.
+A qmulus does not necessarily need to be built on Amazon Linux AMI in order to be compatible with running it on AWS Lambda. One only needs a system with `stack` and `docker` installed in order to build everything necessary for deployment.
 
 
-###Clone and build the library and examples
+### Clone and build the library and examples
 ```sh
 git clone --recursive -j8 https://github.com/qmuli/qmuli.git
 cd qmuli
@@ -132,7 +130,7 @@ cd qmuli
 stack install
 ```
 
-###Running an example
+### Running an example
 The above example is available as the "simple-s3-copy" qmulus.
 
 The `simple-s3-copy <my-globally-unique-name> cf deploy` command does the following:
@@ -165,7 +163,7 @@ To updates all lambdas with the current code separately from updating the CF sta
 `simple-s3-copy <same-globally-unique-name-as-above> lbd update`
 
 
-###NOTE: commands below are dangerous because they destroy all the CF stack resources including S3 buckets and their content
+### NOTE: commands below are dangerous because they destroy all the CF stack resources including S3 buckets and their content
 
 To destroy a stack:
 
@@ -179,7 +177,7 @@ To cycle a stack: destroy it, rebuild, deploy and re-create:
 this command is useful when doing iterative development on a qmulus 
 
 
-###Troubleshooting
+### Troubleshooting
 In case if lambda function suddenly starts timing out, pay close attention to the lambda memory consumption. Sometimes a log message containing `c_poll: permission denied` may appear. Try increasing the lambda function's provisioned memory size.
 
 
@@ -208,3 +206,4 @@ Big kudos to
 [amazonka](https://github.com/brendanhay/amazonka) package
 
 as well as to wonderful Haskell community, without whom the task of creating Qmuli would be very hard to impossible.
+
