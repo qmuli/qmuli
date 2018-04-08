@@ -19,7 +19,6 @@ import           Network.AWS.DynamoDB.PutItem
 import           Network.AWS.DynamoDB.Query
 import           Network.AWS.DynamoDB.Scan
 import           Network.HTTP.Client
-
 import           Protolude
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.CF
@@ -27,12 +26,11 @@ import           Qi.Config.AWS.CW
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier            (DdbTableId)
+import           Qi.Core.Curry
 
 
-type LambdaProgram = Program LambdaInstruction
-
-type CompleteLambdaProgram = LambdaProgram LBS.ByteString
-
+type LambdaProgram          = Program LambdaInstruction
+type CompleteLambdaProgram  = LambdaProgram LBS.ByteString
 type GenericLambdaProgram   = Value           -> CompleteLambdaProgram
 type ApiLambdaProgram       = ApiMethodEvent  -> CompleteLambdaProgram
 type S3LambdaProgram        = S3Event         -> CompleteLambdaProgram
@@ -112,14 +110,14 @@ data LambdaInstruction a where
 getAppName
   :: LambdaProgram Text
 getAppName =
-  singleton $ GetAppName
+  singleton GetAppName
 
 http
   :: Request
   -> ManagerSettings
   -> LambdaProgram (Response LBS.ByteString)
-http req =
-  singleton . Http req
+http =
+  singleton .: Http
 
 -- Amazonka
 
@@ -141,20 +139,20 @@ streamFromS3Object
   :: S3Object
   -> (Sink BS.ByteString LambdaProgram a)
   -> LambdaProgram a
-streamFromS3Object s3Obj = singleton . StreamFromS3Object s3Obj
+streamFromS3Object = singleton .: StreamFromS3Object
 
 streamS3Objects
     :: S3Object
     -> S3Object
     -> Conduit BS.ByteString LambdaProgram BS.ByteString
     -> LambdaProgram ()
-streamS3Objects inS3Obj outS3Obj = singleton . StreamS3Objects inS3Obj outS3Obj
+streamS3Objects = singleton .:: StreamS3Objects
 
 putS3ObjectContent
   :: S3Object
   -> LBS.ByteString
   -> LambdaProgram ()
-putS3ObjectContent s3Obj = singleton . PutS3ObjectContent s3Obj
+putS3ObjectContent = singleton .: PutS3ObjectContent
 
 
 -- DDB
@@ -169,24 +167,24 @@ queryDdbRecords
   -> Maybe Text
   -> DdbAttrs
   -> LambdaProgram QueryResponse
-queryDdbRecords ddbTableId keyCond = singleton . QueryDdbRecords ddbTableId keyCond
+queryDdbRecords = singleton .:: QueryDdbRecords
 
 getDdbRecord
   :: DdbTableId
   -> DdbAttrs
   -> LambdaProgram GetItemResponse
-getDdbRecord ddbTableId = singleton . GetDdbRecord ddbTableId
+getDdbRecord = singleton .: GetDdbRecord
 
 putDdbRecord :: DdbTableId
   -> DdbAttrs
   -> LambdaProgram PutItemResponse
-putDdbRecord ddbTableId = singleton . PutDdbRecord ddbTableId
+putDdbRecord = singleton .: PutDdbRecord
 
 deleteDdbRecord
   :: DdbTableId
   -> DdbAttrs
   -> LambdaProgram DeleteItemResponse
-deleteDdbRecord ddbTableId = singleton . DeleteDdbRecord ddbTableId
+deleteDdbRecord = singleton .: DeleteDdbRecord
 
 
 -- Util

@@ -59,6 +59,7 @@ dependencies:
   - operational
   - optparse-applicative
   - process
+  - protolude
   - resourcet
   - safe
   - stm
@@ -88,6 +89,7 @@ library:
     - Qi.Config.AWS.S3
     - Qi.Config.CF
     - Qi.Config.Identifier
+    - Qi.Core.Curry
     - Qi.Program.Lambda.Interface
     - Qi.Program.Config.Interface
     - Qi.Util
