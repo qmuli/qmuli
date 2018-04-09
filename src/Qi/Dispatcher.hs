@@ -145,7 +145,7 @@ destroyCfStack action =
 
 cycleStack :: Dispatcher ()
 cycleStack = do
-    destroyCfStack $ do
+    destroyCfStack $
       deployApp
     createCfStack
     printSuccess "all done!"

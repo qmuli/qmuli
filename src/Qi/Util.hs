@@ -14,6 +14,7 @@ import qualified Data.Text                   as T
 import           Data.Time.Clock.POSIX       (getPOSIXTime)
 import           Protolude
 import           System.Console.ANSI
+import qualified System.Process              as P
 
 import           Qi.Program.Lambda.Interface (CompleteLambdaProgram)
 
@@ -110,3 +111,8 @@ time label action = do
         putStr $ label ++ " - turnaround in milliseconds: "
         print (after - before)
       return x
+
+callProcess :: [Char] -> [[Char]] -> IO ()
+callProcess pname args = do
+  printSuccess $ "running '" <> toS pname <> "' with args: " <> show args <> " ..."
+  P.callProcess pname args

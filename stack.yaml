@@ -1,5 +1,5 @@
 #resolver: lts-11.3
-#resolver: nightly-2018-01-01
+resolver: nightly-2018-01-01
 
 
 
@@ -12,7 +12,7 @@ packages:
 
 - location:
     git: https://github.com/abailly/system-extra.git
-    commit: 6223138579dc3473cbf84fa323af64380db114cf
+    commit: 4091624e191c8e2bcd4bbdffebee53e655377bdb
   extra-dep: true
     
 - location:

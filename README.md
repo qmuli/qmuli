@@ -133,7 +133,7 @@ stack install
 ### Running an example
 The above example is available as the "simple-s3-copy" qmulus.
 
-The `simple-s3-copy <my-globally-unique-name> cf deploy` command does the following:
+The `simple-s3-copy cf deploy <globally-unique-app-name>` command does the following:
 
 - generates the CloudFormation (CF) json template
 - packages/zips up the executable to be used by lambda
@@ -142,7 +142,7 @@ The `simple-s3-copy <my-globally-unique-name> cf deploy` command does the follow
 
 After that is deployed, just create a new CF stack:
 
-`simple-s3-copy <same-globally-unique-name-as-above> cf create`
+`simple-s3-copy cf create <globally-unique-app-name>`
 
 And voila, you should now have the example deployed and working.
 Try uploading a small file into the 'incoming' bucket, you should see the same file copied automatically to the 'outgoing' bucket.
@@ -150,29 +150,29 @@ Try uploading a small file into the 'incoming' bucket, you should see the same f
 
 To monitor the status of the stack and view the stack outputs:
 
-`simple-s3-copy <same-globally-unique-name-as-above> cf describe`
+`simple-s3-copy cf describe <globally-unique-app-name>`
 
 
 To deploy updates to CF stack:
 
-`simple-s3-copy <same-globally-unique-name-as-above> cf update` (this also implicitly updates all lambdas with the current code)
+`simple-s3-copy cf update <globally-unique-app-name>` (this also implicitly updates all lambdas with the current code)
 
 
 To updates all lambdas with the current code separately from updating the CF stack:
 
-`simple-s3-copy <same-globally-unique-name-as-above> lbd update`
+`simple-s3-copy lbd update <globally-unique-app-name>`
 
 
 ### NOTE: commands below are dangerous because they destroy all the CF stack resources including S3 buckets and their content
 
 To destroy a stack:
 
-`simple-s3-copy <same-globally-unique-name-as-above> cf destroy`
+`simple-s3-copy cf destroy <globally-unique-app-name>`
 
 
 To cycle a stack: destroy it, rebuild, deploy and re-create:
 
-`simple-s3-copy <same-globally-unique-name-as-above> cf cycle`
+`simple-s3-copy cf cycle <globally-unique-app-name>`
 
 this command is useful when doing iterative development on a qmulus 
 
