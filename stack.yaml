@@ -1,20 +1,16 @@
 #resolver: lts-11.3
 resolver: nightly-2018-01-01
 
-
-
 packages:
 - '.'
 - location:
     git: https://github.com/frontrowed/stratosphere.git
-    commit: 1df7b9b215c231d0e3b93e81ed3dcc842d887c78
+    commit: b1779bae2d32b432095f9f4ba97f8f12450b002d
   extra-dep: true
-
 - location:
     git: https://github.com/abailly/system-extra.git
     commit: 4091624e191c8e2bcd4bbdffebee53e655377bdb
   extra-dep: true
-    
 - location:
     git: https://github.com/ababkin/amazonka-s3-streaming.git
     commit: 4fc25d1b20007bef3b8b2924751fe0fc3033e1f5
