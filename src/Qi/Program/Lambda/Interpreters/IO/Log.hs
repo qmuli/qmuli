@@ -22,8 +22,7 @@ import           Data.Binary.Builder        (fromLazyByteString,
 import qualified Data.ByteString.Char8      as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Conduit               (Conduit, Sink, awaitForever,
-                                             transPipe, unwrapResumable, yield,
-                                             ($$), (=$=))
+                                             transPipe, yield, ($$), (=$=))
 import qualified Data.Conduit.List          as CL
 import           Data.Default               (def)
 import           Data.List.NonEmpty         (NonEmpty)

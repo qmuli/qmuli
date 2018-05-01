@@ -56,7 +56,7 @@ data LambdaInstruction a where
   GetS3ObjectContent
     :: S3Object
     -> LambdaInstruction LBS.ByteString
-
+{-
   StreamFromS3Object
     :: S3Object
     -> (Sink BS.ByteString LambdaProgram a)
@@ -67,7 +67,7 @@ data LambdaInstruction a where
     -> S3Object
     -> Conduit BS.ByteString LambdaProgram BS.ByteString
     -> LambdaInstruction ()
-
+-}
   PutS3ObjectContent
     :: S3Object
     -> LBS.ByteString
@@ -134,7 +134,7 @@ getS3ObjectContent
   :: S3Object
   -> LambdaProgram LBS.ByteString
 getS3ObjectContent = singleton . GetS3ObjectContent
-
+{-
 streamFromS3Object
   :: S3Object
   -> (Sink BS.ByteString LambdaProgram a)
@@ -147,7 +147,7 @@ streamS3Objects
     -> Conduit BS.ByteString LambdaProgram BS.ByteString
     -> LambdaProgram ()
 streamS3Objects = singleton .:: StreamS3Objects
-
+-}
 putS3ObjectContent
   :: S3Object
   -> LBS.ByteString

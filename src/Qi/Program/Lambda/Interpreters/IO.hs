@@ -32,8 +32,7 @@ import qualified Data.ByteString.Char8                 as BS
 import qualified Data.ByteString.Lazy.Char8            as LBS
 import           Data.Conduit                          (Conduit, Sink,
                                                         awaitForever, transPipe,
-                                                        unwrapResumable, yield,
-                                                        ($$), (=$=))
+                                                        yield, ($$), (=$=))
 import           Data.Conduit.Binary                   (sinkLbs)
 import qualified Data.Conduit.List                     as CL
 import           Data.Default                          (def)
@@ -49,7 +48,7 @@ import           Network.AWS.Data.Body                 (RsBody (..), fuseStream)
 import           Network.AWS.DynamoDB
 import           Network.AWS.S3
 import           Network.AWS.S3.CreateMultipartUpload
-import           Network.AWS.S3.StreamingUpload
+--import           Network.AWS.S3.StreamingUpload
 import           Network.HTTP.Client                   (ManagerSettings,
                                                         Request, Response,
                                                         httpLbs, newManager)
@@ -80,14 +79,15 @@ newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
     , MonadCatch
     , MonadThrow
     , MonadResource
-    , MonadBase IO
+    --, MonadBase IO
     , MonadReader Env
     , MonadAWS
     )
 
+{-
 liftAWSFromResourceIO :: ResourceT IO a -> QiAWS a
 liftAWSFromResourceIO = liftAWS . lift
-
+-}
 
 data LoggerType = NoLogger | StdOutLogger | CwLogger
 
@@ -171,13 +171,13 @@ run name config program = do
 -- S3
             GetS3ObjectContent s3Obj :>>= is ->
               getS3ObjectContent s3Obj >>= interpret . is
-
+{-
             StreamFromS3Object s3Obj sink :>>= is ->
               streamFromS3Object s3Obj sink >>= interpret . is
 
             StreamS3Objects inS3Obj outS3Obj conduit :>>= is ->
               streamS3Objects inS3Obj outS3Obj conduit >>= interpret . is
-
+-}
             PutS3ObjectContent s3Obj content :>>= is ->
               putS3ObjectContent s3Obj content >>= interpret . is
 
@@ -240,7 +240,7 @@ run name config program = do
           let bucketName = getPhysicalName config $ getById config _s3oBucketId
           r <- send . getObject (BucketName bucketName) $ ObjectKey objKey
           sinkBody (r ^. gorsBody) sinkLbs
-
+{-
         streamFromS3Object
           :: S3Object
           -> (Sink BS.ByteString LambdaProgram a)
@@ -275,7 +275,7 @@ run name config program = do
                 {- ) -}
 
             {- void $ source =$= conduit $$ sink -}
-
+-}
         putS3ObjectContent
           :: S3Object
           -> LBS.ByteString
