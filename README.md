@@ -43,9 +43,9 @@ to `incoming` bucket into the `outgoing` bucket:
 
 In order to accomplish this with regular tools provided by AWS, we would create these resources using one of 3 methods:
 
-- using the AWS console
-- using the AWS command line interface (CLI)
-- using CloudFormation template
+- AWS console
+- AWS command line interface (CLI)
+- CloudFormation template
 
 Using console is great for beginners to learn how to provision resources or for quick ad-hoc changes, but involves lots of clicking around
 and therefore is not very practical for non-trivial deployments and hard to replicate exactly.
@@ -137,7 +137,7 @@ The `simple-s3-copy cf deploy <globally-unique-app-name>` command does the follo
 
 - generates the CloudFormation (CF) json template
 - packages/zips up the executable to be used by lambda
-- uploads those to the qmulus S3 bucket (named with <my-unique-name>)
+- uploads those to the qmulus S3 bucket (named with `<my-unique-name>`)
 
 
 After that is deployed, just create a new CF stack:
@@ -205,5 +205,5 @@ Big kudos to
 * Brendan Hay ([@brendanhay](https://github.com/brendanhay)), the creator and maintainer of the
 [amazonka](https://github.com/brendanhay/amazonka) package
 
-as well as to wonderful Haskell community, without whom the task of creating Qmuli would be very hard to impossible.
+and to the wonderful Haskell community.
 

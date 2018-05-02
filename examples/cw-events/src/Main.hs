@@ -8,7 +8,7 @@ module Main where
 import           Control.Lens
 import           Control.Monad               (void)
 import           Data.Default                (def)
-
+import           Protolude
 import           Qi                          (withConfig)
 import           Qi.Config.AWS.CW            (CwEventsRuleProfile (ScheduledEventProfile))
 import           Qi.Program.Config.Interface (ConfigProgram, cwEventLambda)

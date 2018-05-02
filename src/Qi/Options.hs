@@ -120,7 +120,7 @@ lbdCmd =
   $ info lbdUpdateParser
   $ fullDesc <> progDesc "Perform Lambda operations"
   where
-    lbdUpdateParser = hsubparser (lbdUpdate)
+    lbdUpdateParser = hsubparser (lbdUpdate <> lbdSendEvent)
 
     lbdUpdate :: Mod CommandFields Command
     lbdUpdate =
@@ -128,6 +128,23 @@ lbdCmd =
       $ info (pure LbdUpdate)
       $ fullDesc <> progDesc "Update Lambda"
 
+    lbdSendEvent :: Mod CommandFields Command
+    lbdSendEvent =
+        command "execute"
+      $ info (LbdSendEvent <$> lambdaNameOption <*> lambdaPayloadOption)
+      $ fullDesc <> progDesc "Send Event to Lambda"
+
+lambdaNameOption :: Parser Text
+lambdaNameOption = strOption $
+  long "lambda-name"
+    <> metavar "LAMBDA_NAME"
+    <> help "Name of the Lambda function to call"
+
+lambdaPayloadOption :: Parser Text
+lambdaPayloadOption = strOption $
+  long "lambda-payload"
+    <> metavar "LAMBDA_PAYLOAD"
+    <> help "Event payload for the Lambda function call"
 
 -- | A version of 'execParser' which shows full help on error.
 --

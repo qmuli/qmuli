@@ -23,9 +23,24 @@ build srcDir exeTarget = do
   -- build executable with docker
   printPending $ "building with srcDir: '" <> toS srcDir <> "' and exeTarget: '" <> exeTarget <> "' ..."
   exe <- stackInDocker (ImageName $ toS imageName) srcDir (SimpleTarget $ toS exeTarget)
+
+  let buildDir = srcDir <> "/.build"
+  -- ensure hidden build dir exists
+  createDirectoryIfMissing True buildDir
+
+  -- move and rename the exe to the .build dir
+  let lambdaPath = buildDir <> "/lambda"
+  renameFile exe lambdaPath
+  setFileMode lambdaPath executableByAll
+
   -- pack executable with js shim in .zip file
-  packLambda exe "lambda"
-  return "lambda.zip"
+  let archivePath = buildDir <> "/lambda.zip"
+      jsShimPath  = buildDir <> "/index.js"
+  writeFile jsShimPath [there|./js/index.js|]
+  callProcess "zip" $ [ "-j", archivePath, jsShimPath, lambdaPath ]
+
+  pure archivePath
+
     where
       buildDocker :: Text -> IO ()
       buildDocker imageName = callProcess "docker" ["build", "-t", toS imageName, "ghc-centos" ]
@@ -36,9 +51,3 @@ build srcDir exeTarget = do
                                                           , otherReadMode, otherExecuteMode
                                                           ]
 
-      packLambda :: FilePath -> FilePath -> IO ()
-      packLambda source target = do
-        writeFile "index.js" [there|./js/index.js|]
-        copyFile source target
-        target `setFileMode` executableByAll
-        callProcess "zip" $ [ "lambda.zip", "index.js" , target ]

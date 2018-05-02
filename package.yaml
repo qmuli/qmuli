@@ -101,8 +101,8 @@ library:
 
 flags:
   build-examples:
-    description: "Skip building examples"
-    default: false
+    description: "Build examples"
+    default: true
     manual: true
 
 
@@ -120,12 +120,20 @@ executables:
       else:
         buildable: false
 
-  # qmuli-fold-s3-content:
-    # main: Main.hs
-    # source-dirs: examples/fold-s3-content/src
-    # dependencies:
-      # - base >= 4.8 && < 5
-      # - qmuli
+        #  qmuli-fold-s3-content:
+        #    main: Main.hs
+        #    source-dirs: examples/fold-s3-content/src
+        #    dependencies:
+        #      - base
+        #      - qmuli
+        #    when:    
+        #    - condition: flag(build-examples)
+        #      then:
+        #        buildable: true
+        #      else:
+        #        buildable: false
+
+
   # qmuli-stream-s3-objects:
     # main: Main.hs
     # source-dirs: examples/stream-s3-objects/src
@@ -162,13 +170,19 @@ executables:
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-  # qmuli-cw-events:
-    # main: Main.hs
-    # source-dirs: examples/cw-events/src
-    # dependencies:
-      # - base >= 4.8 && < 5
-      # - qmuli
 
+  qmuli-cw-events:
+    main: Main.hs
+    source-dirs: examples/cw-events/src
+    dependencies:
+      - base
+      - qmuli
+    when:
+    - condition: flag(build-examples)
+      then:
+        buildable: true
+      else:
+        buildable: false
 tests:
   tasty:
     main: Main.hs

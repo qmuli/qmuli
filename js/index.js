@@ -15,17 +15,17 @@ exports.handler = function(event, context, callback) {
   // from the composite AWS lambda name (separated by '_')
   const appName = prefixedLambdaName.split('_', 1);
   const lbdName = prefixedLambdaName.split('_').slice(1);
-  const input = JSON.stringify(event)
+  const payload = JSON.stringify(event)
     .replace(/\\/g, "\\\\")
     .replace(/\$/g, "\\$")
     .replace(/'/g, "\\'")
     .replace(/"/g, "\\\"");
 
-  console.log('input: \"', input, '\"')
+  console.log('lambda payload: \"', payload, '\"')
 
   // the executable built in the AWS environment using Docker will always
   // be named 'lambda'
-  const command = './lambda ' + appName + ' lbd ' + lbdName + ' \"' + input + '\"';
+  const command = './lambda ' + appName + ' lbd execute --lambda-name ' + lbdName + ' --lambda-payload \"' + payload + '\"';
   exec(command, {maxBuffer: maxBuffer}, (error, stdout, stderr) => {
     console.log('stdout: \"' + stdout + '\"');
     console.log('stderr: \"' + stderr + '\"');
