@@ -10,13 +10,14 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict  as SHM
 import qualified Data.Text            as T
 import           Protolude            hiding (getAll)
-import           Stratosphere         hiding (name)
+import           Stratosphere
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.CW
 import qualified Qi.Config.CF.Role    as Role
 
 
+toResources :: Config -> Resources
 toResources config = Resources . map toResource $ getAll config
   where
     toResource rule =

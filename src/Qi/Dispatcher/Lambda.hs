@@ -41,33 +41,36 @@ invoke
   :: Text
   -> Text
   -> ReaderT Config IO ()
-invoke name event = do
+invoke name evt = do
   config <- ask
   liftIO $ do
     case SHM.lookup name $ lbdIOMap config of
       Nothing ->
         putStrLn $ "No lambda with name '" <> name <> "' was found"
       Just lbdIO ->
-        lbdIO event
+        lbdIO evt
 
+lbdIOMap
+  :: Config
+  -> SHM.HashMap Text (Text -> IO ())
 lbdIOMap config = SHM.fromList $ map toLbdIOPair $ getAll config
   where
     toLbdIOPair
       :: Lambda
       -> (Text, Text -> IO ())
-    toLbdIOPair lbd = (name, lbdIO name lbd)
+    toLbdIOPair l = (name, lbdIO name l)
       where
-        name = lbd^.lbdName
+        name = l^.lbdName
 
         lbdIO
           :: Text
           -> Lambda
           -> Text
           -> IO ()
-        lbdIO name lbd eventJson =
+        lbdIO name' lbd eventJson =
           either
             (\err -> panic $ "Could not parse event: " <> eventJson <> ", error was: " <> toS err)
-            (LIO.run name config)
+            (LIO.run name' config)
             (parseLambdaEvent lbd eventJson)
 
     parseLambdaEvent
@@ -79,7 +82,7 @@ lbdIOMap config = SHM.fromList $ map toLbdIOPair $ getAll config
       _lbdGenericLambdaProgram <$> (eitherDecode (toS eventJson) :: Either [Char] Value)
 
     parseLambdaEvent S3BucketLambda{_lbdS3BucketLambdaProgram} eventJson =
-      _lbdS3BucketLambdaProgram <$> (parseEither (`S3Event.parse` config) =<< eitherDecode (toS eventJson))
+      _lbdS3BucketLambdaProgram <$> (parseEither (S3Event.parse config) =<< eitherDecode (toS eventJson))
 
     parseLambdaEvent ApiLambda{_lbdApiMethodLambdaProgram} eventJson =
       _lbdApiMethodLambdaProgram <$> (parseEither (ApiMethodEvent.parse config) =<< eitherDecode (toS eventJson))

@@ -15,12 +15,12 @@ import           Network.AWS.S3               (BucketName (BucketName),
                                                ObjectKey (ObjectKey), bName,
                                                dObjects, dQuiet, delete',
                                                deleteObjects, lbrsBuckets,
-                                               listObjectsV, lrsContents, oKey,
-                                               objectIdentifier)
+                                               listObjectsV2, lovrsContents,
+                                               oKey, objectIdentifier)
 import qualified Network.AWS.S3               as S3
 import           Network.AWS.S3.DeleteObjects
 import           Network.AWS.S3.ListBuckets
-import           Network.AWS.S3.ListObjectsV
+import           Network.AWS.S3.ListObjectsV2
 import           Protolude
 
 
@@ -50,7 +50,7 @@ clearBuckets names = do
 
   forM_ filteredBucketNames $ \bucketName@(BucketName name) -> do
     liftIO $ putStrLn $ "cleaning up bucket: " ++ T.unpack name ++ "..."
-    objectKeys <- map (^.oKey) . (^.lrsContents) <$> send (listObjectsV bucketName)
+    objectKeys <- map (^.oKey) . (^.lovrsContents) <$> send (listObjectsV2 bucketName)
     if null objectKeys
       then
         return ()

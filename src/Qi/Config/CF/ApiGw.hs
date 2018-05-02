@@ -11,11 +11,6 @@ import qualified Data.ByteString.Lazy                        as LBS
 import qualified Data.HashMap.Strict                         as SHM
 import qualified Data.Text                                   as T
 import           Protolude
-import           Stratosphere                                hiding (Delete,
-                                                              name)
-import           Stratosphere.Types                          (AuthorizerType (..))
-import           Text.Heredoc
-
 import           Qi.Config.AWS
 import           Qi.Config.AWS.ApiGw
 import qualified Qi.Config.AWS.ApiGw.ApiAuthorizer.Accessors as ApiAuthorizer
@@ -25,46 +20,49 @@ import           Qi.Config.AWS.ApiGw.ApiMethod.Profile       (ampAuthId)
 import qualified Qi.Config.AWS.ApiGw.ApiResource.Accessors   as ApiResource
 import qualified Qi.Config.AWS.Lambda.Accessors              as Lambda
 import           Qi.Config.Identifier
+import           Stratosphere                                hiding (Delete)
+import           Stratosphere.Types                          (AuthorizerType (..))
+import           Text.Heredoc
 
 
+toResources :: Config -> Resources
 toResources config = Resources . foldMap toStagedApiResources $ getAllWithIds config
 
   where
     jsonContentType = "application/json"
 
     toStagedApiResources :: (ApiId, Api) -> [Resource]
-    toStagedApiResources (aid, api) = deploymentResource:apiResources
+    toStagedApiResources (apiid, api) = deploymentResource:apiResources
       where
-        apiResources = [ apiResource ]
-          ++ map toApiAuthorizers (ApiAuthorizer.getChildren aid config)
-          ++ foldMap toApiChildResources (ApiResource.getChildren (Left aid) config)
+        apiResources = [ apiRes ]
+          <> map toApiAuthorizers (ApiAuthorizer.getChildren apiid config)
+          <> foldMap toApiChildResources (ApiResource.getChildren (Left apiid) config)
 
         apiLName = getLogicalName config api
 
-        apiResource = (
+        apiRes = (
           resource apiLName $
             ApiGatewayRestApiProperties $
-            apiGatewayRestApi
-            & agraName ?~ Literal (api ^. aName)
+              apiGatewayRestApi
+              & agraName ?~ Literal (api ^. aName)
           )
 
         deploymentResource :: Resource
         deploymentResource = (
             resource name $
               ApiGatewayDeploymentProperties $
-              apiGatewayDeployment
-                (Ref apiLName)
+                apiGatewayDeployment (Ref apiLName)
                 & agdStageName ?~ "v1"
           )
-          & dependsOn ?~ deps
+          & resourceDependsOn ?~ deps
 
           where
             name = ApiDeployment.getLogicalName api
-            deps = map (^. resName) apiResources
+            deps = map (^. resourceName) apiResources
 
 
         toApiAuthorizers :: ApiAuthorizerId -> Resource
-        toApiAuthorizers aaid = (
+        toApiAuthorizers apiaid = (
           resource name $
             ApiGatewayAuthorizerProperties $
               apiGatewayAuthorizer (Ref apiLName)
@@ -73,7 +71,7 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllWithIds co
               & agaType ?~ Literal COGNITO_USER_POOLS_AUTH
               & agaIdentitySource ?~ "method.request.header.Authorization"
           )
-          {- & dependsOn ?~ [cognitoLName] -}
+          {- & resourceDependsOn ?~ [cognitoLName] -}
 
           where
             userPoolArn = Join "" [
@@ -86,8 +84,8 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllWithIds co
               ]
             userPoolPhysicalId = GetAtt cognitoLName "UserPoolId"
 
-            name = getLogicalName config $ getById config aaid
-            auth = getById config aaid
+            name = getLogicalName config $ getById config apiaid
+            auth = getById config apiaid
             cognito = getById config (auth^.aaCognitoId)
             cognitoLName = getLogicalName config cognito
 
@@ -200,7 +198,7 @@ toResources config = Resources . foldMap toStagedApiResources $ getAllWithIds co
                     & agmeMethodResponses ?~ methodResponses
 
               )
-              & dependsOn ?~ [
+              & resourceDependsOn ?~ [
                     lbdLName
                   , lbdPermLName
                   ]
@@ -329,7 +327,7 @@ toOutputs config =
     toApiOutput (_, api) =
       output (T.concat [apiLName, "URL"])
         apiUrl
-        & description ?~ "RestApi URL"
+        & outputDescription ?~ "RestApi URL"
 
       where
         -- https://{restapi_id}.execute-api.{region}.amazonaws.com/{stage_name}/

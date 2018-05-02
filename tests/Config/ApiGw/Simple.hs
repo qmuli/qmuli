@@ -11,15 +11,15 @@ import           Data.Aeson.Encode.Pretty    (encodePretty)
 import           Data.Aeson.Lens             (key, nth)
 import qualified Data.ByteString.Lazy.Char8  as LBS
 import           Data.Default                (def)
-import           Test.Tasty.Hspec
-
 import           Qi.Config.AWS.ApiGw         (ApiVerb (Get))
 import           Qi.Program.Config.Interface (ConfigProgram, api,
                                               apiMethodLambda, apiResource)
 import           Qi.Program.Lambda.Interface (ApiLambdaProgram)
+import           Test.Tasty.Hspec
 
 import           Config                      (getConfig, getOutputs,
                                               getResources, getTemplate)
+import           Protolude
 import           Util
 
 
@@ -35,18 +35,19 @@ dummyLambda
 dummyLambda _ = undefined
 
 
-expectedApiDeploymentLogicalName  = "worldApiDeployment"
-expectedApiLogicalName            = "worldApi"
-expectedApiResourceLogicalName    = "thingsApiResource"
-expectedApiMethodLogicalName      = "thingsGet"
-expectedCorsMethodLogicalName     = "thingsOptions"
 
-expectedLambdaLogicalName = "dummyLambdaLambda"
 
 
 spec :: Spec
 spec = describe "Template" $ do
     let template = getTemplate $ getConfig configProgram
+        expectedApiDeploymentLogicalName  = "worldApiDeployment"
+        expectedApiLogicalName            = "worldApi"
+        expectedApiResourceLogicalName    = "thingsApiResource"
+        expectedApiMethodLogicalName      = "thingsGet"
+        expectedCorsMethodLogicalName     = "thingsOptions"
+        expectedLambdaLogicalName         = "dummyLambdaLambda"
+
     it "saves test template" $
       LBS.writeFile "tests/artifacts/apigw_simple_test_template.json" $ encodePretty template
 

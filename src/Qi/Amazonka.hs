@@ -9,6 +9,7 @@ import           Control.Monad.Trans.AWS (runAWST, send)
 import           Data.Aeson              (FromJSON (..), Value (Object),
                                           eitherDecode, (.:))
 import           Data.Aeson.Types        (typeMismatch, withObject)
+import qualified Data.ByteString.Lazy    as LBS
 import           Data.Either             (either)
 import           Network.AWS             hiding (send)
 import           Protolude
@@ -16,6 +17,7 @@ import           System.IO               (stdout)
 import           Text.Heredoc
 
 
+qmuliConfig :: LBS.ByteString
 qmuliConfig = [there|./qmuli.json|]
 
 newtype CurrentRegion = CurrentRegion {unCurrentRegion :: Region}

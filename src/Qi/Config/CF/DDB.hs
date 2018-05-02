@@ -10,13 +10,14 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict  as SHM
 import qualified Data.Text            as T
 import           Protolude            hiding (getAll)
-import           Stratosphere         hiding (name)
+import           Stratosphere
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.DDB    hiding (DdbAttrType (..))
 import qualified Qi.Config.AWS.DDB    as DDB
 
 
+toResources :: Config -> Resources
 toResources config = Resources . foldMap toDdbTableResources $ getAll config
   where
     toDdbTableResources table = [tableRes table] ++ toConditionalDdbTableResources table

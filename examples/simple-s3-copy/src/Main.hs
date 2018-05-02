@@ -9,6 +9,7 @@ import           Control.Lens
 import           Control.Monad               (void)
 import           Data.Default                (def)
 import           Data.Text                   (pack)
+import           Protolude
 
 import           Qi                          (withConfig)
 import           Qi.Config.AWS.Lambda        (LambdaMemorySize (..),

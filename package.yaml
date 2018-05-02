@@ -1,5 +1,5 @@
 name: qmuli
-version: "0.1.0"
+version: "0.2.0"
 synopsis: EDSL for building infrastructure on AWS
 description: EDSL for building infrastructure on AWS
 category: AWS, Cloud
@@ -15,13 +15,67 @@ extra-source-files:
   - README.md
   - stack.yaml
 
+default-extensions:
+  - NoImplicitPrelude
+  - OverloadedStrings
+
+dependencies:
+  - aeson
+  - aeson-pretty
+  - amazonka
+  - amazonka-cloudformation
+  - amazonka-cloudwatch-logs
+  - amazonka-cognito-identity
+  - amazonka-cognito-idp
+  - amazonka-core
+  - amazonka-dynamodb
+  - amazonka-iam
+  - amazonka-lambda
+  - amazonka-s3
+  #- amazonka-s3-streaming
+  - base
+  - binary
+  - bytestring
+  - conduit
+  - conduit-extra
+  - data-default
+  - directory
+  - either
+  - exceptions
+  - executable-path
+  - jwt
+  - hashable
+  - heredoc
+  - http-client
+  - http-client-tls
+  - lens
+  - lens-aeson
+  - mtl
+  - protolude
+  - text
+  - time
+  - transformers
+  - transformers-base
+  - operational
+  - optparse-applicative
+  - process
+  - protolude
+  - resourcet
+  - safe
+  - stm
+  - stratosphere
+  - system-extra
+  - turtle
+  - unix
+  - unordered-containers
+  - yaml
+  - extra
+  - ansi-terminal
+
 
 library:
   source-dirs:
     - src
-  default-extensions:
-    - NoImplicitPrelude
-    - OverloadedStrings
   exposed-modules:
     - Qi
     - Qi.Options
@@ -35,6 +89,7 @@ library:
     - Qi.Config.AWS.S3
     - Qi.Config.CF
     - Qi.Config.Identifier
+    - Qi.Core.Curry
     - Qi.Program.Lambda.Interface
     - Qi.Program.Config.Interface
     - Qi.Util
@@ -43,62 +98,11 @@ library:
     - Qi.Util.CustomCFResource
     - Qi.Util.DDB
     - Qi.Program.Config.Interpreters.Build
-  dependencies:
-    - aeson
-    - aeson-pretty
-    - amazonka
-    - amazonka-cloudformation
-    - amazonka-cloudwatch-logs
-    - amazonka-cognito-identity
-    - amazonka-cognito-idp
-    - amazonka-core
-    - amazonka-dynamodb
-    - amazonka-iam
-    - amazonka-lambda
-    - amazonka-s3
-    - amazonka-s3-streaming
-    - base
-    - binary
-    - bytestring
-    - conduit
-    - conduit-extra
-    - data-default
-    - directory
-    - either
-    - exceptions
-    - executable-path
-    - jwt
-    - hashable
-    - heredoc
-    - http-client
-    - http-client-tls
-    - lens
-    - lens-aeson
-    - mtl
-    - protolude
-    - text
-    - time
-    - transformers
-    - transformers-base
-    - operational
-    - optparse-applicative
-    - process
-    - resourcet
-    - safe
-    - stm
-    - stratosphere
-    - system-extra
-    - turtle
-    - unix
-    - unordered-containers
-    - yaml
-    - extra
-    - ansi-terminal
 
 flags:
   build-examples:
-    description: "Skip building examples"
-    default: false
+    description: "Build examples"
+    default: true
     manual: true
 
 
@@ -107,7 +111,7 @@ executables:
     main: Main.hs
     source-dirs: examples/simple-s3-copy/src
     dependencies:
-      - base >= 4.8 && < 5
+      - base
       - qmuli
     when:    
     - condition: flag(build-examples)
@@ -116,12 +120,20 @@ executables:
       else:
         buildable: false
 
-  # qmuli-fold-s3-content:
-    # main: Main.hs
-    # source-dirs: examples/fold-s3-content/src
-    # dependencies:
-      # - base >= 4.8 && < 5
-      # - qmuli
+        #  qmuli-fold-s3-content:
+        #    main: Main.hs
+        #    source-dirs: examples/fold-s3-content/src
+        #    dependencies:
+        #      - base
+        #      - qmuli
+        #    when:    
+        #    - condition: flag(build-examples)
+        #      then:
+        #        buildable: true
+        #      else:
+        #        buildable: false
+
+
   # qmuli-stream-s3-objects:
     # main: Main.hs
     # source-dirs: examples/stream-s3-objects/src
@@ -158,30 +170,26 @@ executables:
     # dependencies:
       # - base >= 4.8 && < 5
       # - qmuli
-  # qmuli-cw-events:
-    # main: Main.hs
-    # source-dirs: examples/cw-events/src
-    # dependencies:
-      # - base >= 4.8 && < 5
-      # - qmuli
 
+  qmuli-cw-events:
+    main: Main.hs
+    source-dirs: examples/cw-events/src
+    dependencies:
+      - base
+      - qmuli
+    when:
+    - condition: flag(build-examples)
+      then:
+        buildable: true
+      else:
+        buildable: false
 tests:
   tasty:
     main: Main.hs
     source-dirs:
       - tests
     dependencies:
-      - aeson
-      - aeson-pretty
-      - base
-      - bytestring
-      - data-default
-      - heredoc
-      - lens
-      - lens-aeson
-      - mtl
       - qmuli
-      - stratosphere
       - tasty
       - tasty-hspec
       - text

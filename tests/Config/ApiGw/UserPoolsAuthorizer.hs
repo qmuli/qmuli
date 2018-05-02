@@ -11,8 +11,6 @@ import           Data.Aeson.Encode.Pretty              (encodePretty)
 import           Data.Aeson.Lens                       (key, nth)
 import qualified Data.ByteString.Lazy.Char8            as LBS
 import           Data.Default                          (def)
-import           Test.Tasty.Hspec
-
 import           Qi.Config.AWS.ApiGw                   (ApiVerb (Get))
 import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ampAuthId)
 import           Qi.Program.Config.Interface           (ConfigProgram, api,
@@ -22,10 +20,12 @@ import           Qi.Program.Config.Interface           (ConfigProgram, api,
                                                         customResource)
 import           Qi.Program.Lambda.Interface           (ApiLambdaProgram)
 import           Qi.Util.Cognito                       (cognitoPoolProviderLambda)
+import           Test.Tasty.Hspec
 
 import           Config                                (getConfig, getOutputs,
                                                         getResources,
                                                         getTemplate)
+import           Protolude
 import           Util
 
 
@@ -43,16 +43,15 @@ configProgram = do
               (def & ampAuthId ?~ authId)
               dummyLambda def
 
-dummyLambda
-  :: ApiLambdaProgram
+dummyLambda :: ApiLambdaProgram
 dummyLambda _ = undefined
 
-
-expectedApiMethodLogicalName = "thingsGet"
 
 spec :: Spec
 spec = describe "Template" $ do
     let template = getTemplate $ getConfig configProgram
+        expectedApiMethodLogicalName = "thingsGet"
+
     it "saves test template" $
       LBS.writeFile "tests/artifacts/apigw_userpool_authorizer_test_template.json" $ encodePretty template
 

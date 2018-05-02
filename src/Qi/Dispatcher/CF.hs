@@ -76,9 +76,13 @@ describeStack name = do
       panic "Error: no stack description was returned"
 
 
-
+waitOnStackCreated :: Text -> IO ()
 waitOnStackCreated name = waitOnStackStatus name SSCreateComplete False
+
+waitOnStackUpdated :: Text -> IO ()
 waitOnStackUpdated name = waitOnStackStatus name SSUpdateComplete False
+
+waitOnStackDeleted :: Text -> IO ()
 waitOnStackDeleted name = waitOnStackStatus name SSDeleteComplete True
 
 waitOnStackStatus

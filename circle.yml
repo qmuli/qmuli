@@ -1,16 +1,21 @@
+machine:
+  environment:
+    PATH: /usr/bin
+
 checkout:
   post:
     - git submodule sync
     - git submodule update --init
 
 dependencies:
-  cache_directories:
+  cache_directories: []
     - "~/.stack"
     - ".stack-work"
   pre:
-    - curl -L https://github.com/commercialhaskell/stack/releases/download/v1.1.2/stack-1.1.2-linux-x86_64.tar.gz | tar zx -C /tmp
-    - sudo mv /tmp/stack-1.1.2-linux-x86_64/stack /usr/bin
+    - curl -L https://github.com/commercialhaskell/stack/releases/download/v1.6.5/stack-1.6.5-linux-x86_64.tar.gz | tar zx -C /tmp
+    - sudo mv /tmp/stack-1.6.5-linux-x86_64/stack /usr/bin
   override:
+    - stack --version
     - stack setup
     - rm -fr $(stack path --dist-dir) $(stack path --local-install-root)
     - stack build -j1 --fast

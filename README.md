@@ -5,7 +5,7 @@ pronounced as [**cumuli**: plural for heap, accumulation](http://www.merriam-web
 ![CircleCI Status](https://circleci.com/gh/qmuli/qmuli.svg?style=shield&circle-token=:circle-token)
 
 
-###TL;DR: [Serverless AWS framework](https://serverless.com/) for [Haskell](https://www.haskell.org/)
+#### TL;DR: [Serverless AWS framework](https://serverless.com/) for [Haskell](https://www.haskell.org/)
 
 
 Purpose
@@ -43,9 +43,9 @@ to `incoming` bucket into the `outgoing` bucket:
 
 In order to accomplish this with regular tools provided by AWS, we would create these resources using one of 3 methods:
 
-- using the AWS console
-- using the AWS command line interface (CLI)
-- using CloudFormation template
+- AWS console
+- AWS command line interface (CLI)
+- CloudFormation template
 
 Using console is great for beginners to learn how to provision resources or for quick ad-hoc changes, but involves lots of clicking around
 and therefore is not very practical for non-trivial deployments and hard to replicate exactly.
@@ -119,12 +119,10 @@ Note: for how to use currently available functionality and AWS integrations, see
 Getting started
 ---------------
 
-Thanks to [the recent addition of a dockerized Lambda build](https://github.com/qmuli/qmuli/pull/5/commits), a qmulus **now does not need** to be 
-built on an Amazon Linux AMI in order to be compatible with running it on AWS Lambda. One only needs a system with `stack` and `docker` installed in 
-order to build everything necessary for a successful deployment.
+A qmulus does not necessarily need to be built on Amazon Linux AMI in order to be compatible with running it on AWS Lambda. One only needs a system with `stack` and `docker` installed in order to build everything necessary for deployment.
 
 
-###Clone and build the library and examples
+### Clone and build the library and examples
 ```sh
 git clone --recursive -j8 https://github.com/qmuli/qmuli.git
 cd qmuli
@@ -132,19 +130,19 @@ cd qmuli
 stack install
 ```
 
-###Running an example
+### Running an example
 The above example is available as the "simple-s3-copy" qmulus.
 
-The `simple-s3-copy <my-globally-unique-name> cf deploy` command does the following:
+The `simple-s3-copy cf deploy <globally-unique-app-name>` command does the following:
 
 - generates the CloudFormation (CF) json template
 - packages/zips up the executable to be used by lambda
-- uploads those to the qmulus S3 bucket (named with <my-unique-name>)
+- uploads those to the qmulus S3 bucket (named with `<my-unique-name>`)
 
 
 After that is deployed, just create a new CF stack:
 
-`simple-s3-copy <same-globally-unique-name-as-above> cf create`
+`simple-s3-copy cf create <globally-unique-app-name>`
 
 And voila, you should now have the example deployed and working.
 Try uploading a small file into the 'incoming' bucket, you should see the same file copied automatically to the 'outgoing' bucket.
@@ -152,34 +150,34 @@ Try uploading a small file into the 'incoming' bucket, you should see the same f
 
 To monitor the status of the stack and view the stack outputs:
 
-`simple-s3-copy <same-globally-unique-name-as-above> cf describe`
+`simple-s3-copy cf describe <globally-unique-app-name>`
 
 
 To deploy updates to CF stack:
 
-`simple-s3-copy <same-globally-unique-name-as-above> cf update` (this also implicitly updates all lambdas with the current code)
+`simple-s3-copy cf update <globally-unique-app-name>` (this also implicitly updates all lambdas with the current code)
 
 
 To updates all lambdas with the current code separately from updating the CF stack:
 
-`simple-s3-copy <same-globally-unique-name-as-above> lbd update`
+`simple-s3-copy lbd update <globally-unique-app-name>`
 
 
-###NOTE: commands below are dangerous because they destroy all the CF stack resources including S3 buckets and their content
+### NOTE: commands below are dangerous because they destroy all the CF stack resources including S3 buckets and their content
 
 To destroy a stack:
 
-`simple-s3-copy <same-globally-unique-name-as-above> cf destroy`
+`simple-s3-copy cf destroy <globally-unique-app-name>`
 
 
 To cycle a stack: destroy it, rebuild, deploy and re-create:
 
-`simple-s3-copy <same-globally-unique-name-as-above> cf cycle`
+`simple-s3-copy cf cycle <globally-unique-app-name>`
 
 this command is useful when doing iterative development on a qmulus 
 
 
-###Troubleshooting
+### Troubleshooting
 In case if lambda function suddenly starts timing out, pay close attention to the lambda memory consumption. Sometimes a log message containing `c_poll: permission denied` may appear. Try increasing the lambda function's provisioned memory size.
 
 
@@ -207,4 +205,5 @@ Big kudos to
 * Brendan Hay ([@brendanhay](https://github.com/brendanhay)), the creator and maintainer of the
 [amazonka](https://github.com/brendanhay/amazonka) package
 
-as well as to wonderful Haskell community, without whom the task of creating Qmuli would be very hard to impossible.
+and to the wonderful Haskell community.
+

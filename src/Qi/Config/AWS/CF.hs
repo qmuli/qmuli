@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -6,6 +7,7 @@
 module Qi.Config.AWS.CF where
 
 import           Control.Lens
+import           Control.Monad.Fail   (fail)
 import           Data.Aeson
 import           Data.Aeson.Types     (Options (..), SumEncoding (..),
                                        fieldLabelModifier, typeMismatch)
@@ -18,16 +20,17 @@ import           Data.Text            (Text)
 import qualified Data.Text            as T
 import           GHC.Generics
 import           Protolude
-
 import           Qi.Config.Identifier
 
 
 data CfRequestType = CfCreate | CfUpdate | CfDelete
 
 instance FromJSON CfRequestType where
-  parseJSON (String s)  | s == "Create" = pure CfCreate
-                        | s == "Update" = pure CfUpdate
-                        | s == "Delete" = pure CfDelete
+  parseJSON = withText "CfRequestType" $ \case
+    "Create" -> pure CfCreate
+    "Update" -> pure CfUpdate
+    "Delete" -> pure CfDelete
+    unknown  -> fail $ "unknown request type: " <> toS unknown
 
 data CfEvent = CfEventCreate {
     _cfeResponseURL        :: Text

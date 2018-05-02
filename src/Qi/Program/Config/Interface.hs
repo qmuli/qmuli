@@ -4,7 +4,8 @@
 
 module Qi.Program.Config.Interface where
 
-import           Control.Monad.Operational             (Program, singleton)
+import           Control.Monad.Operational             (Program, ProgramT,
+                                                        singleton)
 import           Control.Monad.State.Strict            (State)
 import           Data.ByteString                       (ByteString)
 import qualified Data.ByteString.Lazy.Char8            as LBS
@@ -107,33 +108,88 @@ data ConfigInstruction a where
     -> ConfigInstruction LambdaId
 
 
+genericLambda
+  :: Text
+  -> GenericLambdaProgram
+  -> LambdaProfile
+  -> ProgramT ConfigInstruction m LambdaId
 genericLambda name lbd = singleton . RGenericLambda name lbd
 
+s3Bucket
+  :: Text
+  -> ProgramT ConfigInstruction m S3BucketId
 s3Bucket = singleton . RS3Bucket
 
-s3BucketLambda name s3BucketId lbd = singleton . RS3BucketLambda name s3BucketId lbd
+s3BucketLambda :: Text
+                  -> S3BucketId
+                  -> S3LambdaProgram
+                  -> LambdaProfile
+                  -> ProgramT ConfigInstruction m LambdaId
+s3BucketLambda name s3BucketId lbd =
+  singleton . RS3BucketLambda name s3BucketId lbd
 
+ddbTable
+  :: Text
+  -> DdbAttrDef
+  -> DdbTableProfile
+  -> ProgramT ConfigInstruction m DdbTableId
 ddbTable name hashAttrDef = singleton . RDdbTable name hashAttrDef
 
+ddbStreamLambda
+  :: Text
+  -> DdbTableId
+  -> DdbStreamLambdaProgram
+  -> LambdaProfile
+  -> ProgramT ConfigInstruction m LambdaId
 ddbStreamLambda name tableId lbd = singleton . RDdbStreamLambda name tableId lbd
 
+api
+  :: Text
+  -> ProgramT ConfigInstruction m ApiId
 api = singleton . RApi
 
+apiAuthorizer
+  :: Text
+  -> CustomId
+  -> ApiId
+  -> ProgramT ConfigInstruction m ApiAuthorizerId
 apiAuthorizer name cognitoId =
   singleton . RApiAuthorizer name cognitoId
+
 
 apiResource
   :: ParentResource a
   => Text
   -> a
   -> ConfigProgram ApiResourceId
-apiResource name = singleton . RApiResource name
+apiResource name =
+  singleton . RApiResource name
 
+apiMethodLambda
+  :: Text
+  -> ApiVerb
+  -> ApiResourceId
+  -> ApiMethodProfile
+  -> ApiLambdaProgram
+  -> LambdaProfile
+  -> ProgramT ConfigInstruction m LambdaId
 apiMethodLambda name verb resourceId methodProfile lbd =
   singleton . RApiMethodLambda name verb resourceId methodProfile lbd
 
-customResource name lbd = singleton . RCustomResource name lbd
+customResource
+  :: Text
+  -> CfLambdaProgram
+  -> LambdaProfile
+  -> ProgramT ConfigInstruction m CustomId
+customResource name lbd =
+  singleton . RCustomResource name lbd
 
+cwEventLambda
+  :: Text
+  -> CwEventsRuleProfile
+  -> CwLambdaProgram
+  -> LambdaProfile
+  -> ProgramT ConfigInstruction m LambdaId
 cwEventLambda name ruleProfile lbdProgramFunc =
   singleton . RCwEventLambda name ruleProfile lbdProgramFunc
 

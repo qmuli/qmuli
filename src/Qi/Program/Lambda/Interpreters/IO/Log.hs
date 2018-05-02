@@ -22,8 +22,7 @@ import           Data.Binary.Builder        (fromLazyByteString,
 import qualified Data.ByteString.Char8      as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Conduit               (Conduit, Sink, awaitForever,
-                                             transPipe, unwrapResumable, yield,
-                                             ($$), (=$=))
+                                             transPipe, yield, ($$), (=$=))
 import qualified Data.Conduit.List          as CL
 import           Data.Default               (def)
 import           Data.List.NonEmpty         (NonEmpty)
@@ -37,6 +36,7 @@ import           Network.AWS.Data.Body      (RsBody (..), fuseStream)
 import           Protolude
 import           System.IO                  (stderr)
 
+import           Numeric.Natural            (Natural)
 import           Qi.Amazonka                (currentRegion)
 import           Qi.Config.AWS
 import           Qi.Util                    (time)
@@ -49,7 +49,7 @@ toInputLogEvent
   -> IO InputLogEvent
 toInputLogEvent entry = do
   -- get current UTC epoch time in milliseconds
-  ts <- fromIntegral . round . (* 1000) <$> getPOSIXTime
+  ts <- (fromIntegral :: Integer -> Natural) . round . (* 1000) <$> getPOSIXTime
   return $ inputLogEvent ts entry
 
 queueLogEntry
@@ -71,7 +71,7 @@ readAllAvailableTBQueue
 readAllAvailableTBQueue q =
   readWithLimit limit
   where
-    limit = 100
+    limit = 100 :: Int
     readWithLimit 0 = pure []
     readWithLimit count =
       ifM (isEmptyTBQueue q)
@@ -102,7 +102,7 @@ cloudWatchLoggerWorker lbdName config q = do
     ensureLogStream = do
       groups <- paginate describeLogGroups $$ CL.foldMap (^.dlgrsLogGroups)
       case listToMaybe $ filter ( (== Just groupName) . (^.lgLogGroupName) ) groups of
-        Just group -> do
+        Just _ -> do
           streams <- paginate (describeLogStreams groupName) $$ CL.foldMap (^.dlsrsLogStreams)
           case listToMaybe $ filter ( (== Just streamName) . (^.lsLogStreamName) ) streams of
             Just stream ->

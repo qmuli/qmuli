@@ -5,18 +5,21 @@
 
 module Qi.Config.CF.CF (toResources, toOutputs) where
 
+import           Control.Lens
 import           Data.Aeson           (Value (Array), object)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict  as SHM
 import           Data.Text            (Text)
 import qualified Data.Text            as T
 import           Protolude            hiding (getAll)
-import           Stratosphere         hiding (S3Bucket, name)
-
 import           Qi.Config.AWS
 import           Qi.Config.AWS.CF
+import           Stratosphere         (Output, Outputs (Outputs), ResourceProperties (CloudFormationCustomResourceProperties),
+                                       Resources (Resources), Val (GetAtt),
+                                       cloudFormationCustomResource, output,
+                                       outputDescription, resource)
 
-
+toResources :: Config -> Resources
 toResources config = Resources . map toResource $ getAll config
   where
     toResource custom@Custom{_cLbdId} =
@@ -27,27 +30,26 @@ toResources config = Resources . map toResource $ getAll config
 
       where
         resName = getLogicalName config custom
-        lbdLogicalName = getLogicalNameFromId config (custom^.cLbdId)
+        lbdLogicalName = getLogicalNameFromId config (custom ^. cLbdId)
 
-
+toOutputs :: Config -> Outputs
 toOutputs config =
   Outputs . foldMap toCustomOutputs $ getAll config
 
   where
-
     toCustomOutputs
       :: Custom
       -> [Output]
     toCustomOutputs custom = [
         output (T.concat [lname, "UserPoolId"])
           upid
-          & description ?~ "UserPoolId"
+          & outputDescription ?~ "UserPoolId"
       , output (T.concat [lname, "UserPoolClientId"])
           upcid
-          & description ?~ "UserPoolClientId"
+          & outputDescription ?~ "UserPoolClientId"
       , output (T.concat [lname, "IdentityPoolId"])
           ipid
-          & description ?~ "IdentityPoolId"
+          & outputDescription ?~ "IdentityPoolId"
       ]
 
       where
