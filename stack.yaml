@@ -1,4 +1,5 @@
-resolver: lts-11.7
+#resolver: lts-11.7
+resolver: nightly-2018-05-09
 
 packages:
 - '.'
@@ -7,8 +8,8 @@ packages:
     commit: 6b9b0748c9a57ce2ea0e642211ee6a13c3cd97f3
   extra-dep: true
 - location:
-    git: https://github.com/abailly/system-extra.git
-    commit: 4091624e191c8e2bcd4bbdffebee53e655377bdb
+    git: https://github.com/ababkin/system-extra.git
+    commit: cbdc871e826c0637fb29e677fea6724b9ea2f121
   extra-dep: true
 - location:
     git: https://github.com/brendanhay/amazonka.git
