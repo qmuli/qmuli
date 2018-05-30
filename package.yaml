@@ -33,6 +33,7 @@ dependencies:
   - amazonka-lambda
   - amazonka-s3
   #- amazonka-s3-streaming
+  - ansi-terminal
   - base
   - binary
   - bytestring
@@ -43,34 +44,33 @@ dependencies:
   - either
   - exceptions
   - executable-path
-  - jwt
+  - extra
   - hashable
   - heredoc
   - http-client
   - http-client-tls
+  - jwt
   - lens
   - lens-aeson
   - mtl
-  - protolude
-  - text
-  - time
-  - transformers
-  - transformers-base
   - operational
   - optparse-applicative
   - process
   - protolude
   - resourcet
   - safe
+  - servant-client
   - stm
   - stratosphere
   - system-extra
+  - text
+  - time
+  - transformers
+  - transformers-base
   - turtle
   - unix
   - unordered-containers
   - yaml
-  - extra
-  - ansi-terminal
 
 
 library:

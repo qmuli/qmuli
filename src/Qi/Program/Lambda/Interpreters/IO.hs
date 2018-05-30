@@ -66,6 +66,9 @@ import           Qi.Program.Lambda.Interface           (LambdaInstruction (..),
                                                         LambdaProgram)
 import           Qi.Program.Lambda.Interpreters.IO.Log
 import           Qi.Util                               (time)
+import           Servant.Client                        (BaseUrl, ClientM,
+                                                        ServantError,
+                                                        mkClientEnv, runClientM)
 
 
 
@@ -143,7 +146,6 @@ run name config program = do
     runResourceT . runAWST env . unQiAWS $
       void . liftIO . LBS.putStr =<< go logMessage program
 
-
   where
     go
       :: (Text -> QiAWS ())
@@ -161,8 +163,12 @@ run name config program = do
               getAppName >>= interpret . is
 
 -- Http
-            Http req ms :>>= is ->
-              http req ms >>= interpret . is
+            Http ms req :>>= is ->
+              http ms req >>= interpret . is
+
+-- Servant
+            RunServant ms baseUrl req :>>= is ->
+              runServant ms baseUrl req >>= interpret . is
 
 -- Amazonka
             AmazonkaSend cmd :>>= is ->
@@ -218,12 +224,21 @@ run name config program = do
 -- Http
 
         http
-          :: Request
-          -> ManagerSettings
+          :: ManagerSettings
+          -> Request
           -> QiAWS (Response LBS.ByteString)
-        http req ms = liftIO $ do
+        http ms req = liftIO $
+          httpLbs req =<< newManager ms
+
+-- Servant
+        runServant
+          :: ManagerSettings
+          -> BaseUrl
+          -> ClientM a
+          -> QiAWS (Either ServantError a)
+        runServant ms baseUrl req = liftIO $ do
           mgr <- newManager ms
-          httpLbs req mgr
+          runClientM req $ mkClientEnv mgr baseUrl
 
 -- Amazonka
         amazonkaSend

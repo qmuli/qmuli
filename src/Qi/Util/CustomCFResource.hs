@@ -110,6 +110,6 @@ customResourceProviderLambda CustomResourceProvider{..} event = do
 
 
   -- assume successfully written response to S3 object
-  responseResp <- http request tlsManagerSettings
+  responseResp <- http tlsManagerSettings request
 
   respond 200 . String . T.pack $ show responseResp

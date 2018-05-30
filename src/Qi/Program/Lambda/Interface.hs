@@ -27,6 +27,8 @@ import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier            (DdbTableId)
 import           Qi.Core.Curry
+import           Servant.Client                  (BaseUrl, ClientM,
+                                                  ServantError)
 
 
 type LambdaProgram          = Program LambdaInstruction
@@ -44,9 +46,15 @@ data LambdaInstruction a where
     :: LambdaInstruction Text
 
   Http
-    :: Request
-    -> ManagerSettings
+    :: ManagerSettings
+    -> Request
     -> LambdaInstruction (Response LBS.ByteString)
+
+  RunServant
+    :: ManagerSettings
+    -> BaseUrl
+    -> ClientM a
+    -> LambdaInstruction (Either ServantError a)
 
   AmazonkaSend
     :: (AWSRequest a)
@@ -107,17 +115,23 @@ data LambdaInstruction a where
 
 -- HTTP client
 
-getAppName
-  :: LambdaProgram Text
-getAppName =
-  singleton GetAppName
-
 http
-  :: Request
-  -> ManagerSettings
+  :: ManagerSettings
+  -> Request
   -> LambdaProgram (Response LBS.ByteString)
 http =
   singleton .: Http
+
+-- Servant
+
+runServant
+  :: ManagerSettings
+  -> BaseUrl
+  -> ClientM a
+  -> LambdaProgram (Either ServantError a)
+runServant =
+  singleton .:: RunServant
+
 
 -- Amazonka
 
@@ -189,12 +203,17 @@ deleteDdbRecord = singleton .: DeleteDdbRecord
 
 -- Util
 
-say
-  :: Text
-  -> LambdaProgram ()
-say = singleton . Say
+getAppName
+  :: LambdaProgram Text
+getAppName =
+  singleton GetAppName
 
 getCurrentTime
   :: LambdaProgram UTCTime
 getCurrentTime = singleton GetCurrentTime
+
+say
+  :: Text
+  -> LambdaProgram ()
+say = singleton . Say
 

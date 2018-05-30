@@ -9,7 +9,7 @@ packages:
   extra-dep: true
 - location:
     git: https://github.com/ababkin/system-extra.git
-    commit: cbdc871e826c0637fb29e677fea6724b9ea2f121
+    commit: 0ec5b3ca62bd73a4df6f29b99b654071a0262f18
   extra-dep: true
 - location:
     git: https://github.com/brendanhay/amazonka.git
@@ -43,7 +43,7 @@ ghc-options:
   "qmuli": 
     # -O*
     # -funfolding-use-threshold=16 -O2 -optc-O3
-    -O
+    -O0
     -Wall
     -Wno-unused-imports 
     -Wno-unused-matches 
