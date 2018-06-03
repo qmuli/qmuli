@@ -79,12 +79,8 @@ toResources config = Resources . foldMap toDdbTableResources $ getAll config
 
 
     tableStreamEventSourceMappingRes table lbdId =
-      resource lname $
-        LambdaEventSourceMappingProperties $
-        lambdaEventSourceMapping
-        tableStreamArn
-        (Literal lbdPName)
-        "LATEST"
+      resource lname . LambdaEventSourceMappingProperties $
+          lambdaEventSourceMapping tableStreamArn (Literal lbdPName)
 
       where
         lname = tableLName `T.append` "EventSourceMapping"

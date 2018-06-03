@@ -76,6 +76,7 @@ data LambdaInstruction a where
     -> Conduit BS.ByteString LambdaProgram BS.ByteString
     -> LambdaInstruction ()
 -}
+
   PutS3ObjectContent
     :: S3Object
     -> LBS.ByteString
@@ -108,6 +109,10 @@ data LambdaInstruction a where
 
   Say
     :: Text
+    -> LambdaInstruction ()
+
+  Sleep
+    :: Int
     -> LambdaInstruction ()
 
   GetCurrentTime
@@ -211,6 +216,11 @@ getAppName =
 getCurrentTime
   :: LambdaProgram UTCTime
 getCurrentTime = singleton GetCurrentTime
+
+sleep
+  :: Int
+  -> LambdaProgram ()
+sleep = singleton . Sleep
 
 say
   :: Text

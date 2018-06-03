@@ -207,6 +207,9 @@ run name config program = do
             Say text :>>= is ->
               say text >>= interpret . is
 
+            Sleep micros :>>= is ->
+              sleep micros >>= interpret . is
+
             GetCurrentTime :>>= is ->
               getCurrentTime >>= interpret . is
 
@@ -366,6 +369,10 @@ run name config program = do
           -> QiAWS ()
         say = logMessage
 
+        sleep
+          :: Int
+          -> QiAWS ()
+        sleep = liftIO . threadDelay
 
         getCurrentTime
           :: QiAWS UTCTime
