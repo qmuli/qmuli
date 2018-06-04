@@ -24,8 +24,9 @@ import           Control.Monad.Reader.Class            (MonadReader)
 import           Control.Monad.Trans.AWS               (AWST, runAWST, send)
 import           Control.Monad.Trans.Resource          (MonadResource,
                                                         ResourceT)
-import           Data.Aeson                            (Value (..), encode,
-                                                        object)
+import           Data.Aeson                            (FromJSON, ToJSON,
+                                                        Value (..), decode,
+                                                        encode, object)
 import           Data.Binary.Builder                   (fromLazyByteString,
                                                         toLazyByteString)
 import qualified Data.ByteString.Char8                 as BS
@@ -45,23 +46,26 @@ import           GHC.Exts                              (fromList)
 import           Network.AWS                           hiding (Request,
                                                         Response, send)
 import           Network.AWS.Data.Body                 (RsBody (..), fuseStream)
+import           Network.AWS.Data.Text                 (ToText (..))
 import           Network.AWS.DynamoDB
 import           Network.AWS.S3
 import           Network.AWS.S3.CreateMultipartUpload
 --import           Network.AWS.S3.StreamingUpload
+import           Network.AWS.SQS
+import           Network.AWS.SQS.DeleteMessage
+import           Network.AWS.SQS.ReceiveMessage
+import           Network.AWS.SQS.SendMessage
 import           Network.HTTP.Client                   (ManagerSettings,
                                                         Request, Response,
                                                         httpLbs, newManager)
 import           Protolude                             hiding ((<&>))
-import           System.IO                             (stdout)
-import           System.Mem                            (performMajorGC)
-
 import           Qi.Amazonka                           (currentRegion)
+import           Qi.AWS.SQS
 import           Qi.Config.AWS
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
-import           Qi.Config.Identifier                  (DdbTableId)
+import           Qi.Config.Identifier
 import           Qi.Program.Lambda.Interface           (LambdaInstruction (..),
                                                         LambdaProgram)
 import           Qi.Program.Lambda.Interpreters.IO.Log
@@ -69,8 +73,8 @@ import           Qi.Util                               (time)
 import           Servant.Client                        (BaseUrl, ClientM,
                                                         ServantError,
                                                         mkClientEnv, runClientM)
-
-
+import           System.IO                             (stdout)
+import           System.Mem                            (performMajorGC)
 
 
 newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
@@ -187,6 +191,9 @@ run name config program = do
             PutS3ObjectContent s3Obj content :>>= is ->
               putS3ObjectContent s3Obj content >>= interpret . is
 
+            ListS3Objects s3Bucket :>>= is ->
+              listS3Objects s3Bucket >>= interpret . is
+
 -- DDB
             ScanDdbRecords ddbTableId :>>= is ->
               scanDdbRecords ddbTableId >>= interpret . is
@@ -202,6 +209,17 @@ run name config program = do
 
             DeleteDdbRecord ddbTableId key :>>= is ->
               deleteDdbRecord ddbTableId key >>= interpret . is
+
+-- SQS
+            SendMessage qid a :>>= is ->
+              sendSqsMessage qid a >>= interpret . is
+
+            ReceiveMessage qid :>>= is ->
+              receiveSqsMessage qid >>= interpret . is
+
+            DeleteMessage qid rh :>>= is ->
+              deleteSqsMessage qid rh >>= interpret . is
+
 
 -- Util
             Say text :>>= is ->
@@ -257,7 +275,7 @@ run name config program = do
         getS3ObjectContent S3Object{_s3oBucketId, _s3oKey = S3Key objKey} = do
           let bucketName = getPhysicalName config $ getById config _s3oBucketId
           r <- send . getObject (BucketName bucketName) $ ObjectKey objKey
-          sinkBody (r ^. gorsBody) sinkLbs
+          (r ^. gorsBody) `sinkBody` sinkLbs
 {-
         streamFromS3Object
           :: S3Object
@@ -294,17 +312,33 @@ run name config program = do
 
             {- void $ source =$= conduit $$ sink -}
 -}
+
         putS3ObjectContent
           :: S3Object
           -> LBS.ByteString
           -> QiAWS ()
         putS3ObjectContent s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key objKey} content = do
-          r <- send . putObject (BucketName bucketName) (ObjectKey objKey) $ toBody content
-          return ()
+          r <- send $ putObject (BucketName bucketName) (ObjectKey objKey) (toBody content)
+                        & poACL ?~ OPublicReadWrite
+          pure ()
 
           where
             bucketName = getPhysicalName config $ getById config _s3oBucketId
 
+        listS3Objects
+          :: S3BucketId
+          -> QiAWS [S3Object]
+        listS3Objects bucketId = do
+          r <- send $ listObjectsV2 (BucketName bucketName)
+          case r ^. lovrsResponseStatus of
+            200 ->
+              pure $ (\o -> S3Object bucketId $ S3Key . toText $ o ^. oKey) <$> r ^. lovrsContents
+
+            errCode ->
+              panic $ "listS3Objects returned an error " <> show errCode <> " code"
+
+          where
+            bucketName = getPhysicalName config $ getById config bucketId
 
 -- DynamoDB
         scanDdbRecords
@@ -362,6 +396,42 @@ run name config program = do
 
           where
             tableName = getPhysicalName config $ getById config ddbTableId
+
+-- SQS
+        sendSqsMessage
+          :: ToJSON a
+          => SqsQueueId
+          -> a
+          -> QiAWS ()
+        sendSqsMessage queueId msg = do
+          send . sendMessage queueUrl . toS $ encode msg
+          pure ()
+
+          where
+            queueUrl = getPhysicalName config $ getById config queueId
+
+
+        receiveSqsMessage
+          :: FromJSON a
+          => SqsQueueId
+          -> QiAWS [(a, ReceiptHandle)] -- the json body and the receipt handle
+        receiveSqsMessage queueId = do
+          r <- send $ receiveMessage queueUrl
+          pure . catMaybes $ (\m -> do
+                                msg <- decode . toS =<< m ^. mBody
+                                rh <- m ^. mReceiptHandle
+                                pure (msg, ReceiptHandle rh)
+                              ) <$> (r ^. rmrsMessages)
+
+          where
+            queueUrl = getPhysicalName config $ getById config queueId
+
+
+        deleteSqsMessage
+          :: SqsQueueId
+          -> ReceiptHandle
+          -> QiAWS ()
+        deleteSqsMessage = undefined
 
 -- Util
         say

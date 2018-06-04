@@ -9,11 +9,8 @@ import           Data.ByteString      (ByteString)
 import           Data.Default         (Default, def)
 import           Data.HashMap.Strict  (HashMap)
 import qualified Data.HashMap.Strict  as SHM
-import           Data.Text            (Text)
-import qualified Data.Text            as T
 import           GHC.Show             (Show (..))
 import           Protolude
-
 import           Qi.Config.Identifier
 
 
@@ -39,6 +36,7 @@ data S3Object = S3Object {
     _s3oBucketId :: S3BucketId
   , _s3oKey      :: S3Key
   }
+  deriving Show
 
 s3Object
   :: S3BucketId

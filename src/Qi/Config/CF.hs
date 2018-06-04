@@ -14,6 +14,7 @@ import qualified Qi.Config.CF.DDB     as DDB
 import qualified Qi.Config.CF.Lambda  as Lambda
 import qualified Qi.Config.CF.Role    as Role
 import qualified Qi.Config.CF.S3      as S3
+import qualified Qi.Config.CF.SQS     as SQS
 import           Stratosphere
 
 
@@ -36,6 +37,7 @@ toResources config = mconcat [
   , Lambda.toResources config
   , ApiGw.toResources config
   , DDB.toResources config
+  , SQS.toResources config
   , CF.toResources config
   , CW.toResources config
   ]

@@ -3,10 +3,6 @@ resolver: nightly-2018-06-02
 
 packages:
 - '.'
-# - location:
-    # git: https://github.com/frontrowed/stratosphere.git
-    # commit: 6b9b0748c9a57ce2ea0e642211ee6a13c3cd97f3
-  # extra-dep: true
 - location:
     git: https://github.com/ababkin/system-extra.git
     commit: 0ec5b3ca62bd73a4df6f29b99b654071a0262f18
@@ -15,6 +11,12 @@ packages:
   #  git: https://github.com/ababkin/amazonka-s3-streaming.git
   #  commit: 4fc25d1b20007bef3b8b2924751fe0fc3033e1f5
   #extra-dep: true
+- location:
+    git: https://github.com/brendanhay/amazonka.git
+    commit: 248f7b2a7248222cc21cef6194cd1872ba99ac5d
+    subdirs:
+    - amazonka
+  extra-dep: true
 
 extra-deps: []
   

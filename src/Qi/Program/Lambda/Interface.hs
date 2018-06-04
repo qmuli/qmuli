@@ -6,7 +6,7 @@
 module Qi.Program.Lambda.Interface where
 
 import           Control.Monad.Operational       (Program, singleton)
-import           Data.Aeson                      (Value)
+import           Data.Aeson                      (FromJSON, ToJSON, Value)
 import qualified Data.ByteString                 as BS
 import qualified Data.ByteString.Lazy            as LBS
 import           Data.Conduit
@@ -20,12 +20,14 @@ import           Network.AWS.DynamoDB.Query
 import           Network.AWS.DynamoDB.Scan
 import           Network.HTTP.Client
 import           Protolude
+import           Qi.AWS.SQS
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.CW
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.S3
-import           Qi.Config.Identifier            (DdbTableId)
+import           Qi.Config.AWS.SQS
+import           Qi.Config.Identifier
 import           Qi.Core.Curry
 import           Servant.Client                  (BaseUrl, ClientM,
                                                   ServantError)
@@ -82,6 +84,10 @@ data LambdaInstruction a where
     -> LBS.ByteString
     -> LambdaInstruction ()
 
+  ListS3Objects
+    :: S3BucketId
+    -> LambdaInstruction [S3Object]
+
   ScanDdbRecords
     :: DdbTableId
     -> LambdaInstruction ScanResponse
@@ -107,6 +113,27 @@ data LambdaInstruction a where
     -> DdbAttrs
     -> LambdaInstruction DeleteItemResponse
 
+
+-- SQS
+
+  SendMessage
+    :: ToJSON a
+    => SqsQueueId
+    -> a
+    -> LambdaInstruction ()
+
+  ReceiveMessage
+    :: FromJSON a
+    => SqsQueueId
+    -> LambdaInstruction [(a, ReceiptHandle)] -- the json body and the receipt handle
+
+  DeleteMessage
+    :: SqsQueueId
+    -> ReceiptHandle
+    -> LambdaInstruction ()
+
+
+
   Say
     :: Text
     -> LambdaInstruction ()
@@ -117,6 +144,8 @@ data LambdaInstruction a where
 
   GetCurrentTime
     :: LambdaInstruction UTCTime
+
+
 
 -- HTTP client
 
@@ -173,6 +202,11 @@ putS3ObjectContent
   -> LambdaProgram ()
 putS3ObjectContent = singleton .: PutS3ObjectContent
 
+listS3Objects
+  :: S3BucketId
+  -> LambdaProgram [S3Object]
+listS3Objects = singleton . ListS3Objects
+
 
 -- DDB
 
@@ -204,6 +238,28 @@ deleteDdbRecord
   -> DdbAttrs
   -> LambdaProgram DeleteItemResponse
 deleteDdbRecord = singleton .: DeleteDdbRecord
+
+
+-- SQS
+
+sendMessage
+  :: ToJSON a
+  => SqsQueueId
+  -> a
+  -> LambdaProgram ()
+sendMessage = singleton .: SendMessage
+
+receiveMessage
+  :: FromJSON a
+  => SqsQueueId
+  -> LambdaProgram [(a, ReceiptHandle)] -- the json body and the receipt handle
+receiveMessage = singleton . ReceiveMessage
+
+deleteMessage
+  :: SqsQueueId
+  -> ReceiptHandle
+  -> LambdaProgram ()
+deleteMessage = singleton .: DeleteMessage
 
 
 -- Util

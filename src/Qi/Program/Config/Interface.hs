@@ -66,6 +66,11 @@ data ConfigInstruction a where
     -> LambdaProfile
     -> ConfigInstruction LambdaId
 
+-- SQS
+  RSqsQueue
+    :: Text
+    -> ConfigInstruction SqsQueueId
+
 -- Api
   RApi
     :: Text
@@ -142,6 +147,11 @@ ddbStreamLambda
   -> LambdaProfile
   -> ProgramT ConfigInstruction m LambdaId
 ddbStreamLambda name tableId lbd = singleton . RDdbStreamLambda name tableId lbd
+
+sqsQueue
+  :: Text
+  -> ProgramT ConfigInstruction m SqsQueueId
+sqsQueue = singleton . RSqsQueue
 
 api
   :: Text

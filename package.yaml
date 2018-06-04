@@ -32,6 +32,7 @@ dependencies:
   - amazonka-iam
   - amazonka-lambda
   - amazonka-s3
+  - amazonka-sqs
   #- amazonka-s3-streaming
   - ansi-terminal
   - base

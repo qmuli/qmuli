@@ -41,6 +41,10 @@ newtype DdbTableId = DdbTableId Int deriving (Eq, Show, Hashable)
 instance FromInt DdbTableId where
   fromInt = DdbTableId
 
+newtype SqsQueueId = SqsQueueId Int deriving (Eq, Show, Hashable)
+instance FromInt SqsQueueId where
+  fromInt = SqsQueueId
+
 newtype CustomId = CustomId Int deriving (Eq, Show, Hashable)
 instance FromInt CustomId where
   fromInt = CustomId
