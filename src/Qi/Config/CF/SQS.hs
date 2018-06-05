@@ -4,11 +4,15 @@
 
 module Qi.Config.CF.SQS (toResources) where
 
-import           Protolude     hiding (getAll)
-import           Qi.Config.AWS (Config, getAll, getById, getLogicalName,
-                                getLogicalNameFromId, getPhysicalName)
-import           Stratosphere  (ResourceProperties (S3BucketProperties),
-                                Resources (Resources), Val (GetAtt, Literal))
+import           Control.Lens
+import           Protolude         hiding (getAll)
+import           Qi.Config.AWS     (Config, getAll, getById, getLogicalName,
+                                    getLogicalNameFromId, getPhysicalName)
+import           Qi.Config.AWS.SQS
+import           Stratosphere      (ResourceProperties (SQSQueueProperties),
+                                    Resources (Resources),
+                                    Val (GetAtt, Literal))
+import qualified Stratosphere      as S
 
 
 toResources
@@ -23,14 +27,8 @@ toResources config = foldMap toAllSqsResources $ getAll config
         qln = getLogicalName config sqsQueue
 
         queueResource = (
-          resource qln $
-            LambdaFunctionProperties $
-            lambdaFunction
-              lbdCode
-              "index.handler"
-              (GetAtt Role.lambdaBasicExecutionIAMRoleLogicalName "Arn")
-              (Literal NodeJS43)
-            & lfFunctionName ?~ Literal lambdaName
-            & lfMemorySize ?~ Literal memorySize
-            & lfTimeout ?~ Literal timeOut
+          S.resource qln $
+            SQSQueueProperties $
+              S.sqsQueue
+              & S.sqsqQueueName ?~ Literal (sqsQueue ^. sqsQueueName)
           )
