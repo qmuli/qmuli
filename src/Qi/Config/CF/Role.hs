@@ -70,6 +70,7 @@ toResources config = Resources [lbdRoleRes]
               , "logs:CreateLogStream"
               , "logs:DescribeLogStreams"
               , "logs:PutLogEvents"
+
               , "s3:GetObject"
               , "s3:GetObjectAcl"
               , "s3:GetObjectTagging"
@@ -100,7 +101,6 @@ toResources config = Resources [lbdRoleRes]
               , "dynamodb:GetItem"
               , "dynamodb:PutItem"
               , "dynamodb:DeleteItem"
-
               , "dynamodb:GetRecords"
               , "dynamodb:GetShardIterator"
               , "dynamodb:DescribeStream"
@@ -119,6 +119,8 @@ toResources config = Resources [lbdRoleRes]
               , "iam:PassRole"
               , "iam:PutRolePolicy"
               , "iam:DeleteRolePolicy"
+
+              , "lambda:InvokeFunction"
               ]
 
 

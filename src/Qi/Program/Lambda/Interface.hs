@@ -35,7 +35,7 @@ import           Servant.Client                  (BaseUrl, ClientM,
 
 type LambdaProgram          = Program LambdaInstruction
 type CompleteLambdaProgram  = LambdaProgram LBS.ByteString
-type GenericLambdaProgram   = Value           -> CompleteLambdaProgram
+type GenericLambdaProgram   = Value -> CompleteLambdaProgram
 type ApiLambdaProgram       = ApiMethodEvent  -> CompleteLambdaProgram
 type S3LambdaProgram        = S3Event         -> CompleteLambdaProgram
 type CfLambdaProgram        = CfEvent         -> CompleteLambdaProgram
@@ -63,9 +63,15 @@ data LambdaInstruction a where
     => a
     -> LambdaInstruction (Rs a)
 
+  InvokeLambda
+    :: ToJSON a
+    => LambdaId
+    -> a
+    -> LambdaInstruction ()
+
   GetS3ObjectContent
     :: S3Object
-    -> LambdaInstruction LBS.ByteString
+    -> LambdaInstruction (Either Text LBS.ByteString)
 {-
   StreamFromS3Object
     :: S3Object
@@ -176,12 +182,23 @@ amazonkaSend
 amazonkaSend = singleton . AmazonkaSend
 
 
+-- Lambda
+
+invokeLambda
+  :: ToJSON a
+  => LambdaId
+  -> a
+  -> LambdaProgram ()
+invokeLambda = singleton .: InvokeLambda
+
+
 -- S3
 
 getS3ObjectContent
   :: S3Object
-  -> LambdaProgram LBS.ByteString
+  -> LambdaProgram (Either Text LBS.ByteString)
 getS3ObjectContent = singleton . GetS3ObjectContent
+
 {-
 streamFromS3Object
   :: S3Object
@@ -196,6 +213,7 @@ streamS3Objects
     -> LambdaProgram ()
 streamS3Objects = singleton .:: StreamS3Objects
 -}
+
 putS3ObjectContent
   :: S3Object
   -> LBS.ByteString

@@ -32,7 +32,7 @@ withPathParam
 withPathParam name event f = case SHM.lookup name $ event^.aeParams.rpPath of
   Just (String x) -> f x
   Just unexpected ->
-    argumentsError $ "unexpected path parameter: " ++ show unexpected
+    argumentsError $ "unexpected path parameter: " <> show unexpected
   Nothing ->
     argumentsError "expected path parameter 'thingId' was not found"
 
@@ -44,7 +44,7 @@ withDeserializedBody
 withDeserializedBody event f = case event^.aeBody of
   JsonBody jb ->
     result
-      (internalError . ("Error: fromJson: " <>))
+      (internalError . ("Error: fromJson: " <>) . toS)
       f
       $ fromJSON jb
   unexpected  ->

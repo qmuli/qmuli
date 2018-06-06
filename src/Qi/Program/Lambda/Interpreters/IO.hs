@@ -51,10 +51,8 @@ import           Network.AWS.DynamoDB
 import           Network.AWS.S3
 import           Network.AWS.S3.CreateMultipartUpload
 --import           Network.AWS.S3.StreamingUpload
+import           Network.AWS.Lambda
 import           Network.AWS.SQS
-import           Network.AWS.SQS.DeleteMessage
-import           Network.AWS.SQS.ReceiveMessage
-import           Network.AWS.SQS.SendMessage
 import           Network.HTTP.Client                   (ManagerSettings,
                                                         Request, Response,
                                                         httpLbs, newManager)
@@ -76,7 +74,6 @@ import           Servant.Client                        (BaseUrl, ClientM,
 import           System.IO                             (stdout)
 import           System.Mem                            (performMajorGC)
 
-
 newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
   deriving (
       Functor
@@ -86,15 +83,10 @@ newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
     , MonadCatch
     , MonadThrow
     , MonadResource
-    --, MonadBase IO
     , MonadReader Env
     , MonadAWS
     )
 
-{-
-liftAWSFromResourceIO :: ResourceT IO a -> QiAWS a
-liftAWSFromResourceIO = liftAWS . lift
--}
 
 data LoggerType = NoLogger | StdOutLogger | CwLogger
 
@@ -177,6 +169,11 @@ run name config program = do
 -- Amazonka
             AmazonkaSend cmd :>>= is ->
               amazonkaSend cmd >>= interpret . is
+
+
+-- Lambda
+            InvokeLambda lbd payload :>>= is ->
+              invokeLambda lbd payload >>= interpret . is
 
 -- S3
             GetS3ObjectContent s3Obj :>>= is ->
@@ -268,14 +265,33 @@ run name config program = do
           -> QiAWS (Rs a)
         amazonkaSend = send
 
+-- Lambda
+        invokeLambda
+          :: ToJSON a
+          => LambdaId
+          -> a
+          -> QiAWS ()
+        invokeLambda id payload = do
+          send $ invoke pname (toS $ encode payload) & iInvocationType ?~ Event
+          pure ()
+          where
+            pname = getPhysicalName config $ getById config id
+
+
 -- S3
         getS3ObjectContent
           :: S3Object
-          -> QiAWS LBS.ByteString
+          -> QiAWS (Either Text LBS.ByteString)
         getS3ObjectContent S3Object{_s3oBucketId, _s3oKey = S3Key objKey} = do
           let bucketName = getPhysicalName config $ getById config _s3oBucketId
           r <- send . getObject (BucketName bucketName) $ ObjectKey objKey
-          (r ^. gorsBody) `sinkBody` sinkLbs
+          case r ^. gorsResponseStatus of
+            200 ->
+              fmap Right $ (r ^. gorsBody) `sinkBody` sinkLbs
+            errCode ->
+              pure . Left $ "received error status code: " <> show errCode
+
+
 {-
         streamFromS3Object
           :: S3Object

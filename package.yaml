@@ -108,18 +108,18 @@ flags:
 
 
 executables:
-  qmuli-simple-s3-copy:
-    main: Main.hs
-    source-dirs: examples/simple-s3-copy/src
-    dependencies:
-      - base
-      - qmuli
-    when:    
-    - condition: flag(build-examples)
-      then:
-        buildable: true
-      else:
-        buildable: false
+  # qmuli-simple-s3-copy:
+    # main: Main.hs
+    # source-dirs: examples/simple-s3-copy/src
+    # dependencies:
+      # - base
+      # - qmuli
+    # when:    
+    # - condition: flag(build-examples)
+      # then:
+        # buildable: true
+      # else:
+        # buildable: false
 
         #  qmuli-fold-s3-content:
         #    main: Main.hs
@@ -172,18 +172,18 @@ executables:
       # - base >= 4.8 && < 5
       # - qmuli
 
-  qmuli-cw-events:
-    main: Main.hs
-    source-dirs: examples/cw-events/src
-    dependencies:
-      - base
-      - qmuli
-    when:
-    - condition: flag(build-examples)
-      then:
-        buildable: true
-      else:
-        buildable: false
+  # qmuli-cw-events:
+    # main: Main.hs
+    # source-dirs: examples/cw-events/src
+    # dependencies:
+      # - base
+      # - qmuli
+    # when:
+    # - condition: flag(build-examples)
+      # then:
+        # buildable: true
+      # else:
+        # buildable: false
 tests:
   tasty:
     main: Main.hs
