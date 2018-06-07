@@ -12,8 +12,10 @@
 
 module Qi.Program.Lambda.Interpreters.IO (run) where
 
+--import           Network.AWS.S3.StreamingUpload
 import           Control.Concurrent                    hiding (yield)
 import           Control.Concurrent.STM
+import           Control.Exception.Lens                (handling)
 import           Control.Lens                          hiding (view)
 import           Control.Monad.Base                    (MonadBase)
 import           Control.Monad.Catch                   (MonadCatch, MonadThrow)
@@ -42,16 +44,17 @@ import           Data.Text.Encoding                    (decodeUtf8)
 import qualified Data.Text.IO                          as T
 import           Data.Time.Clock                       (UTCTime)
 import qualified Data.Time.Clock                       as C
+import           Data.Vector                           (Vector)
+import qualified Data.Vector                           as V
 import           GHC.Exts                              (fromList)
 import           Network.AWS                           hiding (Request,
                                                         Response, send)
 import           Network.AWS.Data.Body                 (RsBody (..), fuseStream)
 import           Network.AWS.Data.Text                 (ToText (..))
 import           Network.AWS.DynamoDB
+import           Network.AWS.Lambda
 import           Network.AWS.S3
 import           Network.AWS.S3.CreateMultipartUpload
---import           Network.AWS.S3.StreamingUpload
-import           Network.AWS.Lambda
 import           Network.AWS.SQS
 import           Network.HTTP.Client                   (ManagerSettings,
                                                         Request, Response,
@@ -73,6 +76,7 @@ import           Servant.Client                        (BaseUrl, ClientM,
                                                         mkClientEnv, runClientM)
 import           System.IO                             (stdout)
 import           System.Mem                            (performMajorGC)
+
 
 newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
   deriving (
@@ -188,8 +192,8 @@ run name config program = do
             PutS3ObjectContent s3Obj content :>>= is ->
               putS3ObjectContent s3Obj content >>= interpret . is
 
-            ListS3Objects s3Bucket :>>= is ->
-              listS3Objects s3Bucket >>= interpret . is
+            ListS3Objects s3Bucket cont :>>= is ->
+              listS3Objects s3Bucket (\acc -> interpret . cont acc) >>= interpret . is
 
 -- DDB
             ScanDdbRecords ddbTableId :>>= is ->
@@ -282,14 +286,22 @@ run name config program = do
         getS3ObjectContent
           :: S3Object
           -> QiAWS (Either Text LBS.ByteString)
-        getS3ObjectContent S3Object{_s3oBucketId, _s3oKey = S3Key objKey} = do
-          let bucketName = getPhysicalName config $ getById config _s3oBucketId
-          r <- send . getObject (BucketName bucketName) $ ObjectKey objKey
-          case r ^. gorsResponseStatus of
-            200 ->
+        getS3ObjectContent S3Object{_s3oBucketId, _s3oKey = S3Key objKey} =
+          handling _KeyNotFound handler action
+
+          where
+            bucketName = getPhysicalName config $ getById config _s3oBucketId
+
+            action = do
+              r <- send . getObject (BucketName bucketName) $ ObjectKey objKey
               fmap Right $ (r ^. gorsBody) `sinkBody` sinkLbs
-            errCode ->
-              pure . Left $ "received error status code: " <> show errCode
+
+
+            handler _ = pure $ Left "KeyNotFound"
+
+            _KeyNotFound :: AsError a => Getting (First ServiceError) a ServiceError
+            _KeyNotFound = _ServiceError . hasStatus 404 -- . hasCode "InvalidKeyPair.Duplicate"
+
 
 
 {-
@@ -342,18 +354,30 @@ run name config program = do
             bucketName = getPhysicalName config $ getById config _s3oBucketId
 
         listS3Objects
-          :: S3BucketId
-          -> QiAWS [S3Object]
-        listS3Objects bucketId = do
-          r <- send $ listObjectsV2 (BucketName bucketName)
-          case r ^. lovrsResponseStatus of
-            200 ->
-              pure $ (\o -> S3Object bucketId $ S3Key . toText $ o ^. oKey) <$> r ^. lovrsContents
-
-            errCode ->
-              panic $ "listS3Objects returned an error " <> show errCode <> " code"
+          :: Monoid a
+          => S3BucketId
+          -> (a -> Vector S3Object -> QiAWS a)
+          -> QiAWS a
+        listS3Objects bucketId cont =
+          go mempty Nothing
 
           where
+            go acc maybeToken = do
+              r <- send $ case maybeToken of
+                            Nothing -> -- first pagination call
+                              listObjectsV2 (BucketName bucketName)
+                            Just token ->
+                              listObjectsV2 (BucketName bucketName) & lovContinuationToken ?~ token
+
+
+              acc' <- cont acc $ (\o -> S3Object bucketId $ S3Key . toText $ o ^. oKey) <$> V.fromList (r ^. lovrsContents)
+              case r ^. lovrsNextContinuationToken of
+                Just token ->
+                  go acc' (Just token)
+                Nothing ->
+                  pure acc'
+
+
             bucketName = getPhysicalName config $ getById config bucketId
 
 -- DynamoDB

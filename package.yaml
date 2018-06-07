@@ -71,6 +71,7 @@ dependencies:
   - turtle
   - unix
   - unordered-containers
+  - vector
   - yaml
 
 

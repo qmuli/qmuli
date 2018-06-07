@@ -12,6 +12,7 @@ import qualified Data.ByteString.Lazy            as LBS
 import           Data.Conduit
 import           Data.Text                       (Text)
 import           Data.Time.Clock                 (UTCTime)
+import           Data.Vector                     (Vector)
 import           Network.AWS                     hiding (Request, Response)
 import           Network.AWS.DynamoDB.DeleteItem
 import           Network.AWS.DynamoDB.GetItem
@@ -31,7 +32,6 @@ import           Qi.Config.Identifier
 import           Qi.Core.Curry
 import           Servant.Client                  (BaseUrl, ClientM,
                                                   ServantError)
-
 
 type LambdaProgram          = Program LambdaInstruction
 type CompleteLambdaProgram  = LambdaProgram LBS.ByteString
@@ -91,8 +91,10 @@ data LambdaInstruction a where
     -> LambdaInstruction ()
 
   ListS3Objects
-    :: S3BucketId
-    -> LambdaInstruction [S3Object]
+    :: Monoid a
+    => S3BucketId
+    -> (a -> Vector S3Object -> LambdaProgram a)
+    -> LambdaInstruction a
 
   ScanDdbRecords
     :: DdbTableId
@@ -221,9 +223,11 @@ putS3ObjectContent
 putS3ObjectContent = singleton .: PutS3ObjectContent
 
 listS3Objects
-  :: S3BucketId
-  -> LambdaProgram [S3Object]
-listS3Objects = singleton . ListS3Objects
+  :: Monoid a
+  => S3BucketId
+  -> (a -> Vector S3Object -> LambdaProgram a)
+  -> LambdaProgram a
+listS3Objects = singleton .: ListS3Objects
 
 
 -- DDB
