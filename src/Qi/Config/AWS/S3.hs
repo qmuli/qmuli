@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -5,6 +7,7 @@
 module Qi.Config.AWS.S3 where
 
 import           Control.Lens
+import           Data.Aeson           (FromJSON, ToJSON)
 import           Data.ByteString      (ByteString)
 import           Data.Default         (Default, def)
 import           Data.HashMap.Strict  (HashMap)
@@ -30,13 +33,13 @@ data S3EventConfig = S3EventConfig {
   }
 
 newtype S3Key = S3Key Text
-  deriving Show
+  deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 data S3Object = S3Object {
     _s3oBucketId :: S3BucketId
   , _s3oKey      :: S3Key
   }
-  deriving Show
+  deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 s3Object
   :: S3BucketId
