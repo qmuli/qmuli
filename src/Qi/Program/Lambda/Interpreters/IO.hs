@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
@@ -8,7 +9,9 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
+{-# LANGUAGE ViewPatterns               #-}
 
 module Qi.Program.Lambda.Interpreters.IO (run) where
 
@@ -39,6 +42,7 @@ import           Data.Conduit                          (Conduit, Sink,
 import           Data.Conduit.Binary                   (sinkLbs)
 import qualified Data.Conduit.List                     as CL
 import           Data.Default                          (def)
+import qualified Data.List.NonEmpty                    as NE
 import qualified Data.Text                             as T
 import           Data.Text.Encoding                    (decodeUtf8)
 import qualified Data.Text.IO                          as T
@@ -54,7 +58,7 @@ import           Network.AWS.Data.Text                 (ToText (..))
 import           Network.AWS.DynamoDB
 import           Network.AWS.Lambda
 import           Network.AWS.S3
-import           Network.AWS.S3.CreateMultipartUpload
+import           Network.AWS.S3.Types                  (ETag)
 import           Network.AWS.SQS
 import           Network.HTTP.Client                   (ManagerSettings,
                                                         Request, Response,
@@ -182,6 +186,11 @@ run name config program = do
 -- S3
             GetS3ObjectContent s3Obj :>>= is ->
               getS3ObjectContent s3Obj >>= interpret . is
+
+
+            MultipartS3Upload s3Obj cont :>>= is ->
+              multipartS3Upload s3Obj (interpret . cont) >>= interpret . is
+
 {-
             StreamFromS3Object s3Obj sink :>>= is ->
               streamFromS3Object s3Obj sink >>= interpret . is
@@ -283,17 +292,19 @@ run name config program = do
 
 
 -- S3
+
+
         getS3ObjectContent
           :: S3Object
           -> QiAWS (Either Text LBS.ByteString)
-        getS3ObjectContent S3Object{_s3oBucketId, _s3oKey = S3Key objKey} =
+        getS3ObjectContent S3Object{ _s3oBucketId, _s3oKey = S3Key (ObjectKey -> objKey) } =
           handling _KeyNotFound handler action
 
           where
-            bucketName = getPhysicalName config $ getById config _s3oBucketId
+            bucketName = BucketName . getPhysicalName config $ getById config _s3oBucketId
 
             action = do
-              r <- send . getObject (BucketName bucketName) $ ObjectKey objKey
+              r <- send $ getObject bucketName objKey
               fmap Right $ (r ^. gorsBody) `sinkBody` sinkLbs
 
 
@@ -302,6 +313,41 @@ run name config program = do
             _KeyNotFound :: AsError a => Getting (First ServiceError) a ServiceError
             _KeyNotFound = _ServiceError . hasStatus 404 -- . hasCode "InvalidKeyPair.Duplicate"
 
+
+        multipartS3Upload
+          :: S3Object
+          -> (  ( (Int, S3Object) -> QiAWS (Maybe (Int, ETag)) )
+                -> QiAWS (Maybe [(Int, ETag)]) )
+          -> QiAWS ()
+        multipartS3Upload S3Object{ _s3oBucketId, _s3oKey = S3Key (ObjectKey -> objKey) } cont = do
+          r <- send $ createMultipartUpload destinationBucketName objKey
+          case r ^. cmursUploadId of
+            Nothing ->
+              panic "no uploadId returned"
+            Just uploadId -> do
+
+              chunks <- cont (uploadChunk uploadId)
+              case chunks of
+                [] -> panic "no chunks in multipart upload, TODO: abort"
+                (x:xs) -> do
+                  let completedParts = NE.map (\(i, etag) -> completedPart i etag) (x:|xs)
+                      cmu = completedMultipartUpload & cmuParts ?~ completedParts
+
+                  send $ completeMultipartUpload destinationBucketName objKey uploadId
+                            & cMultipartUpload ?~ cmu
+
+                  pass
+
+          where
+            uploadChunk uploadId (i, sourceS3Object@S3Object{_s3oKey = S3Key (ObjectKey -> sourceObjectKey)}) = do
+              r <- send $ uploadPartCopy bucketName source objKey i uploadId
+              pure . fmap (i, ) $ r ^. upcrsCopyPartResult . cprETag
+
+              where
+                sourceBucketName = BucketName . getPhysicalName config $ getById config $ sourceS3Object ^. s3oBucketId
+
+
+            destinationBucketName = BucketName . getPhysicalName config $ getById config _s3oBucketId
 
 
 {-
@@ -345,13 +391,13 @@ run name config program = do
           :: S3Object
           -> LBS.ByteString
           -> QiAWS ()
-        putS3ObjectContent s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key objKey} content = do
-          r <- send $ putObject (BucketName bucketName) (ObjectKey objKey) (toBody content)
+        putS3ObjectContent s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key (ObjectKey -> objKey)} content = do
+          r <- send $ putObject bucketName objKey (toBody content)
                         & poACL ?~ OPublicReadWrite
           pure ()
 
           where
-            bucketName = getPhysicalName config $ getById config _s3oBucketId
+            bucketName = BucketName . getPhysicalName config $ getById config _s3oBucketId
 
         listS3Objects
           :: Monoid a
@@ -359,10 +405,10 @@ run name config program = do
           -> (a -> Vector S3Object -> QiAWS a)
           -> QiAWS a
         listS3Objects bucketId cont =
-          go mempty Nothing
+          loop mempty Nothing
 
           where
-            go acc maybeToken = do
+            loop !acc !maybeToken = do
               r <- send $ case maybeToken of
                             Nothing -> -- first pagination call
                               listObjectsV2 (BucketName bucketName)
@@ -373,7 +419,7 @@ run name config program = do
               acc' <- cont acc $ (\o -> S3Object bucketId $ S3Key . toText $ o ^. oKey) <$> V.fromList (r ^. lovrsContents)
               case r ^. lovrsNextContinuationToken of
                 Just token ->
-                  go acc' (Just token)
+                  loop acc' (Just token)
                 Nothing ->
                   pure acc'
 

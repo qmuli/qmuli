@@ -19,6 +19,7 @@ import           Network.AWS.DynamoDB.GetItem
 import           Network.AWS.DynamoDB.PutItem
 import           Network.AWS.DynamoDB.Query
 import           Network.AWS.DynamoDB.Scan
+import           Network.AWS.S3.Types            (ETag)
 import           Network.HTTP.Client
 import           Protolude
 import           Qi.AWS.SQS
@@ -72,6 +73,13 @@ data LambdaInstruction a where
   GetS3ObjectContent
     :: S3Object
     -> LambdaInstruction (Either Text LBS.ByteString)
+
+  MultipartS3Upload
+    :: S3Object
+    -> (  ( (Int, S3Object) -> LambdaProgram (Maybe (Int, ETag)) )
+          -> LambdaProgram (Maybe [(Int, ETag)]) )
+    -> LambdaInstruction ()
+
 {-
   StreamFromS3Object
     :: S3Object
@@ -200,6 +208,14 @@ getS3ObjectContent
   :: S3Object
   -> LambdaProgram (Either Text LBS.ByteString)
 getS3ObjectContent = singleton . GetS3ObjectContent
+
+
+multipartS3Upload
+  :: S3Object
+    -> (  ( (Int, S3Object) -> LambdaProgram (Maybe (Int, ETag)) )
+          -> LambdaProgram (Maybe [(Int, ETag)]) )
+  -> LambdaProgram ()
+multipartS3Upload = singleton .: MultipartS3Upload
 
 {-
 streamFromS3Object
