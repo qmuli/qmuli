@@ -189,7 +189,10 @@ run name config program = do
 
 
             MultipartS3Upload s3Obj cont :>>= is ->
-              multipartS3Upload s3Obj (interpret . cont) >>= interpret . is
+              multipartS3Upload s3Obj (\sink -> interpret . cont sink) >>= interpret . is
+
+            UploadS3Chunk s3Obj uploadId chunk :>>= is ->
+              uploadS3Chunk s3Obj uploadId chunk  >>= interpret . is
 
 {-
             StreamFromS3Object s3Obj sink :>>= is ->
@@ -316,39 +319,50 @@ run name config program = do
 
         multipartS3Upload
           :: S3Object
-          -> (  ( (Int, S3Object) -> QiAWS (Maybe (Int, ETag)) )
-                -> QiAWS (Maybe [(Int, ETag)]) )
+          -> (S3Object -> Text -> QiAWS [(Int, ETag)])
           -> QiAWS ()
-        multipartS3Upload S3Object{ _s3oBucketId, _s3oKey = S3Key (ObjectKey -> objKey) } cont = do
-          r <- send $ createMultipartUpload destinationBucketName objKey
+        multipartS3Upload sinkS3Object@S3Object{ _s3oBucketId, _s3oKey = S3Key (ObjectKey -> sinkObjectKey) } cont = do
+          r <- send $ createMultipartUpload sinkBucketName sinkObjectKey
           case r ^. cmursUploadId of
             Nothing ->
               panic "no uploadId returned"
             Just uploadId -> do
 
-              chunks <- cont (uploadChunk uploadId)
+              chunks <- cont sinkS3Object uploadId
               case chunks of
-                [] -> panic "no chunks in multipart upload, TODO: abort"
+                [] -> -- no chunks succeeded, abort the upload
+                  void . send $ abortMultipartUpload sinkBucketName sinkObjectKey uploadId
                 (x:xs) -> do
                   let completedParts = NE.map (\(i, etag) -> completedPart i etag) (x:|xs)
                       cmu = completedMultipartUpload & cmuParts ?~ completedParts
 
-                  send $ completeMultipartUpload destinationBucketName objKey uploadId
+                  send $ completeMultipartUpload sinkBucketName sinkObjectKey uploadId
                             & cMultipartUpload ?~ cmu
 
                   pass
 
           where
-            uploadChunk uploadId (i, sourceS3Object@S3Object{_s3oKey = S3Key (ObjectKey -> sourceObjectKey)}) = do
-              r <- send $ uploadPartCopy bucketName source objKey i uploadId
-              pure . fmap (i, ) $ r ^. upcrsCopyPartResult . cprETag
+            sinkBucketName = BucketName . getPhysicalName config $ getById config _s3oBucketId
 
-              where
-                sourceBucketName = BucketName . getPhysicalName config $ getById config $ sourceS3Object ^. s3oBucketId
+        uploadS3Chunk
+          :: S3Object -- sink
+          -> Text -- uploadId
+          -> (Int, S3Object) -- source chunk
+          -> QiAWS (Maybe (Int, ETag))
+        uploadS3Chunk
+          sinkS3Object@S3Object{_s3oKey = S3Key (ObjectKey -> sinkObjectKey)}
+          uploadId
+          (i, sourceS3Object@S3Object{_s3oKey = S3Key sourceObjectTextKey}) = do
+            r <- send $ uploadPartCopy sinkBucketName source sinkObjectKey i uploadId
+            let cpr = r ^. upcrsCopyPartResult
 
+            pure . map (i, ) $ cpr >>= (\c -> c ^. cprETag)
 
-            destinationBucketName = BucketName . getPhysicalName config $ getById config _s3oBucketId
+          where
+            sinkBucketName = BucketName . getPhysicalName config $ getById config $ sinkS3Object ^. s3oBucketId
 
+            sourceBucketTextName = getPhysicalName config $ getById config $ sourceS3Object ^. s3oBucketId
+            source = sourceBucketTextName <> "/" <> sourceObjectTextKey
 
 {-
         streamFromS3Object

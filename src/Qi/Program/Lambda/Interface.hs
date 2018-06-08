@@ -76,9 +76,15 @@ data LambdaInstruction a where
 
   MultipartS3Upload
     :: S3Object
-    -> (  ( (Int, S3Object) -> LambdaProgram (Maybe (Int, ETag)) )
-          -> LambdaProgram (Maybe [(Int, ETag)]) )
+    -> (S3Object -> Text -> LambdaProgram [(Int, ETag)])
     -> LambdaInstruction ()
+
+  UploadS3Chunk
+    :: S3Object -- sink
+    -> Text -- uploadId
+    -> (Int, S3Object) -- source chunk
+    -> LambdaInstruction (Maybe (Int, ETag))
+
 
 {-
   StreamFromS3Object
@@ -212,10 +218,16 @@ getS3ObjectContent = singleton . GetS3ObjectContent
 
 multipartS3Upload
   :: S3Object
-    -> (  ( (Int, S3Object) -> LambdaProgram (Maybe (Int, ETag)) )
-          -> LambdaProgram (Maybe [(Int, ETag)]) )
+  -> (S3Object -> Text -> LambdaProgram [(Int, ETag)])
   -> LambdaProgram ()
 multipartS3Upload = singleton .: MultipartS3Upload
+
+uploadS3Chunk
+  :: S3Object -- sink
+  -> Text -- uploadId
+  -> (Int, S3Object) -- source chunk
+  -> LambdaProgram (Maybe (Int, ETag))
+uploadS3Chunk = singleton .:: UploadS3Chunk
 
 {-
 streamFromS3Object
