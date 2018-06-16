@@ -99,8 +99,8 @@ newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
 data LoggerType = NoLogger | StdOutLogger | CwLogger
 
 loggerType :: LoggerType
-loggerType = CwLogger
-{- loggerType = NoLogger -}
+{- loggerType = CwLogger -}
+loggerType = NoLogger
 
 withEnv
   :: Text
