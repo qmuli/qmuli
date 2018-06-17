@@ -1,5 +1,5 @@
 name: qmuli
-version: "0.2.0"
+version: "0.3.0"
 synopsis: EDSL for building infrastructure on AWS
 description: EDSL for building infrastructure on AWS
 category: AWS, Cloud
