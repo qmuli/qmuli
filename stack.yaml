@@ -5,7 +5,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/ababkin/system-extra.git
-    commit: 0ec5b3ca62bd73a4df6f29b99b654071a0262f18
+    commit: 8f3f93d5172744a8dedde57693c2b5d3c15f745c
   extra-dep: true
   #- location:
   #  git: https://github.com/ababkin/amazonka-s3-streaming.git
