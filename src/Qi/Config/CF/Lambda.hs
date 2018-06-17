@@ -16,6 +16,7 @@ import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.Lambda.Accessors
 import qualified Qi.Config.CF.Role              as Role
 
+
 toResources :: Config -> Resources
 toResources config = foldMap toAllLambdaResources $ getAll config
   where

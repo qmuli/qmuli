@@ -24,6 +24,7 @@ import           Qi.Config.AWS.CW
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
+import           Qi.Config.AWS.SQS
 import           Qi.Config.Identifier
 import           Qi.Program.Config.Interface hiding (apiResource)
 
@@ -74,6 +75,9 @@ interpret program =
 
     RCwEventLambda name ruleProfile programFunc profile :>>= is ->
       interpret . is =<< rCwEventLambda name ruleProfile programFunc profile
+
+    RSqsQueue name :>>= is ->
+      interpret . is =<< rSqsQueue name
 
     Return _ ->
       return def
@@ -128,6 +132,12 @@ interpret program =
       ddbConfig.dcTables %= SHM.adjust (dtStreamHandler .~ Just newLambdaId) tableId
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
       return newLambdaId
+
+-- Sqs
+    rSqsQueue name = do
+      id <- getNextId
+      sqsConfig . sqsQueues %= SHM.insert id (SqsQueue{ _sqsQueueName = name })
+      pure id
 
 
 -- Api

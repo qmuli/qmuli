@@ -10,7 +10,6 @@ import           Data.Aeson                  (Result (Error, Success),
                                               encode, object)
 import qualified Data.ByteString.Lazy.Char8  as LBS
 import           Data.HashMap.Strict         (HashMap)
-import qualified Data.Text                   as T
 import           Data.Time.Clock.POSIX       (getPOSIXTime)
 import           Protolude
 import           System.Console.ANSI
@@ -30,14 +29,14 @@ success v =
 created :: Value -> CompleteLambdaProgram
 created = respond 201
 
-argumentsError :: [Char] -> CompleteLambdaProgram
-argumentsError = respond 400 . String . T.pack
+argumentsError :: Text -> CompleteLambdaProgram
+argumentsError = respond 400 . String
 
-notFoundError :: [Char] -> CompleteLambdaProgram
-notFoundError = respond 404 . String . T.pack
+notFoundError :: Text -> CompleteLambdaProgram
+notFoundError = respond 404 . String
 
-internalError :: [Char] -> CompleteLambdaProgram
-internalError = respond 500 . String . T.pack
+internalError :: Text -> CompleteLambdaProgram
+internalError = respond 500 . String
 
 respond
   :: Int

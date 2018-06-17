@@ -23,6 +23,7 @@ import           Qi.Config.AWS.CW
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
+import           Qi.Config.AWS.SQS
 import           Qi.Config.Identifier
 
 
@@ -36,6 +37,7 @@ data Config = Config {
   , _ddbConfig    :: DdbConfig
   , _cfConfig     :: CfConfig
   , _cwConfig     :: CwConfig
+  , _sqsConfig    :: SqsConfig
 }
 
 instance Default Config where
@@ -49,6 +51,7 @@ instance Default Config where
     , _ddbConfig    = def
     , _cfConfig     = def
     , _cwConfig     = def
+    , _sqsConfig    = def
   }
 
 makeLenses ''Config
@@ -185,4 +188,11 @@ instance CfResource ApiResource ApiResourceId where
   rNameSuffix = const "ApiResource"
   getName _ = (^.arName)
   getMap = (^.apiGwConfig.acApiResources)
+
+instance CfResource SqsQueue SqsQueueId where
+  rNameSuffix = const "SqsQueue"
+  getName _ = (^.sqsQueueName)
+  getMap = (^. sqsConfig . sqsQueues)
+  getPhysicalName config r =
+    makeAlphaNumeric (getName config r) `dotNamePrefixWith` config
 

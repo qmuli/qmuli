@@ -1,5 +1,5 @@
 name: qmuli
-version: "0.2.0"
+version: "0.3.0"
 synopsis: EDSL for building infrastructure on AWS
 description: EDSL for building infrastructure on AWS
 category: AWS, Cloud
@@ -32,7 +32,9 @@ dependencies:
   - amazonka-iam
   - amazonka-lambda
   - amazonka-s3
+  - amazonka-sqs
   #- amazonka-s3-streaming
+  - ansi-terminal
   - base
   - binary
   - bytestring
@@ -43,34 +45,34 @@ dependencies:
   - either
   - exceptions
   - executable-path
-  - jwt
+  - extra
   - hashable
   - heredoc
   - http-client
   - http-client-tls
+  - jwt
   - lens
   - lens-aeson
   - mtl
-  - protolude
-  - text
-  - time
-  - transformers
-  - transformers-base
   - operational
   - optparse-applicative
   - process
   - protolude
   - resourcet
   - safe
+  - servant-client
   - stm
   - stratosphere
   - system-extra
+  - text
+  - time
+  - transformers
+  - transformers-base
   - turtle
   - unix
   - unordered-containers
+  - vector
   - yaml
-  - extra
-  - ansi-terminal
 
 
 library:
@@ -107,18 +109,18 @@ flags:
 
 
 executables:
-  qmuli-simple-s3-copy:
-    main: Main.hs
-    source-dirs: examples/simple-s3-copy/src
-    dependencies:
-      - base
-      - qmuli
-    when:    
-    - condition: flag(build-examples)
-      then:
-        buildable: true
-      else:
-        buildable: false
+  # qmuli-simple-s3-copy:
+    # main: Main.hs
+    # source-dirs: examples/simple-s3-copy/src
+    # dependencies:
+      # - base
+      # - qmuli
+    # when:    
+    # - condition: flag(build-examples)
+      # then:
+        # buildable: true
+      # else:
+        # buildable: false
 
         #  qmuli-fold-s3-content:
         #    main: Main.hs

@@ -72,7 +72,27 @@ toResources config = Resources [lbdRoleRes]
               , "logs:PutLogEvents"
 
               , "s3:GetObject"
+              , "s3:GetObjectAcl"
+              , "s3:GetObjectTagging"
+              , "s3:GetObjectVersion"
+              , "s3:GetObjectVersionAcl"
+              , "s3:GetObjectVersionTagging"
               , "s3:PutObject"
+              , "s3:PutObjectAcl"
+              , "s3:PutObjectTagging"
+              , "s3:PutObjectVersionAcl"
+              , "s3:PutObjectVersionTagging"
+              , "s3:DeleteObject"
+              , "s3:DeleteObjectTagging"
+              , "s3:DeleteObjectVersion"
+              , "s3:DeleteObjectVersionTagging"
+              , "s3:RestoreObject"
+              , "s3:CreateBucket"
+              , "s3:DeleteBucket"
+              , "s3:ListBucket"
+              , "s3:ListBucketVersions"
+              , "s3:ListAllMyBuckets"
+              , "s3:ListBucketMultipartUploads"
               , "s3:ListMultipartUploadParts"
               , "s3:AbortMultipartUpload"
 
@@ -81,7 +101,6 @@ toResources config = Resources [lbdRoleRes]
               , "dynamodb:GetItem"
               , "dynamodb:PutItem"
               , "dynamodb:DeleteItem"
-
               , "dynamodb:GetRecords"
               , "dynamodb:GetShardIterator"
               , "dynamodb:DescribeStream"
@@ -100,6 +119,8 @@ toResources config = Resources [lbdRoleRes]
               , "iam:PassRole"
               , "iam:PutRolePolicy"
               , "iam:DeleteRolePolicy"
+
+              , "lambda:InvokeFunction"
               ]
 
 
