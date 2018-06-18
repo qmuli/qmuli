@@ -70,7 +70,7 @@ lbdIOMap config = SHM.fromList $ map toLbdIOPair $ getAll config
         lbdIO name' lbd eventJson =
           either
             (\err -> panic $ "Could not parse event: " <> eventJson <> ", error was: " <> toS err)
-            (LIO.run name' config)
+            (LIO.runLambdaProgram name' config LIO.NoLogger {-CwLogger-})
             (parseLambdaEvent lbd eventJson)
 
     parseLambdaEvent

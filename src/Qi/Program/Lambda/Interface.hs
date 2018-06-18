@@ -12,7 +12,6 @@ import qualified Data.ByteString.Lazy            as LBS
 import           Data.Conduit
 import           Data.Text                       (Text)
 import           Data.Time.Clock                 (UTCTime)
-import           Data.Vector                     (Vector)
 import           Network.AWS                     hiding (Request, Response)
 import           Network.AWS.DynamoDB.DeleteItem
 import           Network.AWS.DynamoDB.GetItem
@@ -107,8 +106,18 @@ data LambdaInstruction a where
   ListS3Objects
     :: Monoid a
     => S3BucketId
-    -> (a -> Vector S3Object -> LambdaProgram a)
+    -> (a -> [S3Object] -> LambdaProgram a)
     -> LambdaInstruction a
+
+  DeleteS3Object
+    :: S3Object
+    -> LambdaInstruction ()
+
+  DeleteS3Objects
+    :: [S3Object]
+    -> LambdaInstruction ()
+
+-- DDB
 
   ScanDdbRecords
     :: DdbTableId
@@ -253,9 +262,19 @@ putS3ObjectContent = singleton .: PutS3ObjectContent
 listS3Objects
   :: Monoid a
   => S3BucketId
-  -> (a -> Vector S3Object -> LambdaProgram a)
+  -> (a -> [S3Object] -> LambdaProgram a)
   -> LambdaProgram a
 listS3Objects = singleton .: ListS3Objects
+
+deleteS3Object
+  :: S3Object
+  -> LambdaProgram ()
+deleteS3Object = singleton . DeleteS3Object
+
+deleteS3Objects
+  :: [S3Object]
+  -> LambdaProgram ()
+deleteS3Objects = singleton . DeleteS3Objects
 
 
 -- DDB

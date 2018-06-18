@@ -1,28 +1,37 @@
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Qi.Dispatcher.S3 where
 
 import           Control.Lens
-import           Control.Monad                (forM_, void, (<=<))
-import           Control.Monad.IO.Class       (liftIO)
-import           Data.List                    (intersect)
-import           Data.Text                    (Text)
-import qualified Data.Text                    as T
-import           Network.AWS                  (AWS, send)
-import           Network.AWS.Data.Body        (ToBody, toBody)
-import           Network.AWS.S3               (BucketName (BucketName),
-                                               ObjectKey (ObjectKey), bName,
-                                               dObjects, dQuiet, delete',
-                                               deleteObjects, lbrsBuckets,
-                                               listObjectsV2, lovrsContents,
-                                               oKey, objectIdentifier)
-import qualified Network.AWS.S3               as S3
+import           Control.Monad                     (forM_, void, (<=<))
+import           Control.Monad.IO.Class            (liftIO)
+import           Data.List                         (intersect)
+import           Data.Text                         (Text)
+import qualified Data.Text                         as T
+import           Network.AWS                       (AWS, send)
+import           Network.AWS.Data.Body             (ToBody, toBody)
+import           Network.AWS.S3                    (BucketName (BucketName),
+                                                    ObjectKey (ObjectKey),
+                                                    bName, dObjects, dQuiet,
+                                                    delete', deleteObjects,
+                                                    lbrsBuckets, listObjectsV2,
+                                                    lovrsContents, oKey,
+                                                    objectIdentifier)
+import qualified Network.AWS.S3                    as S3
 import           Network.AWS.S3.DeleteObjects
 import           Network.AWS.S3.ListBuckets
 import           Network.AWS.S3.ListObjectsV2
-import           Protolude
-
+import           Protolude                         hiding (getAll)
+import           Qi.Config.AWS                     (Config, getAll,
+                                                    getAllWithIds, getById,
+                                                    getPhysicalName, namePrefix)
+import           Qi.Config.AWS.S3                  (S3Bucket, s3bName)
+import           Qi.Config.Identifier              (S3BucketId)
+import qualified Qi.Program.Lambda.Interface       as I
+import           Qi.Program.Lambda.Interpreters.IO (LoggerType (..),
+                                                    runLambdaProgram)
 
 createBucket
   :: Text
@@ -42,23 +51,22 @@ putObject bucketName objectKey =
 
 
 clearBuckets
-  :: [Text]
-  -> AWS ()
-clearBuckets names = do
-  existingBucketNames <- map (^.bName) . (^.lbrsBuckets) <$> send listBuckets
-  let filteredBucketNames = map BucketName names `intersect` existingBucketNames
+  :: Config
+  -> IO ()
+clearBuckets config = do
+  putStrLn ("cleaning buckets..." :: Text)
+  runLambdaProgram "dispatcher" config StdOutLogger program
 
-  forM_ filteredBucketNames $ \bucketName@(BucketName name) -> do
-    liftIO $ putStrLn $ "cleaning up bucket: " ++ T.unpack name ++ "..."
-    objectKeys <- map (^.oKey) . (^.lovrsContents) <$> send (listObjectsV2 bucketName)
-    if null objectKeys
-      then
-        return ()
-      else do
-        let objectNamesToDestroy = map (\(ObjectKey key) -> key) objectKeys
-        liftIO $ putStrLn $ "\tfound s3 objects to destroy: " ++ show objectNamesToDestroy
-        void . send . deleteObjects bucketName $ delete'
-                                            & dQuiet ?~ True
-                                            & dObjects .~ map objectIdentifier objectKeys
+  where
+    bucketIds :: [S3BucketId]
+    bucketIds = map fst $ getAllWithIds config
+
+    program = do
+      I.say "destroying buckets..."
+      for_ bucketIds $ \bucketId -> do
+        I.say $ "destroying bucket: '" <> (getById config bucketId) ^. s3bName <> "'"
+        I.listS3Objects bucketId $ \_ -> I.deleteS3Objects
+
+      pure ""
 
 

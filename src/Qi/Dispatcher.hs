@@ -132,8 +132,10 @@ destroyCfStack action =
     let appName = config^.namePrefix
 
     printSuccess "destroying the stack..."
+
+    liftIO $ clearBuckets config
+
     runAmazonka $ do
-      clearBuckets $ map (getPhysicalName config) (getAll config :: [S3Bucket])
       deleteStack appName
 
     action
