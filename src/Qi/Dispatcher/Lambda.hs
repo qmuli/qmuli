@@ -48,16 +48,16 @@ invoke name evt = do
       Nothing ->
         putStrLn $ "No lambda with name '" <> name <> "' was found"
       Just lbdIO ->
-        lbdIO evt
+        putStr =<< lbdIO evt
 
 lbdIOMap
   :: Config
-  -> SHM.HashMap Text (Text -> IO ())
+  -> SHM.HashMap Text (Text -> IO LBS.ByteString)
 lbdIOMap config = SHM.fromList $ map toLbdIOPair $ getAll config
   where
     toLbdIOPair
       :: Lambda
-      -> (Text, Text -> IO ())
+      -> (Text, Text -> IO LBS.ByteString)
     toLbdIOPair l = (name, lbdIO name l)
       where
         name = l^.lbdName
@@ -66,7 +66,7 @@ lbdIOMap config = SHM.fromList $ map toLbdIOPair $ getAll config
           :: Text
           -> Lambda
           -> Text
-          -> IO ()
+          -> IO LBS.ByteString
         lbdIO name' lbd eventJson =
           either
             (\err -> panic $ "Could not parse event: " <> eventJson <> ", error was: " <> toS err)

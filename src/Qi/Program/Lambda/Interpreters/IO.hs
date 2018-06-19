@@ -16,69 +16,62 @@
 module Qi.Program.Lambda.Interpreters.IO (LoggerType(..), runLambdaProgram) where
 
 --import           Network.AWS.S3.StreamingUpload
-import           Control.Concurrent                    hiding (yield)
+import           Control.Concurrent           hiding (yield)
 import           Control.Concurrent.STM
-import           Control.Exception.Lens                (handling)
-import           Control.Lens                          hiding (view)
-import           Control.Monad.Base                    (MonadBase)
-import           Control.Monad.Catch                   (MonadCatch, MonadThrow)
-import           Control.Monad.IO.Class                (MonadIO, liftIO)
-import           Control.Monad.Operational             (ProgramViewT ((:>>=), Return),
-                                                        singleton, view)
-import           Control.Monad.Reader.Class            (MonadReader)
-import           Control.Monad.Trans.AWS               (AWST, runAWST, send)
-import           Control.Monad.Trans.Resource          (MonadResource,
-                                                        ResourceT)
-import           Data.Aeson                            (FromJSON, ToJSON,
-                                                        Value (..), decode,
-                                                        encode, object)
-import           Data.Binary.Builder                   (fromLazyByteString,
-                                                        toLazyByteString)
-import qualified Data.ByteString.Char8                 as BS
-import qualified Data.ByteString.Lazy.Char8            as LBS
-import           Data.Conduit                          (Conduit, Sink,
-                                                        awaitForever, transPipe,
-                                                        yield, ($$), (=$=))
-import           Data.Conduit.Binary                   (sinkLbs)
-import qualified Data.Conduit.List                     as CL
-import           Data.Default                          (def)
-import qualified Data.List.NonEmpty                    as NE
-import qualified Data.Map.Strict                       as Map
-import qualified Data.Text                             as T
-import           Data.Text.Encoding                    (decodeUtf8)
-import qualified Data.Text.IO                          as T
-import           Data.Time.Clock                       (UTCTime)
-import qualified Data.Time.Clock                       as C
-import           GHC.Exts                              (fromList)
-import           Network.AWS                           hiding (Request,
-                                                        Response, send)
-import           Network.AWS.Data.Body                 (RsBody (..), fuseStream)
-import           Network.AWS.Data.Text                 (ToText (..))
+import           Control.Exception.Lens       (handling)
+import           Control.Lens                 hiding (view)
+import           Control.Monad.Base           (MonadBase)
+import           Control.Monad.Catch          (MonadCatch, MonadThrow)
+import           Control.Monad.IO.Class       (MonadIO, liftIO)
+import           Control.Monad.Operational    (ProgramViewT ((:>>=), Return),
+                                               singleton, view)
+import           Control.Monad.Reader.Class   (MonadReader)
+import           Control.Monad.Trans.AWS      (AWST, runAWST, send)
+import           Control.Monad.Trans.Resource (MonadResource, ResourceT)
+import           Data.Aeson                   (FromJSON, ToJSON, Value (..),
+                                               decode, encode, object)
+import           Data.Binary.Builder          (fromLazyByteString,
+                                               toLazyByteString)
+import qualified Data.ByteString.Char8        as BS
+import qualified Data.ByteString.Lazy.Char8   as LBS
+import           Data.Conduit                 (Conduit, Sink, awaitForever,
+                                               transPipe, yield, ($$), (=$=))
+import           Data.Conduit.Binary          (sinkLbs)
+import qualified Data.Conduit.List            as CL
+import           Data.Default                 (def)
+import qualified Data.List.NonEmpty           as NE
+import qualified Data.Map.Strict              as Map
+import qualified Data.Text                    as T
+import           Data.Text.Encoding           (decodeUtf8)
+import qualified Data.Text.IO                 as T
+import           Data.Time.Clock              (UTCTime)
+import qualified Data.Time.Clock              as C
+import           GHC.Exts                     (fromList)
+import           Network.AWS                  hiding (Request, Response, send)
+import           Network.AWS.Data.Body        (RsBody (..), fuseStream)
+import           Network.AWS.Data.Text        (ToText (..))
 import           Network.AWS.DynamoDB
 import           Network.AWS.Lambda
 import           Network.AWS.S3
-import           Network.AWS.S3.Types                  (ETag)
+import           Network.AWS.S3.Types         (ETag)
 import           Network.AWS.SQS
-import           Network.HTTP.Client                   (ManagerSettings,
-                                                        Request, Response,
-                                                        httpLbs, newManager)
-import           Protolude                             hiding ((<&>))
-import           Qi.Amazonka                           (currentRegion)
+import           Network.HTTP.Client          (ManagerSettings, Request,
+                                               Response, httpLbs, newManager)
+import           Protolude                    hiding ((<&>))
+import           Qi.Amazonka                  (currentRegion)
 import           Qi.AWS.SQS
 import           Qi.Config.AWS
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
-import           Qi.Program.Lambda.Interface           (LambdaInstruction (..),
-                                                        LambdaProgram)
-import           Qi.Program.Lambda.Interpreters.IO.Log
-import           Qi.Util                               (time)
-import           Servant.Client                        (BaseUrl, ClientM,
-                                                        ServantError,
-                                                        mkClientEnv, runClientM)
-import           System.IO                             (stdout)
-import           System.Mem                            (performMajorGC)
+import           Qi.Program.Lambda.Interface  (LambdaInstruction (..),
+                                               LambdaProgram)
+import           Qi.Util                      (time)
+import           Servant.Client               (BaseUrl, ClientM, ServantError,
+                                               mkClientEnv, runClientM)
+import           System.IO                    (stdout)
+import           System.Mem                   (performMajorGC)
 
 
 newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
@@ -95,58 +88,39 @@ newtype QiAWS a = QiAWS {unQiAWS :: AWST (ResourceT IO) a}
     )
 
 
-data LoggerType = NoLogger | StdOutLogger | CwLogger
+data LoggerType = NoLogger | StdOutLogger
 
 
 withEnv
   :: Text
   -> Config
   -> LoggerType
-  -> (Env -> (Text -> QiAWS ()) -> IO ())
-  -> IO ()
+  -> (Env -> (Text -> QiAWS ()) -> IO a)
+  -> IO a
 withEnv name config loggerType action =
   case loggerType of
-    CwLogger -> do
-      logQueue <- liftIO . atomically $ newTBQueue 1000
-      loggerDone <- liftIO . forkIOSync $ cloudWatchLoggerWorker name config logQueue
-
-      let cloudWatchLogger :: Logger
-          cloudWatchLogger level bd = do
-            let prefix = LBS.fromChunks ["[lambda][amazonka][]", "[", BS.pack $ show level, "] "]
-                msg = fromLazyByteString prefix <> bd
-            queueLogEntry logQueue . decodeUtf8 . LBS.toStrict $ toLazyByteString msg
-
-      env <- newEnv Discover <&> set envRegion currentRegion . set envLogger cloudWatchLogger
-
-      let logMessage = liftIO . queueLogEntry logQueue . T.append "[Message] "
-      action env logMessage
-
-      signalLogEnd logQueue
-      when (config^.waitOnLogger) $
-        takeMVar loggerDone -- wait on the logger to finish logging messages
-
     StdOutLogger -> do
       logger <- newLogger Debug stdout
       env <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion
 
-      let logMessage = liftIO . putStrLn . T.unpack . T.append "[Message] "
+      let logMessage = liftIO . putStrLn . T.append "[Message] "
       action env logMessage
 
     NoLogger -> do
       env <- newEnv Discover <&> set envRegion currentRegion
-      action env . const $ return ()
+      action env . const $ pure ()
 
 
 runLambdaProgram
   :: Text
   -> Config
   -> LoggerType
-  -> LambdaProgram LBS.ByteString
-  -> IO ()
+  -> LambdaProgram a
+  -> IO a
 runLambdaProgram name config logger program =
   withEnv name config logger $ \env logMessage ->
     runResourceT . runAWST env . unQiAWS $
-      void . liftIO . LBS.putStr =<< interpretWithLogger config logMessage program
+      interpretWithLogger config logMessage program
 
 interpretWithLogger
   :: Config

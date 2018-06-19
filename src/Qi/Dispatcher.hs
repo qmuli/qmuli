@@ -13,31 +13,33 @@ module Qi.Dispatcher (
   ) where
 
 import           Control.Lens
-import           Data.Aeson.Encode.Pretty      (encodePretty)
-import qualified Data.ByteString.Lazy.Char8    as LBS
-import qualified Data.Text                     as T
-import           Network.AWS                   (AWS, send)
-import           Protolude                     hiding (FilePath, getAll)
-import           System.Environment.Executable (splitExecutablePath)
-import           Turtle                        (FilePath, fromString, toText)
+import           Data.Aeson.Encode.Pretty          (encodePretty)
+import qualified Data.ByteString.Lazy.Char8        as LBS
+import qualified Data.Text                         as T
+import           Network.AWS                       (AWS, send)
+import           Protolude                         hiding (FilePath, getAll)
+import           System.Environment.Executable     (splitExecutablePath)
+import           Turtle                            (FilePath, fromString,
+                                                    toText)
 
-import qualified Qi.Amazonka                   as A
-import           Qi.Config.AWS                 (Config, getAll, getPhysicalName,
-                                                namePrefix)
-import           Qi.Config.AWS.Lambda          (Lambda)
-import           Qi.Config.AWS.S3              (S3Bucket)
-import qualified Qi.Config.CF                  as CF
-import           Qi.Dispatcher.Build           (build)
-import           Qi.Dispatcher.CF              (createStack, deleteStack,
-                                                describeStack, updateStack,
-                                                waitOnStackCreated,
-                                                waitOnStackDeleted,
-                                                waitOnStackUpdated)
-import qualified Qi.Dispatcher.Lambda          as Lambda (invoke, update)
-import           Qi.Dispatcher.S3              (clearBuckets, createBucket,
-                                                putObject)
-import           Qi.Util                       (printPending, printSuccess)
-
+import qualified Qi.Amazonka                       as A
+import           Qi.Config.AWS                     (Config, getAll,
+                                                    getPhysicalName, namePrefix)
+import           Qi.Config.AWS.Lambda              (Lambda)
+import           Qi.Config.AWS.S3                  (S3Bucket)
+import qualified Qi.Config.CF                      as CF
+import           Qi.Dispatcher.Build               (build)
+import           Qi.Dispatcher.CF                  (createStack, deleteStack,
+                                                    describeStack, updateStack,
+                                                    waitOnStackCreated,
+                                                    waitOnStackDeleted,
+                                                    waitOnStackUpdated)
+import qualified Qi.Dispatcher.Lambda              as Lambda (invoke, update)
+import           Qi.Dispatcher.S3                  (clearBuckets, createBucket,
+                                                    putObject)
+import           Qi.Program.Lambda.Interpreters.IO (LoggerType (..),
+                                                    runLambdaProgram)
+import           Qi.Util                           (printPending, printSuccess)
 
 type Dispatcher = ReaderT Config IO
 
@@ -129,11 +131,11 @@ destroyCfStack
   -> Dispatcher ()
 destroyCfStack action =
   withConfig $ \config -> do
-    let appName = config^.namePrefix
+    let appName = config ^. namePrefix
 
     printSuccess "destroying the stack..."
 
-    liftIO $ clearBuckets config
+    liftIO $ runLambdaProgram "dispatcher" config StdOutLogger $ clearBuckets config
 
     runAmazonka $ do
       deleteStack appName
