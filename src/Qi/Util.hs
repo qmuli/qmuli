@@ -15,38 +15,39 @@ import           Protolude
 import           System.Console.ANSI
 import qualified System.Process              as P
 
-import           Qi.Program.Lambda.Interface (CompleteLambdaProgram)
-
+import           Qi.Program.Lambda.Interface (LambdaProgram)
 
 success
   :: Value
-  -> CompleteLambdaProgram
+  -> LambdaProgram LBS.ByteString
 success v =
   respond 200 $ case v of
     String _ -> object [ ("message", v) ]
     _        -> v
 
-created :: Value -> CompleteLambdaProgram
+created :: Value -> LambdaProgram LBS.ByteString
 created = respond 201
 
-argumentsError :: Text -> CompleteLambdaProgram
+argumentsError :: Text -> LambdaProgram LBS.ByteString
 argumentsError = respond 400 . String
 
-notFoundError :: Text -> CompleteLambdaProgram
+notFoundError :: Text -> LambdaProgram LBS.ByteString
 notFoundError = respond 404 . String
 
-internalError :: Text -> CompleteLambdaProgram
+internalError :: Text -> LambdaProgram LBS.ByteString
 internalError = respond 500 . String
+
 
 respond
   :: Int
   -> Value
-  -> CompleteLambdaProgram
+  -> LambdaProgram LBS.ByteString
 respond status content =
   return . encode $ object [
       ("status", Number $ fromIntegral status)
     , ("body", content)
     ]
+
 
 result
   :: ([Char] -> b)
@@ -60,14 +61,13 @@ result f g r =
 
 withSuccess
   :: Int
-  -> CompleteLambdaProgram
-  -> CompleteLambdaProgram
+  -> LambdaProgram LBS.ByteString
+  -> LambdaProgram LBS.ByteString
 withSuccess code f =
   case code of
     200         -> f
     unexpected  ->
       internalError $ "Error: unexpected response status: " <> show unexpected
-
 
 printSuccess
   :: MonadIO m

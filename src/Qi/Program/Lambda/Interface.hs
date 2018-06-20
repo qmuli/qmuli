@@ -33,14 +33,12 @@ import           Qi.Core.Curry
 import           Servant.Client                  (BaseUrl, ClientM,
                                                   ServantError)
 
-type LambdaProgram          = Program LambdaInstruction
-type CompleteLambdaProgram  = LambdaProgram LBS.ByteString
-type GenericLambdaProgram   = Value -> CompleteLambdaProgram
-type ApiLambdaProgram       = ApiMethodEvent  -> CompleteLambdaProgram
-type S3LambdaProgram        = S3Event         -> CompleteLambdaProgram
-type CfLambdaProgram        = CfEvent         -> CompleteLambdaProgram
-type CwLambdaProgram        = CwEvent         -> CompleteLambdaProgram
-type DdbStreamLambdaProgram = DdbStreamEvent  -> CompleteLambdaProgram
+type LambdaProgram            = Program LambdaInstruction
+type ApiLambdaProgram         = ApiMethodEvent  -> LambdaProgram LBS.ByteString
+type S3LambdaProgram          = S3Event         -> LambdaProgram LBS.ByteString
+type CfLambdaProgram          = CfEvent         -> LambdaProgram LBS.ByteString
+type CwLambdaProgram          = CwEvent         -> LambdaProgram LBS.ByteString
+type DdbStreamLambdaProgram   = DdbStreamEvent  -> LambdaProgram LBS.ByteString
 
 data LambdaInstruction a where
 

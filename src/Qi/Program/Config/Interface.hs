@@ -1,17 +1,18 @@
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
 
 module Qi.Program.Config.Interface where
 
 import           Control.Monad.Operational             (Program, ProgramT,
                                                         singleton)
 import           Control.Monad.State.Strict            (State)
+import           Data.Aeson                            (FromJSON, ToJSON)
 import           Data.ByteString                       (ByteString)
 import qualified Data.ByteString.Lazy.Char8            as LBS
 import           Data.Default                          (Default, def)
 import           Protolude
-
 import           Qi.Config.AWS                         (Config)
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ApiMethodProfile)
@@ -21,11 +22,12 @@ import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda                  (LambdaProfile)
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
+import           Qi.Core.Curry
 import           Qi.Program.Lambda.Interface           (ApiLambdaProgram,
                                                         CfLambdaProgram,
                                                         CwLambdaProgram,
                                                         DdbStreamLambdaProgram,
-                                                        GenericLambdaProgram,
+                                                        LambdaProgram,
                                                         S3LambdaProgram)
 
 
@@ -35,8 +37,9 @@ data ConfigInstruction a where
 
 -- Lambda
   RGenericLambda
-    :: Text
-    -> GenericLambdaProgram
+    :: forall a b. (FromJSON a, ToJSON b)
+    => Text
+    -> (a -> LambdaProgram b)
     -> LambdaProfile
     -> ConfigInstruction LambdaId
 
@@ -114,31 +117,33 @@ data ConfigInstruction a where
 
 
 genericLambda
-  :: Text
-  -> GenericLambdaProgram
+  :: forall a b m. (FromJSON a, ToJSON b)
+  => Text
+  -> (a -> LambdaProgram b)
   -> LambdaProfile
   -> ProgramT ConfigInstruction m LambdaId
-genericLambda name lbd = singleton . RGenericLambda name lbd
+genericLambda = singleton .:: RGenericLambda
 
 s3Bucket
   :: Text
   -> ProgramT ConfigInstruction m S3BucketId
 s3Bucket = singleton . RS3Bucket
 
-s3BucketLambda :: Text
-                  -> S3BucketId
-                  -> S3LambdaProgram
-                  -> LambdaProfile
-                  -> ProgramT ConfigInstruction m LambdaId
-s3BucketLambda name s3BucketId lbd =
-  singleton . RS3BucketLambda name s3BucketId lbd
+s3BucketLambda
+  :: Text
+  -> S3BucketId
+  -> S3LambdaProgram
+  -> LambdaProfile
+  -> ProgramT ConfigInstruction m LambdaId
+s3BucketLambda =
+  singleton .::: RS3BucketLambda
 
 ddbTable
   :: Text
   -> DdbAttrDef
   -> DdbTableProfile
   -> ProgramT ConfigInstruction m DdbTableId
-ddbTable name hashAttrDef = singleton . RDdbTable name hashAttrDef
+ddbTable = singleton .:: RDdbTable
 
 ddbStreamLambda
   :: Text
@@ -146,7 +151,7 @@ ddbStreamLambda
   -> DdbStreamLambdaProgram
   -> LambdaProfile
   -> ProgramT ConfigInstruction m LambdaId
-ddbStreamLambda name tableId lbd = singleton . RDdbStreamLambda name tableId lbd
+ddbStreamLambda = singleton .::: RDdbStreamLambda
 
 sqsQueue
   :: Text
@@ -163,8 +168,8 @@ apiAuthorizer
   -> CustomId
   -> ApiId
   -> ProgramT ConfigInstruction m ApiAuthorizerId
-apiAuthorizer name cognitoId =
-  singleton . RApiAuthorizer name cognitoId
+apiAuthorizer =
+  singleton .:: RApiAuthorizer
 
 
 apiResource
@@ -172,8 +177,8 @@ apiResource
   => Text
   -> a
   -> ConfigProgram ApiResourceId
-apiResource name =
-  singleton . RApiResource name
+apiResource =
+  singleton .: RApiResource
 
 apiMethodLambda
   :: Text
@@ -183,16 +188,16 @@ apiMethodLambda
   -> ApiLambdaProgram
   -> LambdaProfile
   -> ProgramT ConfigInstruction m LambdaId
-apiMethodLambda name verb resourceId methodProfile lbd =
-  singleton . RApiMethodLambda name verb resourceId methodProfile lbd
+apiMethodLambda =
+  singleton .::::: RApiMethodLambda
 
 customResource
   :: Text
   -> CfLambdaProgram
   -> LambdaProfile
   -> ProgramT ConfigInstruction m CustomId
-customResource name lbd =
-  singleton . RCustomResource name lbd
+customResource =
+  singleton .:: RCustomResource
 
 cwEventLambda
   :: Text
@@ -200,6 +205,6 @@ cwEventLambda
   -> CwLambdaProgram
   -> LambdaProfile
   -> ProgramT ConfigInstruction m LambdaId
-cwEventLambda name ruleProfile lbdProgramFunc =
-  singleton . RCwEventLambda name ruleProfile lbdProgramFunc
+cwEventLambda =
+  singleton .::: RCwEventLambda
 

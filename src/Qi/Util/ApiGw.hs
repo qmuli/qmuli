@@ -19,16 +19,14 @@ import           Qi.Config.AWS.ApiGw         (ApiMethodEvent (..),
                                               aeParams, rpPath)
 import           Qi.Config.AWS.DDB           (DdbAttrDef (..), DdbAttrType (..),
                                               DdbProvCap (..))
-import           Qi.Program.Lambda.Interface (CompleteLambdaProgram,
-                                              LambdaProgram)
+import           Qi.Program.Lambda.Interface (LambdaProgram)
 import           Qi.Util
-
 
 withPathParam
   :: Text
   -> ApiMethodEvent
-  -> (Text -> CompleteLambdaProgram)
-  -> CompleteLambdaProgram
+  -> (Text -> LambdaProgram LBS.ByteString)
+  -> LambdaProgram LBS.ByteString
 withPathParam name event f = case SHM.lookup name $ event^.aeParams.rpPath of
   Just (String x) -> f x
   Just unexpected ->

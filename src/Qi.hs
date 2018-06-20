@@ -32,7 +32,7 @@ withConfig configProgram = do
       CfCreate                   -> createCfStack
       CfUpdate                   -> updateCfStack
       CfDescribe                 -> describeCfStack
-      CfDestroy                  -> destroyCfStack $ return ()
+      CfDestroy                  -> destroyCfStack $ pure ()
       CfCycle                    -> cycleStack
 
       LbdUpdate                  -> updateLambdas

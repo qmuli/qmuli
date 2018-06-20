@@ -4,7 +4,8 @@
 module Qi.Dispatcher.Lambda (invoke, update) where
 
 import           Control.Lens
-import           Data.Aeson                          (Value, eitherDecode)
+import           Data.Aeson                          (Value, eitherDecode,
+                                                      encode)
 import           Data.Aeson.Types                    (parseEither)
 import qualified Data.ByteString.Lazy.Char8          as LBS
 import qualified Data.HashMap.Strict                 as SHM
@@ -23,7 +24,7 @@ import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
 import qualified Qi.Config.AWS.S3.Event              as S3Event
-import           Qi.Program.Lambda.Interface         (CompleteLambdaProgram)
+import           Qi.Program.Lambda.Interface         (LambdaProgram)
 import qualified Qi.Program.Lambda.Interpreters.IO   as LIO
 
 
@@ -70,16 +71,16 @@ lbdIOMap config = SHM.fromList $ map toLbdIOPair $ getAll config
         lbdIO name' lbd eventJson =
           either
             (\err -> panic $ "Could not parse event: " <> eventJson <> ", error was: " <> toS err)
-            (LIO.runLambdaProgram name' config LIO.NoLogger {-CwLogger-})
+            (LIO.runLambdaProgram name' config LIO.StdOutLogger)
             (parseLambdaEvent lbd eventJson)
 
     parseLambdaEvent
       :: Lambda
       -> Text
-      -> Either [Char] CompleteLambdaProgram
+      -> Either [Char] (LambdaProgram LBS.ByteString)
 
     parseLambdaEvent GenericLambda{_lbdGenericLambdaProgram} eventJson =
-      _lbdGenericLambdaProgram <$> (eitherDecode (toS eventJson) :: Either [Char] Value)
+      fmap encode . _lbdGenericLambdaProgram <$> eitherDecode (toS eventJson)
 
     parseLambdaEvent S3BucketLambda{_lbdS3BucketLambdaProgram} eventJson =
       _lbdS3BucketLambdaProgram <$> (parseEither (S3Event.parse config) =<< eitherDecode (toS eventJson))

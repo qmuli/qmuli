@@ -1,18 +1,18 @@
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE NamedFieldPuns            #-}
+{-# LANGUAGE RankNTypes                #-}
+{-# LANGUAGE TemplateHaskell           #-}
 
 module Qi.Config.AWS.Lambda where
 
 import           Control.Lens
-import           Data.Aeson                  (Value)
+import           Data.Aeson                  (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy.Char8  as LBS
 import           Data.Default                (Default, def)
 import           Data.HashMap.Strict         (HashMap)
 import qualified Data.HashMap.Strict         as SHM
+import           Data.Proxy                  (Proxy)
 import           Data.Text                   (Text)
-import           Stratosphere
-
 import           Protolude
 import           Qi.Config.AWS.ApiGw         (ApiMethodEvent)
 import           Qi.Config.AWS.CF            (CfEvent)
@@ -20,40 +20,44 @@ import           Qi.Config.AWS.CW            (CwEvent)
 import           Qi.Config.AWS.DDB           (DdbStreamEvent)
 import           Qi.Config.AWS.S3            (S3Event)
 import           Qi.Config.Identifier
-import           Qi.Program.Lambda.Interface (CompleteLambdaProgram)
+import           Qi.Program.Lambda.Interface (LambdaProgram)
+import           Stratosphere
 
 
-data Lambda =
+data Lambda = forall a b. (FromJSON a, ToJSON b) =>
     GenericLambda {
     _lbdName                 :: Text
   , _lbdProfile              :: LambdaProfile
-  , _lbdGenericLambdaProgram :: Value -> CompleteLambdaProgram
+  , _lbdGenericLambdaProgram :: (a -> LambdaProgram b)
+  , _lbdInputProxy           :: Proxy a
+  , _lbdOutputProxy          :: Proxy b
   }
   | S3BucketLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdS3BucketLambdaProgram :: S3Event -> CompleteLambdaProgram
+  , _lbdS3BucketLambdaProgram :: S3Event -> LambdaProgram LBS.ByteString
   }
   | ApiLambda {
     _lbdName                   :: Text
   , _lbdProfile                :: LambdaProfile
-  , _lbdApiMethodLambdaProgram :: ApiMethodEvent -> CompleteLambdaProgram
+  , _lbdApiMethodLambdaProgram :: ApiMethodEvent -> LambdaProgram LBS.ByteString
   }
   | CfCustomLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdCfCustomLambdaProgram :: CfEvent -> CompleteLambdaProgram
+  , _lbdCfCustomLambdaProgram :: CfEvent -> LambdaProgram LBS.ByteString
   }
   | CwEventLambda {
     _lbdName                 :: Text
   , _lbdProfile              :: LambdaProfile
-  , _lbdCwEventLambdaProgram :: CwEvent -> CompleteLambdaProgram
+  , _lbdCwEventLambdaProgram :: CwEvent -> LambdaProgram LBS.ByteString
   }
   | DdbStreamLambda {
     _lbdName                   :: Text
   , _lbdProfile                :: LambdaProfile
-  , _lbdDdbStreamLambdaProgram :: DdbStreamEvent -> CompleteLambdaProgram
+  , _lbdDdbStreamLambdaProgram :: DdbStreamEvent -> LambdaProgram LBS.ByteString
   }
+
 
 data LambdaConfig = LambdaConfig {
     _lcLambdas :: HashMap LambdaId Lambda

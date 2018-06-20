@@ -2,8 +2,6 @@
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE OverloadedStrings          #-}
-
 
 module Qi.Program.Config.Interpreters.Build where
 
@@ -14,8 +12,8 @@ import           Control.Monad.State.Class   (MonadState)
 import           Control.Monad.State.Strict  (State)
 import           Data.Default                (def)
 import qualified Data.HashMap.Strict         as SHM
+import           Data.Proxy                  (Proxy (Proxy))
 import           Protolude                   hiding (State)
-
 import           Qi.Config.AWS
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.CF
@@ -87,9 +85,9 @@ interpret program =
 -- Lambda
     rGenericLambda name programFunc profile = do
       newLambdaId <- getNextId
-      let newLambda = GenericLambda name profile programFunc
+      let newLambda = GenericLambda name profile programFunc Proxy Proxy
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
-      return newLambdaId
+      pure newLambdaId
 
 -- S3
     rS3Bucket name = do
