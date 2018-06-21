@@ -21,7 +21,7 @@ import           Network.HTTP.Client.TLS     (tlsManagerSettings)
 import           Protolude
 
 import           Qi.Config.AWS.CF
-import           Qi.Program.Lambda.Interface (LambdaProgram, amazonkaSend, http)
+import           Qi.Program.Lambda.Interface (LambdaProgram, amazonkaSend)
 import           Qi.Util                     (respond)
 
 
@@ -58,6 +58,7 @@ data CustomResourceProvider = CustomResourceProvider {
   , onDelete :: Text -> LambdaProgram (Either Text Result)
   }
 
+{-
 customResourceProviderLambda
   :: CustomResourceProvider
   -> CfEventHandler
@@ -113,3 +114,4 @@ customResourceProviderLambda CustomResourceProvider{..} event = do
   responseResp <- http tlsManagerSettings request
 
   respond 200 . String . T.pack $ show responseResp
+-}

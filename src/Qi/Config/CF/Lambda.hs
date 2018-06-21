@@ -50,7 +50,7 @@ toResources config = foldMap toAllLambdaResources $ getAll config
               lbdCode
               "index.handler"
               (GetAtt Role.lambdaBasicExecutionIAMRoleLogicalName "Arn")
-              (Literal NodeJS43)
+              (Literal NodeJS810)
             & lfFunctionName ?~ Literal lambdaName
             & lfMemorySize ?~ Literal memorySize
             & lfTimeout ?~ Literal timeOut
@@ -59,8 +59,8 @@ toResources config = foldMap toAllLambdaResources $ getAll config
           where
             lambdaName = getPhysicalName config lbd
 
-            memorySize = fromIntegral . fromEnum $ lbd^.lbdProfile.lpMemorySize
-            timeOut = fromIntegral $ lbd^.lbdProfile.lpTimeoutSeconds
+            memorySize = fromIntegral . fromEnum $ lbd ^. lbdProfile . lpMemorySize
+            timeOut = fromIntegral $ lbd ^. lbdProfile . lpTimeoutSeconds
 
             lbdCode :: LambdaFunctionCode
             lbdCode = lambdaFunctionCode

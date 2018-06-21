@@ -45,11 +45,6 @@ data LambdaInstruction a where
   GetAppName
     :: LambdaInstruction Text
 
-  Http
-    :: ManagerSettings
-    -> Request
-    -> LambdaInstruction (Response LBS.ByteString)
-
   RunServant
     :: ManagerSettings
     -> BaseUrl
@@ -174,16 +169,6 @@ data LambdaInstruction a where
   GetCurrentTime
     :: LambdaInstruction UTCTime
 
-
-
--- HTTP client
-
-http
-  :: ManagerSettings
-  -> Request
-  -> LambdaProgram (Response LBS.ByteString)
-http =
-  singleton .: Http
 
 -- Servant
 

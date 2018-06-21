@@ -37,7 +37,6 @@ import           Qi.Config.AWS.CF
 import           Qi.Program.Lambda.Interface                              (LambdaProgram,
                                                                            amazonkaSend,
                                                                            getAppName,
-                                                                           http,
                                                                            say)
 import           Qi.Util.ApiGw
 import           Qi.Util.CustomCFResource
@@ -49,6 +48,7 @@ dashToUnderscore
   -> Text
 dashToUnderscore = T.replace "-" "_"
 
+{-
 cognitoPoolProviderLambda
   :: CfEventHandler
 cognitoPoolProviderLambda =
@@ -246,3 +246,4 @@ cognitoPoolProviderLambda =
       say $ T.concat ["deleting authenticated role: ", roleName, " ..."]
       drr <- amazonkaSend $ deleteRole roleName
       return $ Right arid
+-}

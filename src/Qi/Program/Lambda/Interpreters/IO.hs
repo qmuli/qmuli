@@ -19,7 +19,7 @@ module Qi.Program.Lambda.Interpreters.IO (LoggerType(..), runLambdaProgram) wher
 import           Control.Concurrent           hiding (yield)
 import           Control.Concurrent.STM
 import           Control.Exception.Lens       (handling)
-import           Control.Lens                 hiding (view)
+import           Control.Lens                 hiding (view, (.=))
 import           Control.Monad.Base           (MonadBase)
 import           Control.Monad.Catch          (MonadCatch, MonadThrow)
 import           Control.Monad.IO.Class       (MonadIO, liftIO)
@@ -29,7 +29,7 @@ import           Control.Monad.Reader.Class   (MonadReader)
 import           Control.Monad.Trans.AWS      (AWST, runAWST, send)
 import           Control.Monad.Trans.Resource (MonadResource, ResourceT)
 import           Data.Aeson                   (FromJSON, ToJSON, Value (..),
-                                               decode, encode, object)
+                                               decode, encode, object, (.=))
 import           Data.Binary.Builder          (fromLazyByteString,
                                                toLazyByteString)
 import qualified Data.ByteString.Char8        as BS
@@ -70,7 +70,7 @@ import           Qi.Program.Lambda.Interface  (LambdaInstruction (..),
 import           Qi.Util                      (time)
 import           Servant.Client               (BaseUrl, ClientM, ServantError,
                                                mkClientEnv, runClientM)
-import           System.IO                    (stdout)
+import           System.IO                    (hFlush, stdout)
 import           System.Mem                   (performMajorGC)
 
 
@@ -103,7 +103,10 @@ withEnv name config loggerType action =
       logger <- newLogger Debug stdout
       env <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion
 
-      let logMessage = liftIO . putStrLn . T.append "[Message] "
+      let logMessage msg = liftIO $ do
+            putStrLn . encode $ object ["message" .= String msg]
+            hFlush stdout
+
       action env logMessage
 
     NoLogger -> do
@@ -137,10 +140,6 @@ interpretWithLogger config logMessage = interpret
 
         GetAppName :>>= is ->
           getAppName >>= interpret . is
-
--- Http
-        Http ms req :>>= is ->
-          http ms req >>= interpret . is
 
 -- Servant
         RunServant ms baseUrl req :>>= is ->
@@ -232,15 +231,6 @@ interpretWithLogger config logMessage = interpret
       :: QiAWS Text
     getAppName =
       return $ config^.namePrefix
-
--- Http
-
-    http
-      :: ManagerSettings
-      -> Request
-      -> QiAWS (Response LBS.ByteString)
-    http ms req = liftIO $
-      httpLbs req =<< newManager ms
 
 -- Servant
     runServant

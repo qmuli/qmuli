@@ -41,6 +41,7 @@ import           Qi.Program.Lambda.Interpreters.IO (LoggerType (..),
                                                     runLambdaProgram)
 import           Qi.Util                           (printPending, printSuccess)
 
+
 type Dispatcher = ReaderT Config IO
 
 withConfig
@@ -89,7 +90,7 @@ deployApp =
 
     runAmazonka $ do
       createBucket appName
-      putObject appName "cf.json" $ CF.render config
+      putObject appName "cf.json" $ CF.render config -- TODO: render this inside docker container: https://github.com/qmuli/qmuli/issues/60
       putObject appName "lambda.zip" content
 
   where
