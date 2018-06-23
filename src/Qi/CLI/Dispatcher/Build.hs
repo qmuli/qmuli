@@ -1,7 +1,7 @@
 {-# LANGUAGE QuasiQuotes     #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Qi.Dispatcher.Build(build) where
+module Qi.CLI.Dispatcher.Build(build) where
 
 import           Protolude
 import           Qi.Util

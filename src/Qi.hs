@@ -8,8 +8,8 @@ import           Control.Monad.State.Strict           (runState)
 import           Data.Char                            (isDigit, isLower)
 import           Data.Default                         (def)
 import           Protolude                            hiding (runState)
+import           Qi.CLI.Dispatcher
 import           Qi.Config.AWS
-import           Qi.Dispatcher
 import           Qi.Options
 import           Qi.Program.Config.Interface          (ConfigProgram)
 import           Qi.Program.Config.Interpreters.Build (QiConfig (unQiConfig),
@@ -37,6 +37,7 @@ withConfig configProgram = do
 
       LbdUpdate                  -> updateLambdas
       LbdSendEvent lbdName event -> invokeLambda lbdName event
+      LbdLogs lbdName            -> lambdaLogs lbdName
 
   where
     config name = snd . (`runState` def{_namePrefix = name}) . unQiConfig $ interpret configProgram

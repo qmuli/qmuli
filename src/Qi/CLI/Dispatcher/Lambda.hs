@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Qi.Dispatcher.Lambda (invoke, update) where
+module Qi.CLI.Dispatcher.Lambda (invoke, update, logs) where
 
 import           Control.Lens
 import           Data.Aeson                          (Value, eitherDecode,
@@ -51,6 +51,15 @@ invoke name evt = do
       Just lbdIO ->
         putStr =<< lbdIO evt
 
+
+logs
+  :: Text
+  -> ReaderT Config IO ()
+logs _name =
+  -- send $
+  pass
+
+
 lbdIOMap
   :: Config
   -> SHM.HashMap Text (Text -> IO LBS.ByteString)
@@ -61,7 +70,7 @@ lbdIOMap config = SHM.fromList $ map toLbdIOPair $ getAll config
       -> (Text, Text -> IO LBS.ByteString)
     toLbdIOPair l = (name, lbdIO name l)
       where
-        name = l^.lbdName
+        name = l ^. lbdName
 
         lbdIO
           :: Text

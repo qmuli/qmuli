@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Qi.Dispatcher.CF where
+module Qi.CLI.Dispatcher.CF where
 
 import           Control.Concurrent         (threadDelay)
 import           Control.Lens

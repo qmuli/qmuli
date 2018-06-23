@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Qi.Dispatcher (
+module Qi.CLI.Dispatcher (
     invokeLambda
   , updateLambdas
   , deployApp
@@ -10,6 +10,7 @@ module Qi.Dispatcher (
   , destroyCfStack
   , cycleStack
   , renderCfTemplate
+  , lambdaLogs
   ) where
 
 import           Control.Lens
@@ -23,20 +24,20 @@ import           Turtle                            (FilePath, fromString,
                                                     toText)
 
 import qualified Qi.Amazonka                       as A
+import           Qi.CLI.Dispatcher.Build           (build)
+import           Qi.CLI.Dispatcher.CF              (createStack, deleteStack,
+                                                    describeStack, updateStack,
+                                                    waitOnStackCreated,
+                                                    waitOnStackDeleted,
+                                                    waitOnStackUpdated)
+import qualified Qi.CLI.Dispatcher.Lambda          as Lambda
+import           Qi.CLI.Dispatcher.S3              (clearBuckets, createBucket,
+                                                    putObject)
 import           Qi.Config.AWS                     (Config, getAll,
                                                     getPhysicalName, namePrefix)
 import           Qi.Config.AWS.Lambda              (Lambda)
 import           Qi.Config.AWS.S3                  (S3Bucket)
 import qualified Qi.Config.CF                      as CF
-import           Qi.Dispatcher.Build               (build)
-import           Qi.Dispatcher.CF                  (createStack, deleteStack,
-                                                    describeStack, updateStack,
-                                                    waitOnStackCreated,
-                                                    waitOnStackDeleted,
-                                                    waitOnStackUpdated)
-import qualified Qi.Dispatcher.Lambda              as Lambda (invoke, update)
-import           Qi.Dispatcher.S3                  (clearBuckets, createBucket,
-                                                    putObject)
 import           Qi.Program.Lambda.Interpreters.IO (LoggerType (..),
                                                     runLambdaProgram)
 import           Qi.Util                           (printPending, printSuccess)
@@ -68,9 +69,19 @@ invokeLambda = Lambda.invoke
 
 updateLambdas :: Dispatcher ()
 updateLambdas = withConfig $ \config -> do
-  let appName = config^.namePrefix
+  let appName = config ^. namePrefix
+
+      allLambdas :: [Lambda]
+      allLambdas = getAll config
+
   printSuccess "updating the lambdas..."
-  runAmazonka . Lambda.update appName $ map (getPhysicalName config) (getAll config :: [Lambda])
+  runAmazonka . Lambda.update appName $ map (getPhysicalName config) allLambdas
+
+
+lambdaLogs
+  :: Text
+  -> ReaderT Config IO ()
+lambdaLogs = const pass -- runAmazonka . Lambda.logs
 
 
 renderCfTemplate :: Dispatcher ()

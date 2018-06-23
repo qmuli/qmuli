@@ -31,6 +31,7 @@ data Command =
   | CfCycle
   | LbdUpdate
   | LbdSendEvent Text Text
+  | LbdLogs Text
 
 
 optionsSpec :: ParserInfo Options
@@ -133,6 +134,13 @@ lbdCmd =
         command "execute"
       $ info (LbdSendEvent <$> lambdaNameOption <*> lambdaPayloadOption)
       $ fullDesc <> progDesc "Send Event to Lambda"
+
+    lbdLogs :: Mod CommandFields Command
+    lbdLogs =
+        command "logs"
+      $ info (LbdLogs <$> lambdaNameOption)
+      $ fullDesc <> progDesc "Get Lambda logs"
+
 
 lambdaNameOption :: Parser Text
 lambdaNameOption = strOption $

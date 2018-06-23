@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Qi.Dispatcher.S3 where
+module Qi.CLI.Dispatcher.S3 where
 
 import           Control.Lens
 import           Control.Monad                (forM_, void, (<=<))
