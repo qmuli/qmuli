@@ -77,7 +77,7 @@ data ApiMethodConfig = ApiMethodConfig {
 
 data ApiAuthorizer = ApiAuthorizer {
     _aaName      :: Text
-  , _aaCognitoId :: CustomId
+  , _aaCognitoId :: CfCustomResourceId
   , _aaApiId     :: ApiId
   }
 

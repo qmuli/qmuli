@@ -147,56 +147,56 @@ class (Eq rid, Show rid, Hashable rid) => CfResource r rid | rid -> r, r -> rid 
 
 instance CfResource CwEventsRule CwEventsRuleId where
   rNameSuffix = const "CwEventsRule"
-  getName _ = (^.cerName)
-  getMap = (^.cwConfig.ccRules)
+  getName _ = (^. cerName)
+  getMap = (^. cwConfig . ccRules)
 
 
 instance CfResource Lambda LambdaId where
   rNameSuffix = const "Lambda"
-  getName _ = (^.lbdName)
-  getMap = (^.lbdConfig.lcLambdas)
+  getName _ = (^. lbdName)
+  getMap = (^. lbdConfig . lcLambdas)
 
 
-instance CfResource Custom CustomId where
-  rNameSuffix = const "Custom"
-  getName config = getLogicalNameFromId config . (^.cLbdId)
-  getMap = (^.cfConfig.cfcCustoms)
+instance CfResource CfCustomResource CfCustomResourceId where
+  rNameSuffix = const "CfCustomResource"
+  getName config = getLogicalNameFromId config . (^. cLbdId)
+  getMap = (^. cfConfig . cfcCustomResources)
 
 
 instance CfResource DdbTable DdbTableId where
   rNameSuffix = const "DynamoDBTable"
-  getName _ = (^.dtName)
-  getMap = (^.ddbConfig.dcTables)
+  getName _ = (^. dtName)
+  getMap = (^. ddbConfig . dcTables)
 
 
 instance CfResource S3Bucket S3BucketId where
   rNameSuffix = const "S3Bucket"
-  getName _ = (^.s3bName)
-  getMap = (^.s3Config.s3Buckets.s3idxIdToS3Bucket)
+  getName _ = (^. s3bName)
+  getMap = (^. s3Config . s3Buckets . s3idxIdToS3Bucket)
   getPhysicalName config r =
     makeAlphaNumeric (getName config r) `dotNamePrefixWith` config
 
 
 instance CfResource Api ApiId where
   rNameSuffix = const "Api"
-  getName _ = (^.aName)
-  getMap = (^.apiGwConfig.acApis)
+  getName _ = (^. aName)
+  getMap = (^. apiGwConfig . acApis)
 
 
 instance CfResource ApiAuthorizer ApiAuthorizerId where
   rNameSuffix = const "ApiAuthorizer"
-  getName _ = (^.aaName)
-  getMap = (^.apiGwConfig.acApiAuthorizers)
+  getName _ = (^. aaName)
+  getMap = (^. apiGwConfig . acApiAuthorizers)
 
 
 instance CfResource ApiResource ApiResourceId where
   rNameSuffix = const "ApiResource"
-  getName _ = (^.arName)
-  getMap = (^.apiGwConfig.acApiResources)
+  getName _ = (^. arName)
+  getMap = (^. apiGwConfig . acApiResources)
 
 instance CfResource SqsQueue SqsQueueId where
   rNameSuffix = const "SqsQueue"
-  getName _ = (^.sqsQueueName)
+  getName _ = (^. sqsQueueName)
   getMap = (^. sqsConfig . sqsQueues)
   getPhysicalName config r =
     makeAlphaNumeric (getName config r) `dotNamePrefixWith` config

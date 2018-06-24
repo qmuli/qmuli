@@ -47,9 +47,9 @@ newtype SqsQueueId = SqsQueueId Int deriving (Eq, Show, Hashable, Generic, ToJSO
 instance FromInt SqsQueueId where
   fromInt = SqsQueueId
 
-newtype CustomId = CustomId Int deriving (Eq, Show, Hashable, Generic, ToJSON, FromJSON)
-instance FromInt CustomId where
-  fromInt = CustomId
+newtype CfCustomResourceId = CfCustomResourceId Int deriving (Eq, Show, Hashable, Generic, ToJSON, FromJSON)
+instance FromInt CfCustomResourceId where
+  fromInt = CfCustomResourceId
 
 newtype CwEventsRuleId = CwEventsRuleId Int deriving (Eq, Show, Hashable, Generic, ToJSON, FromJSON)
 instance FromInt CwEventsRuleId where

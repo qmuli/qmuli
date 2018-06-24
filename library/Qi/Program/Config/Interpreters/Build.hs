@@ -5,26 +5,26 @@
 
 module Qi.Program.Config.Interpreters.Build where
 
-import           Control.Lens                hiding (view)
-import           Control.Monad.Operational   (ProgramViewT ((:>>=), Return),
-                                              view)
-import           Control.Monad.State.Class   (MonadState)
-import           Control.Monad.State.Strict  (State)
-import           Data.Default                (def)
-import qualified Data.HashMap.Strict         as SHM
-import           Data.Proxy                  (Proxy (Proxy))
-import           Protolude                   hiding (State)
+import           Control.Lens                             hiding (view)
+import           Control.Monad.Operational                (ProgramViewT ((:>>=), Return),
+                                                           view)
+import           Control.Monad.State.Class                (MonadState)
+import           Control.Monad.State.Strict               (State)
+import           Data.Default                             (def)
+import qualified Data.HashMap.Strict                      as SHM
+import           Data.Proxy                               (Proxy (Proxy))
+import           Protolude                                hiding (State)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.CF
-import qualified Qi.Config.AWS.CF.Accessors  as CF
+import qualified Qi.Config.AWS.CfCustomResource.Accessors as CustomResource
 import           Qi.Config.AWS.CW
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
 import           Qi.Config.AWS.SQS
 import           Qi.Config.Identifier
-import           Qi.Program.Config.Interface hiding (apiResource)
+import           Qi.Program.Config.Interface              hiding (apiResource)
 
 
 newtype QiConfig a = QiConfig {unQiConfig :: State Config a}
@@ -78,7 +78,7 @@ interpret program =
       interpret . is =<< rSqsQueue name
 
     Return _ ->
-      return def
+      pure def
 
   where
 
@@ -97,7 +97,7 @@ interpret program =
           insertNameToId = s3idxNameToId %~ SHM.insert name newS3BucketId
 
       s3Config . s3Buckets %= insertNameToId . insertIdToS3Bucket
-      return newS3BucketId
+      pure newS3BucketId
 
 
     rS3BucketLambda name bucketId programFunc profile = do
@@ -107,7 +107,7 @@ interpret program =
 
       s3Config.s3Buckets.s3idxIdToS3Bucket %= SHM.adjust modifyBucket bucketId
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
-      return newLambdaId
+      pure newLambdaId
 
 -- DDB
     rDdbTable name hashAttrDef profile = do
@@ -120,7 +120,7 @@ interpret program =
         }
 
       ddbConfig . dcTables %= SHM.insert newDdbTableId newDdbTable
-      return newDdbTableId
+      pure newDdbTableId
 
 
     rDdbStreamLambda name tableId programFunc profile = do
@@ -129,7 +129,7 @@ interpret program =
 
       ddbConfig.dcTables %= SHM.adjust (dtStreamHandler .~ Just newLambdaId) tableId
       lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
-      return newLambdaId
+      pure newLambdaId
 
 -- Sqs
     rSqsQueue name = do
@@ -147,7 +147,7 @@ interpret program =
           insertIdToApiAuthorizerDeps = acApiAuthorizerDeps %~ SHM.insert newApiId []
 
       apiGwConfig %= insertIdToApi . insertIdToApiResourceDeps . insertIdToApiAuthorizerDeps
-      return newApiId
+      pure newApiId
 
 
     rApiAuthorizer name cognitoId apiId = do
@@ -157,7 +157,7 @@ interpret program =
           insertIdToApiAuthorizerDeps = acApiAuthorizerDeps %~ SHM.unionWith (++) (SHM.singleton apiId [newApiAuthorizerId])
 
       apiGwConfig %= insertIdToApiAuthorizer . insertIdToApiAuthorizerDeps
-      return newApiAuthorizerId
+      pure newApiAuthorizerId
 
 
     rApiResource
@@ -173,7 +173,7 @@ interpret program =
           insertIdToApiResourceDeps = acApiResourceDeps %~ SHM.unionWith (++) (SHM.singleton parentId [newApiResourceId])
 
       apiGwConfig %= insertIdToApiResource . insertIdToApiResourceDeps
-      return newApiResourceId
+      pure newApiResourceId
 
 
     rApiMethodLambda name verb apiResourceId methodProfile programFunc profile = do
@@ -187,20 +187,20 @@ interpret program =
 
       apiGwConfig . acApiResources %= SHM.adjust (arMethodConfigs %~ (apiMethodConfig:)) apiResourceId
       lbdConfig . lcLambdas %= SHM.insert newLambdaId newLambda
-      return newLambdaId
+      pure newLambdaId
 
 
     rCustomResource name programFunc profile = do
       newLambdaId <- getNextId
-      let newCustom = Custom newLambdaId
-          (newCustomId, cfConfigModifier) = CF.insert newCustom
+      let newCustomResource = CfCustomResource newLambdaId
+          (newCustomId, cfConfigModifier) = CustomResource.insert newCustomResource
 
           newLambda = CfCustomLambda name profile programFunc
 
       lbdConfig . lcLambdas %= SHM.insert newLambdaId newLambda
       cfConfig %= cfConfigModifier
 
-      return newCustomId
+      pure newCustomId
 
 
     rCwEventLambda name ruleProfile programFunc profile = do
@@ -216,6 +216,6 @@ interpret program =
 
       cwConfig . ccRules %= SHM.insert newEventsRuleId newEventsRule
       lbdConfig . lcLambdas %= SHM.insert newLambdaId newLambda
-      return newLambdaId
+      pure newLambdaId
 
 

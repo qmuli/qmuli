@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Qi.Config.AWS.CF.Accessors where
+module Qi.Config.AWS.CfCustomResource.Accessors where
 
 import           Control.Lens
 import           Data.Hashable
@@ -17,10 +17,10 @@ import           Qi.Config.Identifier
 
 
 insert
-  :: Custom
-  -> (CustomId, (CfConfig -> CfConfig))
-insert custom = (cid, insertIdToCustom)
+  :: CfCustomResource
+  -> (CfCustomResourceId, (CfConfig -> CfConfig))
+insert customResource = (customResourceId, insertIdToCustom)
   where
-    insertIdToCustom = cfcCustoms %~ SHM.insert cid custom
-    cid = CustomId $ hash custom
+    insertIdToCustom = cfcCustomResources %~ SHM.insert customResourceId customResource
+    customResourceId = CfCustomResourceId $ hash customResource
 

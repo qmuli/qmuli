@@ -23,8 +23,7 @@ import           Qi.Config.AWS.Lambda                  (LambdaProfile)
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
 import           Qi.Core.Curry
-import           Qi.Program.Lambda.Interface           (ApiLambdaProgram,
-                                                        CfLambdaProgram,
+import           Qi.Program.Lambda.Interface           (ApiLambdaProgram, CfCustomResourceLambdaProgram,
                                                         CwLambdaProgram,
                                                         DdbStreamLambdaProgram,
                                                         LambdaProgram,
@@ -81,7 +80,7 @@ data ConfigInstruction a where
 
   RApiAuthorizer
     :: Text
-    -> CustomId
+    -> CfCustomResourceId
     -> ApiId
     -> ConfigInstruction ApiAuthorizerId
 
@@ -103,9 +102,9 @@ data ConfigInstruction a where
 -- Custom
   RCustomResource
     :: Text
-    -> CfLambdaProgram
+    -> CfCustomResourceLambdaProgram
     -> LambdaProfile
-    -> ConfigInstruction CustomId
+    -> ConfigInstruction CfCustomResourceId
 
 -- CloudWatch Logs
   RCwEventLambda
@@ -165,12 +164,11 @@ api = singleton . RApi
 
 apiAuthorizer
   :: Text
-  -> CustomId
+  -> CfCustomResourceId
   -> ApiId
   -> ConfigProgram ApiAuthorizerId
 apiAuthorizer =
   singleton .:: RApiAuthorizer
-
 
 apiResource
   :: ParentResource a
@@ -193,9 +191,9 @@ apiMethodLambda =
 
 customResource
   :: Text
-  -> CfLambdaProgram
+  -> CfCustomResourceLambdaProgram
   -> LambdaProfile
-  -> ConfigProgram CustomId
+  -> ConfigProgram CfCustomResourceId
 customResource =
   singleton .:: RCustomResource
 

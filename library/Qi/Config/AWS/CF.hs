@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -24,89 +23,23 @@ import           Qi.AWS.Types
 import           Qi.Config.Identifier
 
 
-data CfRequestType = CfCreate | CfUpdate | CfDelete
-
-instance FromJSON CfRequestType where
-  parseJSON = withText "CfRequestType" $ \case
-    "Create" -> pure CfCreate
-    "Update" -> pure CfUpdate
-    "Delete" -> pure CfDelete
-    unknown  -> fail $ "unknown request type: " <> toS unknown
-
-
-{-
-{
-  "RequestType": "Create",
-  "ServiceToken": "arn:aws:lambda:us-east-1:910653408535:function:cognitotestxx_cognitoPoolProvider",
-  "ResponseURL": "https://cloudformation-custom-resource-response-useast1.s3.amazonaws.com/arn%3Aaws%3Acloudformation%3Aus-east-1%3A910653408535%3Astack/cognitotestxx/3b615fb0-7701-11e8-85ef-50fa5f2588d2%7CcognitoPoolProviderLambdaCustom%7C9616e4f8-9153-4bc6-bc02-53252002a8a3?AWSAccessKeyId=AKIAJGHTPRZJWHX6QVGA&Expires=1529778000&Signature=i3hplxObOjPQvet9UGeiCQZJ60A%3D\",
-  "StackId": "arn:aws:cloudformation:us-east-1:910653408535:stack/cognitotestxx/3b615fb0-7701-11e8-85ef-50fa5f2588d2",
-  "RequestId": "9616e4f8-9153-4bc6-bc02-53252002a8a3",
-  "LogicalResourceId": "cognitoPoolProviderLambdaCustom",
-  "ResourceType": "AWS::CloudFormation::CustomResource",
-  "ResourceProperties": {
-    "ServiceToken": "arn:aws:lambda:us-east-1:910653408535:function:cognitotestxx_cognitoPoolProvider"
-  }
-}
- -}
-
-
--- TODO: fix this sum data type
-data CfEvent = CfEventCreate {
-    _cfeServiceToken       :: Arn
-  , _cfeResponseURL        :: Text
-  , _cfeStackId            :: Arn
-  , _cfeRequestId          :: Text
-  , _cfeLogicalResourceId  :: LogicalResourceId
-  , _cfeResourceType       :: Text
-  , _cfeResourceProperties :: Object
-  }
-  | CfEventUpdate {
-    _cfeResponseURL           :: Text
-  , _cfeStackId               :: Arn
-  , _cfeRequestId             :: Text
-  , _cfeResourceType          :: Text
-  , _cfeLogicalResourceId     :: LogicalResourceId
-  , _cfePhysicalResourceId    :: CompositeResourceId
-  , _cfeResourceProperties    :: Object
-  , _cfeOldResourceProperties :: Object
-  }
-  | CfEventDelete {
-    _cfeResponseURL        :: Text
-  , _cfeStackId            :: Arn
-  , _cfeRequestId          :: Text
-  , _cfeResourceType       :: Text
-  , _cfeLogicalResourceId  :: LogicalResourceId
-  , _cfePhysicalResourceId :: CompositeResourceId
-  , _cfeResourceProperties :: Object
-  }
-  deriving (Eq, Show, Generic)
-
-
-instance FromJSON CfEvent where
-  parseJSON = genericParseJSON defaultOptions {
-                  fieldLabelModifier = drop 4
-                , sumEncoding = TaggedObject "RequestType" ""
-                , constructorTagModifier = drop 7
-                }
-
-
-data Custom = Custom {
+data CfCustomResource = CfCustomResource {
     _cLbdId :: LambdaId
   }
 
-instance Hashable Custom where
-  hashWithSalt s Custom{_cLbdId = LambdaId lid} = s `hashWithSalt` (show lid ++ "custom")
+instance Hashable CfCustomResource where
+  hashWithSalt s CfCustomResource{ _cLbdId = LambdaId lbdId } =
+    s `hashWithSalt` (show lbdId <> "custom" :: Text)
 
 
 data CfConfig = CfConfig {
-    _cfcCustoms :: HashMap CustomId Custom
+    _cfcCustomResources :: HashMap CfCustomResourceId CfCustomResource
   }
 
 instance Default CfConfig where
   def = CfConfig {
-    _cfcCustoms = SHM.empty
+    _cfcCustomResources = SHM.empty
   }
 
-makeLenses ''CfEvent
 makeLenses ''CfConfig
-makeLenses ''Custom
+makeLenses ''CfCustomResource

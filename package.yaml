@@ -87,7 +87,6 @@ library:
     - Qi.Util
     - Qi.Util.ApiGw
     - Qi.Util.Cognito
-    - Qi.Util.CustomCFResource
     - Qi.Util.DDB
     - Qi.Program.Config.Interpreters.Build
       

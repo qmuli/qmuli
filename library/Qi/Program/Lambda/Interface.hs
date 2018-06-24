@@ -5,40 +5,42 @@
 
 module Qi.Program.Lambda.Interface where
 
-import           Control.Monad.Operational       (Program, singleton)
-import           Data.Aeson                      (FromJSON, ToJSON, Value)
-import qualified Data.ByteString                 as BS
-import qualified Data.ByteString.Lazy            as LBS
+import           Control.Monad.Operational            (Program, singleton)
+import           Data.Aeson                           (FromJSON, ToJSON, Value)
+import qualified Data.ByteString                      as BS
+import qualified Data.ByteString.Lazy                 as LBS
 import           Data.Conduit
-import           Data.Text                       (Text)
-import           Data.Time.Clock                 (UTCTime)
-import           Network.AWS                     hiding (Request, Response)
+import           Data.Text                            (Text)
+import           Data.Time.Clock                      (UTCTime)
+import           Network.AWS                          hiding (Request, Response)
 import           Network.AWS.DynamoDB.DeleteItem
 import           Network.AWS.DynamoDB.GetItem
 import           Network.AWS.DynamoDB.PutItem
 import           Network.AWS.DynamoDB.Query
 import           Network.AWS.DynamoDB.Scan
-import           Network.AWS.S3.Types            (ETag)
+import           Network.AWS.S3.Types                 (ETag)
 import           Network.HTTP.Client
 import           Protolude
 import           Qi.AWS.SQS
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.CF
+import           Qi.Config.AWS.CfCustomResource.Types (CfCustomResourceEvent)
 import           Qi.Config.AWS.CW
 import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.S3
 import           Qi.Config.AWS.SQS
 import           Qi.Config.Identifier
 import           Qi.Core.Curry
-import           Servant.Client                  (BaseUrl, ClientM,
-                                                  ServantError)
+import           Servant.Client                       (BaseUrl, ClientM,
+                                                       ServantError)
 
-type LambdaProgram            = Program LambdaInstruction
-type ApiLambdaProgram         = ApiMethodEvent  -> LambdaProgram LBS.ByteString
-type S3LambdaProgram          = S3Event         -> LambdaProgram LBS.ByteString
-type CfLambdaProgram          = CfEvent         -> LambdaProgram LBS.ByteString
-type CwLambdaProgram          = CwEvent         -> LambdaProgram LBS.ByteString
-type DdbStreamLambdaProgram   = DdbStreamEvent  -> LambdaProgram LBS.ByteString
+
+type LambdaProgram                  = Program LambdaInstruction
+type ApiLambdaProgram               = ApiMethodEvent        -> LambdaProgram LBS.ByteString
+type S3LambdaProgram                = S3Event               -> LambdaProgram LBS.ByteString
+type CfCustomResourceLambdaProgram  = CfCustomResourceEvent -> LambdaProgram LBS.ByteString
+type CwLambdaProgram                = CwEvent               -> LambdaProgram LBS.ByteString
+type DdbStreamLambdaProgram         = DdbStreamEvent        -> LambdaProgram LBS.ByteString
 
 data LambdaInstruction a where
 

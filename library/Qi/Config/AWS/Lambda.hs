@@ -6,21 +6,25 @@
 module Qi.Config.AWS.Lambda where
 
 import           Control.Lens
-import           Data.Aeson                  (FromJSON, ToJSON)
-import qualified Data.ByteString.Lazy.Char8  as LBS
-import           Data.Default                (Default, def)
-import           Data.HashMap.Strict         (HashMap)
-import qualified Data.HashMap.Strict         as SHM
-import           Data.Proxy                  (Proxy)
-import           Data.Text                   (Text)
+import           Data.Aeson                           (FromJSON, ToJSON)
+import qualified Data.ByteString.Lazy.Char8           as LBS
+import           Data.Default                         (Default, def)
+import           Data.HashMap.Strict                  (HashMap)
+import qualified Data.HashMap.Strict                  as SHM
+import           Data.Proxy                           (Proxy)
+import           Data.Text                            (Text)
 import           Protolude
-import           Qi.Config.AWS.ApiGw         (ApiMethodEvent)
-import           Qi.Config.AWS.CF            (CfEvent)
-import           Qi.Config.AWS.CW            (CwEvent)
-import           Qi.Config.AWS.DDB           (DdbStreamEvent)
-import           Qi.Config.AWS.S3            (S3Event)
+import           Qi.Config.AWS.ApiGw                  (ApiMethodEvent)
+import           Qi.Config.AWS.CfCustomResource.Types (CfCustomResourceEvent)
+import           Qi.Config.AWS.CW                     (CwEvent)
+import           Qi.Config.AWS.DDB                    (DdbStreamEvent)
+import           Qi.Config.AWS.S3                     (S3Event)
 import           Qi.Config.Identifier
-import           Qi.Program.Lambda.Interface (LambdaProgram)
+import           Qi.Program.Lambda.Interface          (ApiLambdaProgram, CfCustomResourceLambdaProgram,
+                                                       CwLambdaProgram,
+                                                       DdbStreamLambdaProgram,
+                                                       LambdaProgram,
+                                                       S3LambdaProgram)
 import           Stratosphere
 
 
@@ -35,27 +39,27 @@ data Lambda = forall a b. (FromJSON a, ToJSON b) =>
   | S3BucketLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdS3BucketLambdaProgram :: S3Event -> LambdaProgram LBS.ByteString
+  , _lbdS3BucketLambdaProgram :: S3LambdaProgram
   }
   | ApiLambda {
     _lbdName                   :: Text
   , _lbdProfile                :: LambdaProfile
-  , _lbdApiMethodLambdaProgram :: ApiMethodEvent -> LambdaProgram LBS.ByteString
+  , _lbdApiMethodLambdaProgram :: ApiLambdaProgram
   }
   | CfCustomLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdCfCustomLambdaProgram :: CfEvent -> LambdaProgram LBS.ByteString
+  , _lbdCfCustomLambdaProgram :: CfCustomResourceLambdaProgram
   }
   | CwEventLambda {
     _lbdName                 :: Text
   , _lbdProfile              :: LambdaProfile
-  , _lbdCwEventLambdaProgram :: CwEvent -> LambdaProgram LBS.ByteString
+  , _lbdCwEventLambdaProgram :: CwLambdaProgram
   }
   | DdbStreamLambda {
     _lbdName                   :: Text
   , _lbdProfile                :: LambdaProfile
-  , _lbdDdbStreamLambdaProgram :: DdbStreamEvent -> LambdaProgram LBS.ByteString
+  , _lbdDdbStreamLambdaProgram :: DdbStreamLambdaProgram
   }
 
 
@@ -79,6 +83,9 @@ data LambdaMemorySize =
   | M512
   | M1024
   | M1536
+  | M2048
+  | M2560
+  | M3008
 
 instance Enum LambdaMemorySize where
   toEnum 128  = M128

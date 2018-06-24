@@ -22,15 +22,15 @@ import           Stratosphere         (Output, Outputs (Outputs), ResourceProper
 toResources :: Config -> Resources
 toResources config = Resources . map toResource $ getAll config
   where
-    toResource custom@Custom{_cLbdId} =
-      resource resName $
+    toResource customResource@CfCustomResource{ _cLbdId } =
+      resource lname $
         CloudFormationCustomResourceProperties $
         cloudFormationCustomResource
           (GetAtt lbdLogicalName "Arn")
 
       where
-        resName = getLogicalName config custom
-        lbdLogicalName = getLogicalNameFromId config (custom ^. cLbdId)
+        lname = getLogicalName config customResource
+        lbdLogicalName = getLogicalNameFromId config _cLbdId
 
 toOutputs :: Config -> Outputs
 toOutputs config =
@@ -38,24 +38,24 @@ toOutputs config =
 
   where
     toCustomOutputs
-      :: Custom
+      :: CfCustomResource
       -> [Output]
     toCustomOutputs custom = [
-        output (T.concat [lname, "UserPoolId"])
-          upid
+        output (lname <> "UserPoolId")
+          userPoolId
           & outputDescription ?~ "UserPoolId"
-      , output (T.concat [lname, "UserPoolClientId"])
-          upcid
+      , output (lname <> "UserPoolClientId")
+          userPoolClientId
           & outputDescription ?~ "UserPoolClientId"
-      , output (T.concat [lname, "IdentityPoolId"])
-          ipid
+      , output (lname <> "IdentityPoolId")
+          idPoolId
           & outputDescription ?~ "IdentityPoolId"
       ]
 
       where
         lname = getLogicalName config custom
 
-        upid  = GetAtt lname "UserPoolId"
-        upcid = GetAtt lname "UserPoolClientId"
-        ipid  = GetAtt lname "IdentityPoolId"
+        userPoolId        = GetAtt lname "UserPoolId"
+        userPoolClientId  = GetAtt lname "UserPoolClientId"
+        idPoolId          = GetAtt lname "IdentityPoolId"
 

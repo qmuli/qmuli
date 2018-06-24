@@ -34,15 +34,19 @@ import           Network.AWS.CognitoIdentityProvider.Types                (Verif
 import           Network.AWS.IAM                                          hiding (String)
 import           Protolude
 
+import           Qi.AWS.CF
 import           Qi.AWS.Cognito
 import           Qi.AWS.Types
 import           Qi.Config.AWS.CF
-import           Qi.Program.Lambda.Interface                              (LambdaProgram,
+import           Qi.Config.AWS.CfCustomResource
+import           Qi.Config.AWS.CfCustomResource.Types
+import           Qi.Config.AWS.CfCustomResource.Types
+import           Qi.Program.Lambda.Interface                              (CfCustomResourceLambdaProgram,
+                                                                           LambdaProgram,
                                                                            amazonkaSend,
                                                                            getAppName,
                                                                            say)
 import           Qi.Util.ApiGw
-import           Qi.Util.CustomCFResource
 
 
 -- to satisfy the unreasonable and inconsistent demands for AWS resource naming
@@ -52,7 +56,7 @@ dashToUnderscore
 dashToUnderscore = T.replace "-" "_"
 
 cognitoPoolProviderLambda
-  :: CfEventHandler
+  :: CfCustomResourceLambdaProgram
 cognitoPoolProviderLambda =
   customResourceProviderLambda $
     CustomResourceProvider createHandler updateHandler deleteHandler
