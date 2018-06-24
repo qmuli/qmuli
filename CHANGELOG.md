@@ -1,3 +1,8 @@
+## 0.4.0
+
+- Fix JS shim, improve how lambda is invoked
+- Various cleanup
+
 ## 0.3.0
 
 - Disabled broken CW logger

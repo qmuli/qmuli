@@ -13,7 +13,6 @@ import           Qi                          (withConfig)
 import           Qi.Config.AWS.CW            (CwEventsRuleProfile (ScheduledEventProfile))
 import           Qi.Program.Config.Interface (ConfigProgram, cwEventLambda)
 import           Qi.Program.Lambda.Interface (CwLambdaProgram, say)
-import           Qi.Util                     (success)
 
 
 main :: IO ()
@@ -31,6 +30,4 @@ main = withConfig config
     eventLambda _ = do
       -- emit log messages that end up in the appropriate cloudwatch group/stream
       say "tick"
-
-      success "lambda had executed successfully"
-
+      pure "all done!"

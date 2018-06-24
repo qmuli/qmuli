@@ -8,6 +8,7 @@ import           Data.Aeson                            (Value (String))
 import           Data.Default                          (def)
 import qualified Data.HashMap.Strict                   as SHM
 import qualified Data.Text                             as T
+import           Protolude
 import           Web.JWT                               (claims, decode)
 
 import           Qi                                    (withConfig)
@@ -20,8 +21,8 @@ import           Qi.Program.Config.Interface           (ConfigProgram, api,
                                                         apiResource,
                                                         customResource)
 import           Qi.Program.Lambda.Interface           (ApiLambdaProgram, say)
-import           Qi.Util                               (argumentsError, success)
 import           Qi.Util.Cognito                       (cognitoPoolProviderLambda)
+
 
 main :: IO ()
 main = withConfig config
@@ -29,7 +30,7 @@ main = withConfig config
     config :: ConfigProgram ()
     config = do
       cognito <- customResource "cognitoPoolProvider"
-              (cognitoPoolProviderLambda "MyIdentityPool" "MyUserPool" "MyClient") def
+              cognitoPoolProviderLambda def
 
 
       void $ api "world" >>= \world -> do
@@ -43,13 +44,12 @@ main = withConfig config
       :: ApiLambdaProgram
     greetLambda event = do
       withJwt event $ \jwt -> do
-        say $ T.concat ["jwt contents: ", T.pack $ show (decode jwt)]
-        success "lambda had executed successfully"
+        say $ T.concat ["jwt contents: ", show (decode jwt)]
+        pure "lambda had executed successfully"
 
 
-
-
-withJwt event f = case SHM.lookup "Authorization" $ event^.aeParams.rpHeaders of
-  Just x -> f x
+withJwt event f = case SHM.lookup "Authorization" $ event ^. aeParams . rpHeaders of
+  Just jwt -> f jwt
   Nothing ->
-    argumentsError "expected header 'Authorization' was not found"
+    pure "expected header 'Authorization' was not found"
+
