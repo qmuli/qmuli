@@ -90,6 +90,9 @@ instance Enum LambdaMemorySize where
   toEnum 512  = M512
   toEnum 1024 = M1024
   toEnum 1536 = M1536
+  toEnum 2048 = M2048
+  toEnum 2560 = M2560
+  toEnum 3008 = M3008
   toEnum x    = panic $ "no such memory configuration: " <> show x
 
   fromEnum M128  = 128
@@ -101,7 +104,9 @@ instance Enum LambdaMemorySize where
   fromEnum M512  = 512
   fromEnum M1024 = 1024
   fromEnum M1536 = 1536
-
+  fromEnum M2048 = 2048
+  fromEnum M2560 = 2560
+  fromEnum M3008 = 3008
 
 data LambdaProfile = LambdaProfile {
     _lpMemorySize     :: LambdaMemorySize
