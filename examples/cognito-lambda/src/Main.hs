@@ -66,7 +66,7 @@ scanContacts ddbTableId payload = do
   r <- scanDdbRecords ddbTableId
   withSuccess (r^.srsResponseStatus) $
     result
-      (internalError . ("Parsing error: " ++))
+      (internalError . ("Parsing error: " <>))
       (success . (toJSON :: [Contact] -> Value))
       $ forM (r^.srsItems) parseAttrs
 
@@ -92,7 +92,7 @@ getContact ddbTableId payload =
       result
         (internalError . ("Parsing error: " ++))
         (success . (toJSON :: Contact -> Value))
-        $ parseAttrs $ r^.girsItem
+        $ parseAttrs $ r ^. girsItem
 
 
 putContact
@@ -101,7 +101,7 @@ putContact
 putContact ddbTableId payload =
   withDeserializedPayload payload $ \(contact :: Contact) -> do
     r <- putDdbRecord ddbTableId $ toAttrs contact
-    withSuccess (r^.pirsResponseStatus) $
+    withSuccess (r ^. pirsResponseStatus) $
       success "successfully put contact"
 
 deleteContact
@@ -110,7 +110,7 @@ deleteContact
 deleteContact ddbTableId payload =
   withId payload $ \cid -> do
       r <- deleteDdbRecord ddbTableId $ idKeys cid
-      withSuccess (r^.dirsResponseStatus) $
+      withSuccess (r ^. dirsResponseStatus) $
         success "successfully deleted contact"
 
 

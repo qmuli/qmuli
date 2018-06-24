@@ -1,0 +1,39 @@
+{
+  "Records": [
+    {
+      "eventVersion": "2.0",
+      "eventSource": "aws:s3",
+      "awsRegion": "us-east-1",
+      "eventTime": "2018-06-23T18:30:09.024Z",
+      "eventName": "ObjectCreated:Put",
+      "userIdentity": {
+        "principalId": "A2LJIUV93EEHGA"
+      },
+      "requestParameters": {
+        "sourceIPAddress": "69.112.11.107"
+      },
+      "responseElements": {
+        "x-amz-request-id": "6F6BF0964CB6889B",
+        "x-amz-id-2": "OIPny1kFrTR3NWwLeb+cCGOzZr2i23x7tDLVlTs5oK7UmR0zaqyfPB4RzcSNWg+17Gw1vaMi24c="
+      },
+      "s3": {
+        "s3SchemaVersion": "1.0", 
+        "configurationId": "3937ce94-63c9-4aca-a070-07e19f16ca1a",
+        "bucket": {
+          "name": "s3testxx1.incoming",
+          "ownerIdentity": {
+            "principalId": "A2LJIUV93EEHGA"
+          },
+          "arn": "arn:aws:s3:::s3testxx1.incoming"
+        },
+        "object": {
+          "key": "marriage-license.jpeg",
+          "size": 982472,
+          "eTag": "b239d2bb5ca09dc69b41d066ce5226d1",
+          "sequencer": "005B2E91B0C081BD8B"
+        }
+      }
+    }
+  ]
+}
+

@@ -22,18 +22,6 @@ default-extensions:
 dependencies:
   - aeson
   - aeson-pretty
-  - amazonka
-  - amazonka-cloudformation
-  - amazonka-cloudwatch-logs
-  - amazonka-cognito-identity
-  - amazonka-cognito-idp
-  - amazonka-core
-  - amazonka-dynamodb
-  - amazonka-iam
-  - amazonka-lambda
-  - amazonka-s3
-  - amazonka-sqs
-  #- amazonka-s3-streaming
   - ansi-terminal
   - base
   - binary
@@ -72,27 +60,28 @@ dependencies:
   - turtle
   - unix
   - unordered-containers
-  - vector
   - yaml
 
 
 library:
   source-dirs:
-    - src
+    - library
+
   exposed-modules:
     - Qi
-    - Qi.Options
+    - Qi.AWS.Types
     - Qi.Config.AWS
     - Qi.Config.AWS.ApiGw
+    - Qi.Config.AWS.ApiGw.ApiMethod.Profile
     - Qi.Config.AWS.CF
     - Qi.Config.AWS.CW
     - Qi.Config.AWS.DDB
     - Qi.Config.AWS.Lambda
-    - Qi.Config.AWS.ApiGw.ApiMethod.Profile
     - Qi.Config.AWS.S3
-    - Qi.Config.CF
+    - Qi.Config.CfTemplate
     - Qi.Config.Identifier
     - Qi.Core.Curry
+    - Qi.Options
     - Qi.Program.Lambda.Interface
     - Qi.Program.Config.Interface
     - Qi.Util
@@ -101,6 +90,21 @@ library:
     - Qi.Util.CustomCFResource
     - Qi.Util.DDB
     - Qi.Program.Config.Interpreters.Build
+      
+  dependencies:
+  #- amazonka-s3-streaming
+    - amazonka
+    - amazonka-cloudformation
+    - amazonka-cloudwatch-logs
+    - amazonka-cognito-identity
+    - amazonka-cognito-idp
+    - amazonka-core
+    - amazonka-dynamodb
+    - amazonka-iam
+    - amazonka-lambda
+    - amazonka-s3
+    - amazonka-sqs
+
 
 flags:
   build-examples:
@@ -110,31 +114,31 @@ flags:
 
 
 executables:
-  # qmuli-simple-s3-copy:
-    # main: Main.hs
-    # source-dirs: examples/simple-s3-copy/src
-    # dependencies:
-      # - base
-      # - qmuli
-    # when:    
-    # - condition: flag(build-examples)
-      # then:
-        # buildable: true
-      # else:
-        # buildable: false
+  qmuli-simple-s3-copy:
+    main: Main.hs
+    source-dirs: examples/simple-s3-copy/src
+    dependencies:
+      - base
+      - qmuli
+    when:    
+    - condition: flag(build-examples)
+      then:
+        buildable: true
+      else:
+        buildable: false
 
-        #  qmuli-fold-s3-content:
-        #    main: Main.hs
-        #    source-dirs: examples/fold-s3-content/src
-        #    dependencies:
-        #      - base
-        #      - qmuli
-        #    when:    
-        #    - condition: flag(build-examples)
-        #      then:
-        #        buildable: true
-        #      else:
-        #        buildable: false
+#  qmuli-fold-s3-content:
+#    main: Main.hs
+#    source-dirs: examples/fold-s3-content/src
+#    dependencies:
+#      - base
+#      - qmuli
+#    when:    
+#    - condition: flag(build-examples)
+#      then:
+#        buildable: true
+#      else:
+#        buildable: false
 
 
   # qmuli-stream-s3-objects:
@@ -174,9 +178,9 @@ executables:
       # - base >= 4.8 && < 5
       # - qmuli
 
-  qmuli-cw-events:
+  qmuli-cognito-apigw-lambda:
     main: Main.hs
-    source-dirs: examples/cw-events/src
+    source-dirs: examples/cognito-apigw-lambda/src
     dependencies:
       - base
       - qmuli
@@ -186,14 +190,30 @@ executables:
         buildable: true
       else:
         buildable: false
+
+  # qmuli-cw-events:
+    # main: Main.hs
+    # source-dirs: examples/cw-events/src
+    # dependencies:
+      # - base
+      # - qmuli
+    # when:
+    # - condition: flag(build-examples)
+      # then:
+        # buildable: true
+      # else:
+        # buildable: false
+
 tests:
   tasty:
     main: Main.hs
     source-dirs:
       - tests
     dependencies:
+      - file-embed
       - qmuli
       - tasty
       - tasty-hspec
       - text
       - unordered-containers
+      

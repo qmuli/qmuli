@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -6,11 +7,8 @@
 module Main where
 
 import           Control.Lens
-import           Control.Monad               (void)
 import           Data.Default                (def)
-import           Data.Text                   (pack)
 import           Protolude
-
 import           Qi                          (withConfig)
 import           Qi.Config.AWS.Lambda        (LambdaMemorySize (..),
                                               lpMemorySize)
@@ -22,7 +20,6 @@ import           Qi.Program.Config.Interface (ConfigProgram, s3Bucket,
 import           Qi.Program.Lambda.Interface (S3LambdaProgram,
                                               getS3ObjectContent,
                                               putS3ObjectContent, say)
-import           Qi.Util                     (success)
 
 
 main :: IO ()
@@ -57,14 +54,15 @@ main = withConfig config
               outgoingS3Obj = s3oBucketId .~ sinkBucketId $ incomingS3Obj
 
           -- get the content of the newly uploaded file
-          content <- getS3ObjectContent incomingS3Obj
+          eitherContent <- getS3ObjectContent incomingS3Obj
 
-          -- emit log messages that end up in the appropriate cloudwatch group/stream
-          say "hello there!"
+          case eitherContent of
+            Right content -> do
+              -- write the content into a new file in the "output" bucket
+              putS3ObjectContent outgoingS3Obj content
 
-          -- write the content into a new file in the "output" bucket
-          putS3ObjectContent outgoingS3Obj content
+              pure "lambda had executed successfully"
 
-          success "lambda had executed successfully"
-
+            Left err ->
+              pure . toS $ "error: '" <> err <> "'"
 
