@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Config.Identifier where
+module Qi.Test.Config.Identifier where
 
 import           Control.Lens
 import           Control.Monad.State.Strict           (runState)

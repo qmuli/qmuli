@@ -16,6 +16,7 @@
 module Qi.Program.Lambda.Interpreters.IO (LoggerType(..), runLambdaProgram) where
 
 --import           Network.AWS.S3.StreamingUpload
+import           Codec.Archive.Zip
 import           Control.Concurrent           hiding (yield)
 import           Control.Concurrent.STM
 import           Control.Exception.Lens       (handling)
@@ -52,6 +53,8 @@ import           Network.AWS.Data.Body        (RsBody (..), fuseStream)
 import           Network.AWS.Data.Text        (ToText (..))
 import           Network.AWS.DynamoDB
 import           Network.AWS.Lambda
+import           Network.AWS.LexModels
+import           Network.AWS.LexModels.Types
 import           Network.AWS.S3
 import           Network.AWS.S3.Types         (ETag)
 import           Network.AWS.SQS
@@ -59,6 +62,7 @@ import           Network.HTTP.Client          (ManagerSettings, Request,
                                                Response, httpLbs, newManager)
 import           Protolude                    hiding ((<&>))
 import           Qi.Amazonka                  (currentRegion)
+import           Qi.AWS.Lex
 import           Qi.AWS.SQS
 import           Qi.Config.AWS
 import           Qi.Config.AWS.DDB
@@ -213,6 +217,11 @@ interpretWithLogger config logMessage = interpret
 
         DeleteMessage qid rh :>>= is ->
           deleteSqsMessage qid rh >>= interpret . is
+
+-- Lex
+
+        StartBotImport spec :>>= is ->
+          startBotImport spec >>= interpret . is
 
 
 -- Util
@@ -541,6 +550,28 @@ interpretWithLogger config logMessage = interpret
       -> ReceiptHandle
       -> QiAWS ()
     deleteSqsMessage = panic "deleteSqsMessage is not implemented"
+
+-- Lex
+
+    startBotImport
+      :: BotSpec
+      -> QiAWS ()
+    startBotImport botSpec = do
+      archive <- liftIO . compress . toS $ encode botSpec
+      void . send $ startImport
+                      archive
+                      Bot
+                      OverwriteLatest
+
+      where
+        compress :: ByteString -> IO ByteString
+        compress content = do
+          let tempFile      = "temp.zip"
+              fileInArchive = "spec.json"
+          mkEntrySelector fileInArchive
+            >>= createArchive tempFile . addEntry Store content
+          BS.readFile tempFile
+
 
 -- Util
     say

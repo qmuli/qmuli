@@ -16,12 +16,11 @@ import           Network.AWS.DynamoDB.DeleteItem
 import           Network.AWS.DynamoDB.GetItem
 import           Network.AWS.DynamoDB.PutItem
 import           Network.AWS.DynamoDB.Scan
-import           Web.JWT                         (claims, decode)
-
 import           Qi                              (withConfig)
 import           Qi.Config.AWS.DDB               (DdbAttrDef (..),
                                                   DdbAttrType (..))
 import           Qi.Config.Identifier            (DdbTableId)
+import qualified Qi.CustomResource.Cognito       as Cognito
 import           Qi.Program.Config.Interface     (ConfigProgram, customResource,
                                                   ddbTable, genericLambda)
 import           Qi.Program.Lambda.Interface     (CompleteLambdaProgram,
@@ -30,8 +29,8 @@ import           Qi.Program.Lambda.Interface     (CompleteLambdaProgram,
                                                   putDdbRecord, say,
                                                   scanDdbRecords)
 import           Qi.Util
-import           Qi.Util.Cognito                 (cognitoPoolProviderLambda)
 import           Qi.Util.DDB
+import           Web.JWT                         (claims, decode)
 
 import           Types
 import           Types.Contact
@@ -42,7 +41,8 @@ main = withConfig config
   where
     config :: ConfigProgram ()
     config = do
-      cognito <- customResource "cognitoPoolProvider" cognitoPoolProviderLambda $ def
+      cognito <- customResource "cognitoProvider"
+                  Cognito.providerLambda def
 
       contactsTable <- ddbTable "contacts" (DdbAttrDef "Id" S) def
 
@@ -64,11 +64,11 @@ scanContacts
   -> GenericLambdaProgram
 scanContacts ddbTableId payload = do
   r <- scanDdbRecords ddbTableId
-  withSuccess (r^.srsResponseStatus) $
+  withSuccess (r ^. srsResponseStatus) $
     result
       (internalError . ("Parsing error: " <>))
       (success . (toJSON :: [Contact] -> Value))
-      $ forM (r^.srsItems) parseAttrs
+      $ forM (r ^. srsItems) parseAttrs
 
 postContact
   :: DdbTableId
@@ -76,11 +76,11 @@ postContact
 postContact ddbTableId payload =
   withDeserializedPayload payload $ \(contact :: Contact) -> do
     r <- putDdbRecord ddbTableId . toAttrs $ addId contact
-    withSuccess (r^.pirsResponseStatus) $
+    withSuccess (r ^. pirsResponseStatus) $
       success "successfully posted contact"
   where
     addId :: Contact -> Contact
-    addId c = c{cId = T.pack . show $ hash c}
+    addId c = c{ cId = T.pack . show $ hash c }
 
 getContact
   :: DdbTableId
@@ -88,7 +88,7 @@ getContact
 getContact ddbTableId payload =
   withId payload $ \cid -> do
     r <- getDdbRecord ddbTableId $ idKeys cid
-    withSuccess (r^.girsResponseStatus) $
+    withSuccess (r ^. girsResponseStatus) $
       result
         (internalError . ("Parsing error: " ++))
         (success . (toJSON :: Contact -> Value))
@@ -121,7 +121,7 @@ withDeserializedPayload
   -> CompleteLambdaProgram
 withDeserializedPayload payload f =
   result
-    (internalError . ("Error: fromJson: " ++))
+    (internalError . ("Error: fromJson: " <>))
     f
     $ fromJSON payload
 

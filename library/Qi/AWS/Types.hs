@@ -12,7 +12,7 @@ import           Qi.AWS.Cognito
 
 
 newtype Arn = Arn Text
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show, Read, Generic)
   deriving newtype (ToJSON, FromJSON)
 
 

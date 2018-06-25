@@ -30,13 +30,13 @@ import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.CfCustomResource.Types
 import           Qi.Program.Lambda.Interface          (CfCustomResourceLambdaProgram,
                                                        LambdaProgram,
-                                                       amazonkaSend, http)
+                                                       amazonkaSend, http, say)
 
 
 data CustomResourceProvider = CustomResourceProvider {
     onCreate :: LambdaProgram (Either Text Result)
-  , onUpdate :: CompositeResourceId -> LambdaProgram (Either Text Result)
-  , onDelete :: CompositeResourceId -> LambdaProgram (Either Text Result)
+  , onUpdate :: CustomResourceId -> LambdaProgram (Either Text Result)
+  , onDelete :: CustomResourceId -> LambdaProgram (Either Text Result)
   }
 
 customResourceProviderLambda
@@ -86,6 +86,7 @@ customResourceProviderLambda CustomResourceProvider{..} event = do
                                   ]
                               }
 
+  say $ "submitting provider lambda response payload to S3: '" <> toS encodedResponse <> "'"
 
   -- assume successfully written response to S3 object
   responseResp <- http tlsManagerSettings request

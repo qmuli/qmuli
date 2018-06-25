@@ -121,6 +121,8 @@ toResources config = Resources [lbdRoleRes]
               , "iam:DeleteRolePolicy"
 
               , "lambda:InvokeFunction"
+
+              , "lex:*"
               ]
 
 

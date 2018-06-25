@@ -69,10 +69,13 @@ library:
 
   exposed-modules:
     - Qi
+    - Qi.AWS.CF
+    - Qi.AWS.Lex
     - Qi.AWS.Types
     - Qi.Config.AWS
     - Qi.Config.AWS.ApiGw
     - Qi.Config.AWS.ApiGw.ApiMethod.Profile
+    - Qi.Config.AWS.CfCustomResource.Types
     - Qi.Config.AWS.CF
     - Qi.Config.AWS.CW
     - Qi.Config.AWS.DDB
@@ -81,14 +84,15 @@ library:
     - Qi.Config.CfTemplate
     - Qi.Config.Identifier
     - Qi.Core.Curry
+    - Qi.CustomResource.Cognito
+    - Qi.CustomResource.Lex
     - Qi.Options
     - Qi.Program.Lambda.Interface
     - Qi.Program.Config.Interface
+    - Qi.Program.Config.Interpreters.Build
     - Qi.Util
     - Qi.Util.ApiGw
-    - Qi.Util.Cognito
     - Qi.Util.DDB
-    - Qi.Program.Config.Interpreters.Build
       
   dependencies:
   #- amazonka-s3-streaming
@@ -101,8 +105,10 @@ library:
     - amazonka-dynamodb
     - amazonka-iam
     - amazonka-lambda
+    - amazonka-lex-models
     - amazonka-s3
     - amazonka-sqs
+    - zip
 
 
 flags:

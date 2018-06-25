@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Config.ApiGw.Simple where
+module Qi.Test.Config.ApiGw.Simple where
 
 import           Control.Lens
 import           Control.Monad               (void)
@@ -32,7 +32,7 @@ configProgram =
 
 dummyLambda
   :: ApiLambdaProgram
-dummyLambda _ = undefined
+dummyLambda _ = panic "lambda not implemented"
 
 
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Config.Template where
+module Qi.Test.Config.Template where
 
 import           Control.Lens
 import           Data.Default                (def)

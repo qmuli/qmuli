@@ -16,7 +16,7 @@ import           Data.Maybe                           (fromJust, isJust)
 import           Data.Text                            (Text)
 import           Protolude                            hiding (runState)
 import           Qi.Config.AWS                        (Config (..))
-import           Qi.Config.CF                         (render)
+import           Qi.Config.CfTemplate                 (render)
 import           Qi.Program.Config.Interface          (ConfigProgram)
 import           Qi.Program.Config.Interpreters.Build (interpret, unQiConfig)
 import           Util

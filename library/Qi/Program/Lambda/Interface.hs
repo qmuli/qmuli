@@ -21,6 +21,7 @@ import           Network.AWS.DynamoDB.Scan
 import           Network.AWS.S3.Types                 (ETag)
 import           Network.HTTP.Client
 import           Protolude
+import           Qi.AWS.Lex                           (BotSpec)
 import           Qi.AWS.SQS
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.CF
@@ -44,6 +45,7 @@ type DdbStreamLambdaProgram         = DdbStreamEvent        -> LambdaProgram LBS
 
 data LambdaInstruction a where
 
+
   GetAppName
     :: LambdaInstruction Text
 
@@ -65,11 +67,17 @@ data LambdaInstruction a where
     => a
     -> LambdaInstruction (Rs a)
 
+
+-- Lambda
+
   InvokeLambda
     :: ToJSON a
     => LambdaId
     -> a
     -> LambdaInstruction ()
+
+
+-- S3
 
   GetS3ObjectContent
     :: S3Object
@@ -85,7 +93,6 @@ data LambdaInstruction a where
     -> Text -- uploadId
     -> (Int, S3Object) -- source chunk
     -> LambdaInstruction (Maybe (Int, ETag))
-
 
 {-
   StreamFromS3Object
@@ -118,6 +125,7 @@ data LambdaInstruction a where
   DeleteS3Objects
     :: [S3Object]
     -> LambdaInstruction ()
+
 
 -- DDB
 
@@ -166,6 +174,14 @@ data LambdaInstruction a where
     -> LambdaInstruction ()
 
 
+-- Lex
+
+  StartBotImport
+    :: BotSpec
+    -> LambdaInstruction ()
+
+
+-- Util
 
   Say
     :: Text
@@ -177,6 +193,8 @@ data LambdaInstruction a where
 
   GetCurrentTime
     :: LambdaInstruction UTCTime
+
+
 
 
 -- Http
@@ -331,6 +349,13 @@ deleteMessage
   -> LambdaProgram ()
 deleteMessage = singleton .: DeleteMessage
 
+
+-- Lex
+
+startBotImport
+  :: BotSpec
+  -> LambdaProgram ()
+startBotImport = singleton . StartBotImport
 
 -- Util
 

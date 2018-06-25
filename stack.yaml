@@ -11,10 +11,12 @@ packages:
   #  commit: 4fc25d1b20007bef3b8b2924751fe0fc3033e1f5
   #extra-dep: true
 - location:
-    git: https://github.com/brendanhay/amazonka.git
+    git: https://github.com/ababkin/amazonka.git
     commit: 248f7b2a7248222cc21cef6194cd1872ba99ac5d
     subdirs:
     - amazonka
+    - amazonka-lex-models
+    - core
   extra-dep: true
 
 extra-deps: []

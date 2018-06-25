@@ -1,11 +1,10 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedLists     #-}
-{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Qi.Util.Cognito where
+module Qi.CustomResource.Cognito (providerLambda) where
 
 import           Control.Lens                                             hiding
                                                                            (view,
@@ -28,12 +27,13 @@ import           Network.AWS.CognitoIdentity.Types                        (cipCl
 import           Network.AWS.CognitoIdentityProvider.CreateUserPool
 import           Network.AWS.CognitoIdentityProvider.CreateUserPoolClient
 import           Network.AWS.CognitoIdentityProvider.DeleteUserPool
-import           Network.AWS.CognitoIdentityProvider.Types                (VerifiedAttributeType (Email),
+import           Network.AWS.CognitoIdentityProvider.Types                (AdvancedSecurityModeType (Off),
+                                                                           VerifiedAttributeType (Email),
                                                                            upctClientId,
-                                                                           uptId)
+                                                                           uptId,
+                                                                           userPoolAddOnsType)
 import           Network.AWS.IAM                                          hiding (String)
 import           Protolude
-
 import           Qi.AWS.CF
 import           Qi.AWS.Cognito
 import           Qi.AWS.Types
@@ -55,9 +55,9 @@ dashToUnderscore
   -> Text
 dashToUnderscore = T.replace "-" "_"
 
-cognitoPoolProviderLambda
+providerLambda
   :: CfCustomResourceLambdaProgram
-cognitoPoolProviderLambda =
+providerLambda =
   customResourceProviderLambda $
     CustomResourceProvider createHandler updateHandler deleteHandler
 
@@ -69,7 +69,7 @@ cognitoPoolProviderLambda =
         userPoolClientId        <- ExceptT $ tryCreateUserPoolClient userPoolId
         (idPoolId, authRoleId)  <- ExceptT $ tryCreateIdentityPool userPoolId userPoolClientId
         pure $ Result {
-            rId = Just $ CompositeResourceId [UserPoolIdResourceId userPoolId, IdPoolIdResourceId idPoolId]
+            rId = Just $ CustomResourceId [UserPoolIdResourceId userPoolId, IdPoolIdResourceId idPoolId]
           , rAttrs = SHM.fromList [
                 ("UserPoolId",          toJSON userPoolId)
               , ("UserPoolClientId",    toJSON userPoolClientId)
@@ -88,7 +88,7 @@ cognitoPoolProviderLambda =
         }
 
 
-    deleteHandler ids@(CompositeResourceId ( (UserPoolIdResourceId userPoolId) :| [IdPoolIdResourceId idPoolId] )) = do
+    deleteHandler ids@(CustomResourceId ( [UserPoolIdResourceId userPoolId, IdPoolIdResourceId idPoolId] )) = do
       say "deleting the custom Cognito resource..."
       runExceptT $ do
         ExceptT $ tryDeleteUserPool userPoolId
@@ -110,6 +110,8 @@ cognitoPoolProviderLambda =
 
       resp <- amazonkaSend $ createUserPool name
                               & cupAutoVerifiedAttributes .~ [Email]
+                              & cupUserPoolAddOns ?~ userPoolAddOnsType Off
+
       case resp ^. cuprsResponseStatus of
         200 ->
           pure $ case (^. uptId) =<< resp ^. cuprsUserPool of
