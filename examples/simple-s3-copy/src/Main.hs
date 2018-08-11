@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -7,6 +8,7 @@
 module Main where
 
 import           Control.Lens
+import           Control.Monad.Freer
 import           Data.Default                (def)
 import           Protolude
 import           Qi                          (withConfig)
@@ -15,8 +17,7 @@ import           Qi.Config.AWS.Lambda        (LambdaMemorySize (..),
 import           Qi.Config.AWS.S3            (S3Event, s3Object, s3eObject,
                                               s3oBucketId, s3oKey)
 import           Qi.Config.Identifier        (S3BucketId)
-import           Qi.Program.Config.Interface (ConfigProgram, s3Bucket,
-                                              s3BucketLambda)
+import           Qi.Program.Config.Lang      (ResEff, s3Bucket, s3BucketLambda)
 import           Qi.Program.Lambda.Interface (S3LambdaProgram,
                                               getS3ObjectContent,
                                               putS3ObjectContent, say)
@@ -25,7 +26,6 @@ import           Qi.Program.Lambda.Interface (S3LambdaProgram,
 main :: IO ()
 main = withConfig config
   where
-    config :: ConfigProgram ()
     config = do
 
       -- create an "input" s3 bucket

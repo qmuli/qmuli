@@ -35,6 +35,7 @@ dependencies:
   - exceptions
   - executable-path
   - extra
+  - freer-simple 
   - hashable
   - heredoc
   - http-client
@@ -88,8 +89,8 @@ library:
     - Qi.CustomResource.Lex
     - Qi.Options
     - Qi.Program.Lambda.Interface
-    - Qi.Program.Config.Interface
-    - Qi.Program.Config.Interpreters.Build
+    - Qi.Program.Config.Lang
+    - Qi.Program.Config.Ipret.Build
     - Qi.Util
     - Qi.Util.ApiGw
     - Qi.Util.DDB
@@ -125,7 +126,7 @@ executables:
     dependencies:
       - base
       - qmuli
-    when:    
+    when:
     - condition: flag(build-examples)
       then:
         buildable: true
@@ -138,7 +139,7 @@ executables:
 #    dependencies:
 #      - base
 #      - qmuli
-#    when:    
+#    when:
 #    - condition: flag(build-examples)
 #      then:
 #        buildable: true
@@ -183,18 +184,18 @@ executables:
       # - base >= 4.8 && < 5
       # - qmuli
 
-  qmuli-cognito-apigw-lambda:
-    main: Main.hs
-    source-dirs: examples/cognito-apigw-lambda/src
-    dependencies:
-      - base
-      - qmuli
-    when:
-    - condition: flag(build-examples)
-      then:
-        buildable: true
-      else:
-        buildable: false
+  # qmuli-cognito-apigw-lambda:
+    # main: Main.hs
+    # source-dirs: examples/cognito-apigw-lambda/src
+    # dependencies:
+      # - base
+      # - qmuli
+    # when:
+    # - condition: flag(build-examples)
+      # then:
+        # buildable: true
+      # else:
+        # buildable: false
 
   # qmuli-cw-events:
     # main: Main.hs

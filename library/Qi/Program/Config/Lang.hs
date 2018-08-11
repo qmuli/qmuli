@@ -1,12 +1,15 @@
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE GADTs             #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE TypeOperators     #-}
 
-module Qi.Program.Config.Interface where
+module Qi.Program.Config.Lang where
 
-import           Control.Monad.Operational             (Program, ProgramT,
-                                                        singleton)
+import           Control.Monad.Freer
 import           Control.Monad.State.Strict            (State)
 import           Data.Aeson                            (FromJSON, ToJSON)
 import           Data.ByteString                       (ByteString)
@@ -30,65 +33,67 @@ import           Qi.Program.Lambda.Interface           (ApiLambdaProgram, CfCust
                                                         S3LambdaProgram)
 
 
-type ConfigProgram = Program ConfigInstruction
 
-data ConfigInstruction a where
 
--- Lambda
+data ResEff r where
   RGenericLambda
-    :: forall a b. (FromJSON a, ToJSON b)
+    :: forall a b
+    .  (FromJSON a, ToJSON b)
     => Text
     -> (a -> LambdaProgram b)
     -> LambdaProfile
-    -> ConfigInstruction LambdaId
+    -> ResEff LambdaId
 
 -- S3
+
   RS3Bucket
     :: Text
-    -> ConfigInstruction S3BucketId
+    -> ResEff S3BucketId
 
   RS3BucketLambda
     :: Text
     -> S3BucketId
     -> S3LambdaProgram
     -> LambdaProfile
-    -> ConfigInstruction LambdaId
+    -> ResEff LambdaId
+
+{-
 
 -- DDB
   RDdbTable
     :: Text
     -> DdbAttrDef
     -> DdbTableProfile
-    -> ConfigInstruction DdbTableId
+    -> ResEff DdbTableId
 
   RDdbStreamLambda
     :: Text
     -> DdbTableId
     -> DdbStreamLambdaProgram
     -> LambdaProfile
-    -> ConfigInstruction LambdaId
+    -> ResEff LambdaId
 
 -- SQS
   RSqsQueue
     :: Text
-    -> ConfigInstruction SqsQueueId
+    -> ResEff SqsQueueId
 
 -- Api
   RApi
     :: Text
-    -> ConfigInstruction ApiId
+    -> ResEff ApiId
 
   RApiAuthorizer
     :: Text
     -> CfCustomResourceId
     -> ApiId
-    -> ConfigInstruction ApiAuthorizerId
+    -> ResEff ApiAuthorizerId
 
   RApiResource
     :: ParentResource a
     => Text
     -> a
-    -> ConfigInstruction ApiResourceId
+    -> ResEff ApiResourceId
 
   RApiMethodLambda
     :: Text
@@ -97,14 +102,14 @@ data ConfigInstruction a where
     -> ApiMethodProfile
     -> ApiLambdaProgram
     -> LambdaProfile
-    -> ConfigInstruction LambdaId
+    -> ResEff LambdaId
 
 -- Custom
   RCustomResource
     :: Text
     -> CfCustomResourceLambdaProgram
     -> LambdaProfile
-    -> ConfigInstruction CfCustomResourceId
+    -> ResEff CfCustomResourceId
 
 -- CloudWatch Logs
   RCwEventLambda
@@ -112,30 +117,38 @@ data ConfigInstruction a where
     -> CwEventsRuleProfile
     -> CwLambdaProgram
     -> LambdaProfile
-    -> ConfigInstruction LambdaId
+    -> ResEff LambdaId
+
+-}
+
+
 
 
 genericLambda
-  :: forall a b. (FromJSON a, ToJSON b)
+  :: (Member ResEff effs, FromJSON a, ToJSON b)
   => Text
   -> (a -> LambdaProgram b)
   -> LambdaProfile
-  -> ConfigProgram LambdaId
-genericLambda = singleton .:: RGenericLambda
+  -> Eff effs LambdaId
+genericLambda = send .:: RGenericLambda
 
 s3Bucket
-  :: Text
-  -> ConfigProgram S3BucketId
-s3Bucket = singleton . RS3Bucket
+  :: (Member ResEff effs)
+  => Text
+  -> Eff effs S3BucketId
+s3Bucket = send . RS3Bucket
 
 s3BucketLambda
-  :: Text
+  :: (Member ResEff effs)
+  => Text
   -> S3BucketId
   -> S3LambdaProgram
   -> LambdaProfile
-  -> ConfigProgram LambdaId
+  -> Eff effs LambdaId
 s3BucketLambda =
-  singleton .::: RS3BucketLambda
+  send .::: RS3BucketLambda
+
+{-
 
 ddbTable
   :: Text
@@ -205,4 +218,4 @@ cwEventLambda
   -> ConfigProgram LambdaId
 cwEventLambda =
   singleton .::: RCwEventLambda
-
+-}

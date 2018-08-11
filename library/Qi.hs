@@ -1,23 +1,24 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Qi where
 
-import           Control.Lens                         hiding (argument)
-import           Control.Monad.State.Strict           (runState)
-import           Data.Char                            (isDigit, isLower)
-import           Data.Default                         (def)
-import           Protolude                            hiding (runState)
+import           Control.Lens                  hiding (argument)
+import           Control.Monad.Freer           hiding (run)
+import           Control.Monad.State.Strict    (runState)
+import           Data.Char                     (isDigit, isLower)
+import           Data.Default                  (def)
+import           Protolude                     hiding (runState)
 import           Qi.CLI.Dispatcher
 import           Qi.Config.AWS
 import           Qi.Options
-import           Qi.Program.Config.Interface          (ConfigProgram)
-import           Qi.Program.Config.Interpreters.Build (QiConfig (unQiConfig),
-                                                       interpret)
+import           Qi.Program.Config.Ipret.Build (QiConfig (unQiConfig), run)
+import           Qi.Program.Config.Lang        (ResEff)
 
 
 withConfig
-  :: ConfigProgram ()
+  :: Eff '[ResEff, QiConfig] ()
   -> IO ()
 withConfig configProgram = do
   -- `showHelpOnErrorExecParser` parses out commands, arguments and options using the rules in `opts`
@@ -40,7 +41,6 @@ withConfig configProgram = do
       LbdLogs lbdName      -> lambdaLogs lbdName
 
   where
-    config name = snd . (`runState` def{_namePrefix = name}) . unQiConfig $ interpret configProgram
-
+    config name = snd . (`runState` def{_namePrefix = name}) . unQiConfig $ run configProgram
 
 

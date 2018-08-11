@@ -1,13 +1,21 @@
+{-# LANGUAGE AllowAmbiguousTypes        #-}
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE TypeOperators              #-}
 
-module Qi.Program.Config.Interpreters.Build where
+module Qi.Program.Config.Ipret.Build where
 
 import           Control.Lens                             hiding (view)
-import           Control.Monad.Operational                (ProgramViewT ((:>>=), Return),
-                                                           view)
+import           Control.Monad.Freer
 import           Control.Monad.State.Class                (MonadState)
 import           Control.Monad.State.Strict               (State)
 import           Data.Default                             (def)
@@ -24,7 +32,7 @@ import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
 import           Qi.Config.AWS.SQS
 import           Qi.Config.Identifier
-import           Qi.Program.Config.Interface              hiding (apiResource)
+import           Qi.Program.Config.Lang
 
 
 newtype QiConfig a = QiConfig {unQiConfig :: State Config a}
@@ -35,6 +43,39 @@ newtype QiConfig a = QiConfig {unQiConfig :: State Config a}
     , MonadState Config
     )
 
+run
+  :: Eff '[ResEff, QiConfig] a -> QiConfig a
+run = runM . interpret (\case
+
+  RGenericLambda name programFunc profile -> send . QiConfig $ do
+    newLambdaId <- getNextId
+    let newLambda = GenericLambda name profile programFunc Proxy Proxy
+    lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
+    pure newLambdaId
+
+  RS3Bucket name -> send . QiConfig $ do
+    newS3BucketId <- getNextId
+    let newBucket = def & s3bName .~ name
+        insertIdToS3Bucket = s3idxIdToS3Bucket %~ SHM.insert newS3BucketId newBucket
+        insertNameToId = s3idxNameToId %~ SHM.insert name newS3BucketId
+
+    s3Config . s3Buckets %= insertNameToId . insertIdToS3Bucket
+    pure newS3BucketId
+
+  RS3BucketLambda name bucketId programFunc profile -> send . QiConfig $ do
+    newLambdaId <- getNextId
+    let newLambda = S3BucketLambda name profile programFunc
+        modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll newLambdaId):)
+
+    s3Config.s3Buckets.s3idxIdToS3Bucket %= SHM.adjust modifyBucket bucketId
+    lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
+    pure newLambdaId
+
+  )
+
+
+
+{-
 interpret
   :: ConfigProgram ()
   -> QiConfig ()
@@ -217,5 +258,5 @@ interpret program =
       cwConfig . ccRules %= SHM.insert newEventsRuleId newEventsRule
       lbdConfig . lcLambdas %= SHM.insert newLambdaId newLambda
       pure newLambdaId
-
+-}
 

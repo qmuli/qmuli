@@ -1,4 +1,4 @@
-resolver: nightly-2018-06-23
+resolver: nightly-2018-08-11
 
 packages:
 - '.'
@@ -6,10 +6,12 @@ packages:
     git: https://github.com/ababkin/system-extra.git
     commit: 8f3f93d5172744a8dedde57693c2b5d3c15f745c
   extra-dep: true
+
   #- location:
   #  git: https://github.com/ababkin/amazonka-s3-streaming.git
   #  commit: 4fc25d1b20007bef3b8b2924751fe0fc3033e1f5
   #extra-dep: true
+
 - location:
     git: https://github.com/ababkin/amazonka.git
     commit: 248f7b2a7248222cc21cef6194cd1872ba99ac5d
@@ -36,7 +38,7 @@ ghc-options:
     -Wno-unused-do-bind
     -Wno-deprecations
     -threaded
-    -Werror
+    # -Werror
     #-static 
 
     # "qmuli-stream-s3-objects": -static -threaded
