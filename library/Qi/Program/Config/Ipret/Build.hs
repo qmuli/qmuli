@@ -47,137 +47,91 @@ run
   :: Eff '[ResEff, QiConfig] a -> QiConfig a
 run = runM . interpret (\case
 
-  RGenericLambda name programFunc profile -> send . QiConfig $ do
-    newLambdaId <- getNextId
-    let newLambda = GenericLambda name profile programFunc Proxy Proxy
-    lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
-    pure newLambdaId
-
-  RS3Bucket name -> send . QiConfig $ do
-    newS3BucketId <- getNextId
-    let newBucket = def & s3bName .~ name
-        insertIdToS3Bucket = s3idxIdToS3Bucket %~ SHM.insert newS3BucketId newBucket
-        insertNameToId = s3idxNameToId %~ SHM.insert name newS3BucketId
-
-    s3Config . s3Buckets %= insertNameToId . insertIdToS3Bucket
-    pure newS3BucketId
-
-  RS3BucketLambda name bucketId programFunc profile -> send . QiConfig $ do
-    newLambdaId <- getNextId
-    let newLambda = S3BucketLambda name profile programFunc
-        modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll newLambdaId):)
-
-    s3Config.s3Buckets.s3idxIdToS3Bucket %= SHM.adjust modifyBucket bucketId
-    lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
-    pure newLambdaId
-
-  )
-
-
-
-{-
-interpret
-  :: ConfigProgram ()
-  -> QiConfig ()
-interpret program =
-  case view program of
-
-    RGenericLambda name programFunc profile :>>= is ->
-      interpret . is =<< rGenericLambda name programFunc profile
-
-    RS3Bucket name :>>= is ->
-      interpret . is =<< rS3Bucket name
-
-    RS3BucketLambda name bucketId programFunc profile :>>= is ->
-      interpret . is =<< rS3BucketLambda name bucketId programFunc profile
-
-    RDdbTable name hashAttrDef profile :>>= is ->
-      interpret . is =<< rDdbTable name hashAttrDef profile
-
-    RDdbStreamLambda name tableId lbd profile :>>= is ->
-      interpret . is =<< rDdbStreamLambda name tableId lbd profile
-
-    RApi name :>>= is ->
-      interpret . is =<< rApi name
-
-    RApiAuthorizer name cognitoId apiId :>>= is ->
-      interpret . is =<< rApiAuthorizer name cognitoId apiId
-
-    RApiResource name parentId :>>= is ->
-      interpret . is =<< rApiResource name parentId
-
-    RApiMethodLambda name verb apiResourceId methodProfile programFunc profile :>>= is ->
-      interpret . is =<< rApiMethodLambda name verb apiResourceId methodProfile programFunc profile
-
-    RCustomResource name programFunc profile :>>= is ->
-      interpret . is =<< rCustomResource name programFunc profile
-
-    RCwEventLambda name ruleProfile programFunc profile :>>= is ->
-      interpret . is =<< rCwEventLambda name ruleProfile programFunc profile
-
-    RSqsQueue name :>>= is ->
-      interpret . is =<< rSqsQueue name
-
-    Return _ ->
-      pure def
-
-  where
-
--- Lambda
-    rGenericLambda name programFunc profile = do
-      newLambdaId <- getNextId
+  RGenericLambda name programFunc profile -> send . QiConfig $
+    withNextId $ \id -> do
       let newLambda = GenericLambda name profile programFunc Proxy Proxy
-      lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
-      pure newLambdaId
+      lbdConfig.lcLambdas %= SHM.insert id newLambda
 
 -- S3
-    rS3Bucket name = do
-      newS3BucketId <- getNextId
+  RS3Bucket name -> send . QiConfig $
+    withNextId $ \id -> do
       let newBucket = def & s3bName .~ name
-          insertIdToS3Bucket = s3idxIdToS3Bucket %~ SHM.insert newS3BucketId newBucket
-          insertNameToId = s3idxNameToId %~ SHM.insert name newS3BucketId
-
+          insertIdToS3Bucket = s3idxIdToS3Bucket %~ SHM.insert id newBucket
+          insertNameToId = s3idxNameToId %~ SHM.insert name id
       s3Config . s3Buckets %= insertNameToId . insertIdToS3Bucket
-      pure newS3BucketId
 
-
-    rS3BucketLambda name bucketId programFunc profile = do
-      newLambdaId <- getNextId
+  RS3BucketLambda name bucketId programFunc profile -> send . QiConfig $
+    withNextId $ \id -> do
       let newLambda = S3BucketLambda name profile programFunc
-          modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll newLambdaId):)
-
+          modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll id):)
       s3Config.s3Buckets.s3idxIdToS3Bucket %= SHM.adjust modifyBucket bucketId
-      lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
-      pure newLambdaId
+      lbdConfig.lcLambdas %= SHM.insert id newLambda
+
 
 -- DDB
-    rDdbTable name hashAttrDef profile = do
-      newDdbTableId <- getNextId
+  RDdbTable name hashAttrDef profile -> send . QiConfig $
+    withNextId $ \id -> do
       let newDdbTable = DdbTable {
           _dtName           = name
         , _dtHashAttrDef    = hashAttrDef
         , _dtProfile        = profile
         , _dtStreamHandler  = Nothing
         }
-
-      ddbConfig . dcTables %= SHM.insert newDdbTableId newDdbTable
-      pure newDdbTableId
+      ddbConfig . dcTables %= SHM.insert id newDdbTable
 
 
-    rDdbStreamLambda name tableId programFunc profile = do
-      newLambdaId <- getNextId
+  RDdbStreamLambda name tableId programFunc profile -> send . QiConfig $
+    withNextId $ \id -> do
       let newLambda = DdbStreamLambda name profile programFunc
 
-      ddbConfig.dcTables %= SHM.adjust (dtStreamHandler .~ Just newLambdaId) tableId
-      lbdConfig.lcLambdas %= SHM.insert newLambdaId newLambda
-      pure newLambdaId
+      ddbConfig.dcTables %= SHM.adjust (dtStreamHandler .~ Just id) tableId
+      lbdConfig.lcLambdas %= SHM.insert id newLambda
+
 
 -- Sqs
-    rSqsQueue name = do
-      id <- getNextId
+  RSqsQueue name -> send . QiConfig $
+    withNextId $ \id -> do
       sqsConfig . sqsQueues %= SHM.insert id (SqsQueue{ _sqsQueueName = name })
+
+
+-- Custom
+  RCustomResource name programFunc profile -> send . QiConfig $ do
+    id <- getNextId
+    let newCustomResource = CfCustomResource id
+        (newCustomId, cfConfigModifier) = CustomResource.insert newCustomResource
+
+        newLambda = CfCustomLambda name profile programFunc
+
+    lbdConfig . lcLambdas %= SHM.insert id newLambda
+    cfConfig %= cfConfigModifier
+    pure newCustomId
+
+
+-- CloudWatch
+  RCwEventLambda name ruleProfile programFunc profile -> send . QiConfig $ do
+    newEventsRuleId <- getNextId
+    withNextId $ \newLambdaId -> do
+      let newLambda = CwEventLambda name profile programFunc
+          newEventsRule = CwEventsRule {
+            _cerName    = name
+          , _cerProfile = ruleProfile
+          , _cerLbdId   = newLambdaId
+          }
+
+      cwConfig . ccRules %= SHM.insert newEventsRuleId newEventsRule
+      lbdConfig . lcLambdas %= SHM.insert newLambdaId newLambda
+
+  )
+
+
+  where
+    withNextId f = do
+      id <- getNextId
+      f id
       pure id
 
+
+{-
 
 -- Api
     rApi name = do
@@ -230,33 +184,5 @@ interpret program =
       lbdConfig . lcLambdas %= SHM.insert newLambdaId newLambda
       pure newLambdaId
 
-
-    rCustomResource name programFunc profile = do
-      newLambdaId <- getNextId
-      let newCustomResource = CfCustomResource newLambdaId
-          (newCustomId, cfConfigModifier) = CustomResource.insert newCustomResource
-
-          newLambda = CfCustomLambda name profile programFunc
-
-      lbdConfig . lcLambdas %= SHM.insert newLambdaId newLambda
-      cfConfig %= cfConfigModifier
-
-      pure newCustomId
-
-
-    rCwEventLambda name ruleProfile programFunc profile = do
-      newEventsRuleId <- getNextId
-      newLambdaId     <- getNextId
-
-      let newLambda = CwEventLambda name profile programFunc
-          newEventsRule = CwEventsRule {
-            _cerName    = name
-          , _cerProfile = ruleProfile
-          , _cerLbdId   = newLambdaId
-          }
-
-      cwConfig . ccRules %= SHM.insert newEventsRuleId newEventsRule
-      lbdConfig . lcLambdas %= SHM.insert newLambdaId newLambda
-      pure newLambdaId
 -}
 

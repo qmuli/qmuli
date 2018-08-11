@@ -10,42 +10,39 @@
 module Qi.Program.Config.Lang where
 
 import           Control.Monad.Freer
-import           Control.Monad.State.Strict            (State)
-import           Data.Aeson                            (FromJSON, ToJSON)
-import           Data.ByteString                       (ByteString)
-import qualified Data.ByteString.Lazy.Char8            as LBS
-import           Data.Default                          (Default, def)
+import           Data.Aeson                  (FromJSON, ToJSON)
+import           Data.ByteString             (ByteString)
+import qualified Data.ByteString.Lazy.Char8  as LBS
+import           Data.Default                (Default, def)
 import           Protolude
-import           Qi.Config.AWS                         (Config)
-import           Qi.Config.AWS.ApiGw
-import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ApiMethodProfile)
+import           Qi.Config.AWS               (Config)
+{- import           Qi.Config.AWS.ApiGw -}
+{- import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ApiMethodProfile) -}
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.CW
 import           Qi.Config.AWS.DDB
-import           Qi.Config.AWS.Lambda                  (LambdaProfile)
+import           Qi.Config.AWS.Lambda        (LambdaProfile)
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
 import           Qi.Core.Curry
-import           Qi.Program.Lambda.Interface           (ApiLambdaProgram, CfCustomResourceLambdaProgram,
-                                                        CwLambdaProgram,
-                                                        DdbStreamLambdaProgram,
-                                                        LambdaProgram,
-                                                        S3LambdaProgram)
+import           Qi.Program.Lambda.Interface (ApiLambdaProgram,
+                                              CfCustomResourceLambdaProgram,
+                                              CwLambdaProgram,
+                                              DdbStreamLambdaProgram,
+                                              LambdaProgram, S3LambdaProgram)
 
 
 
 
 data ResEff r where
   RGenericLambda
-    :: forall a b
-    .  (FromJSON a, ToJSON b)
+    :: (FromJSON a, ToJSON b)
     => Text
     -> (a -> LambdaProgram b)
     -> LambdaProfile
     -> ResEff LambdaId
 
 -- S3
-
   RS3Bucket
     :: Text
     -> ResEff S3BucketId
@@ -56,8 +53,6 @@ data ResEff r where
     -> S3LambdaProgram
     -> LambdaProfile
     -> ResEff LambdaId
-
-{-
 
 -- DDB
   RDdbTable
@@ -78,6 +73,23 @@ data ResEff r where
     :: Text
     -> ResEff SqsQueueId
 
+
+-- Custom
+  RCustomResource
+    :: Text
+    -> CfCustomResourceLambdaProgram
+    -> LambdaProfile
+    -> ResEff CfCustomResourceId
+
+-- CloudWatch Logs
+  RCwEventLambda
+    :: Text
+    -> CwEventsRuleProfile
+    -> CwLambdaProgram
+    -> LambdaProfile
+    -> ResEff LambdaId
+
+{-
 -- Api
   RApi
     :: Text
@@ -103,22 +115,6 @@ data ResEff r where
     -> ApiLambdaProgram
     -> LambdaProfile
     -> ResEff LambdaId
-
--- Custom
-  RCustomResource
-    :: Text
-    -> CfCustomResourceLambdaProgram
-    -> LambdaProfile
-    -> ResEff CfCustomResourceId
-
--- CloudWatch Logs
-  RCwEventLambda
-    :: Text
-    -> CwEventsRuleProfile
-    -> CwLambdaProgram
-    -> LambdaProfile
-    -> ResEff LambdaId
-
 -}
 
 
@@ -130,13 +126,15 @@ genericLambda
   -> (a -> LambdaProgram b)
   -> LambdaProfile
   -> Eff effs LambdaId
-genericLambda = send .:: RGenericLambda
+genericLambda =
+  send .:: RGenericLambda
 
 s3Bucket
   :: (Member ResEff effs)
   => Text
   -> Eff effs S3BucketId
-s3Bucket = send . RS3Bucket
+s3Bucket =
+  send . RS3Bucket
 
 s3BucketLambda
   :: (Member ResEff effs)
@@ -148,27 +146,55 @@ s3BucketLambda
 s3BucketLambda =
   send .::: RS3BucketLambda
 
-{-
 
 ddbTable
-  :: Text
+  :: (Member ResEff effs)
+  => Text
   -> DdbAttrDef
   -> DdbTableProfile
-  -> ConfigProgram DdbTableId
-ddbTable = singleton .:: RDdbTable
+  -> Eff effs DdbTableId
+ddbTable =
+  send .:: RDdbTable
 
 ddbStreamLambda
-  :: Text
+  :: (Member ResEff effs)
+  => Text
   -> DdbTableId
   -> DdbStreamLambdaProgram
   -> LambdaProfile
-  -> ConfigProgram LambdaId
-ddbStreamLambda = singleton .::: RDdbStreamLambda
+  -> Eff effs LambdaId
+ddbStreamLambda =
+  send .::: RDdbStreamLambda
 
 sqsQueue
-  :: Text
-  -> ConfigProgram SqsQueueId
-sqsQueue = singleton . RSqsQueue
+  :: (Member ResEff effs)
+  => Text
+  -> Eff effs SqsQueueId
+sqsQueue =
+  send . RSqsQueue
+
+
+customResource
+  :: (Member ResEff effs)
+  => Text
+  -> CfCustomResourceLambdaProgram
+  -> LambdaProfile
+  -> Eff effs CfCustomResourceId
+customResource =
+  send .:: RCustomResource
+
+cwEventLambda
+  :: (Member ResEff effs)
+  => Text
+  -> CwEventsRuleProfile
+  -> CwLambdaProgram
+  -> LambdaProfile
+  -> Eff effs LambdaId
+cwEventLambda =
+  send .::: RCwEventLambda
+
+
+{-
 
 api
   :: Text
@@ -201,21 +227,5 @@ apiMethodLambda
   -> ConfigProgram LambdaId
 apiMethodLambda =
   singleton .::::: RApiMethodLambda
-
-customResource
-  :: Text
-  -> CfCustomResourceLambdaProgram
-  -> LambdaProfile
-  -> ConfigProgram CfCustomResourceId
-customResource =
-  singleton .:: RCustomResource
-
-cwEventLambda
-  :: Text
-  -> CwEventsRuleProfile
-  -> CwLambdaProgram
-  -> LambdaProfile
-  -> ConfigProgram LambdaId
-cwEventLambda =
-  singleton .::: RCwEventLambda
 -}
+
