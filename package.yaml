@@ -88,7 +88,9 @@ library:
     - Qi.CustomResource.Cognito
     - Qi.CustomResource.Lex
     - Qi.Options
-    - Qi.Program.Lambda.Interface
+    - Qi.Program.S3.Lang
+    - Qi.Program.Gen.Lang
+    - Qi.Program.Lambda.Lang
     - Qi.Program.Config.Lang
     - Qi.Program.Config.Ipret.Build
     - Qi.Util

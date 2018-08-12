@@ -1,7 +1,9 @@
 {-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
@@ -9,7 +11,7 @@
 -- https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-custom-resources.html
 
 module Qi.Config.AWS.CfCustomResource where
-
+{-
 import           Control.Lens                         hiding (view, (.=))
 import           Data.Aeson                           hiding (Result)
 import           Data.Aeson.Types                     (fieldLabelModifier,
@@ -28,7 +30,7 @@ import           Qi.AWS.CF
 import           Qi.AWS.Types
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.CfCustomResource.Types
-import           Qi.Program.Lambda.Interface          (CfCustomResourceLambdaProgram,
+import           Qi.Program.Gen.Lang                  (CfCustomResourceLambdaProgram,
                                                        LambdaProgram,
                                                        amazonkaSend, http, say)
 
@@ -92,4 +94,4 @@ customResourceProviderLambda CustomResourceProvider{..} event = do
   responseResp <- http tlsManagerSettings request
 
   pure $ show responseResp
-
+-}

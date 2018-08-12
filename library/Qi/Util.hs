@@ -4,18 +4,17 @@
 
 module Qi.Util where
 
-import           Control.Monad.IO.Class      (MonadIO, liftIO)
-import           Data.Aeson                  (Result (Error, Success),
-                                              Value (Number, Object, String),
-                                              encode, object)
-import qualified Data.ByteString.Lazy.Char8  as LBS
-import           Data.HashMap.Strict         (HashMap)
-import           Data.Time.Clock.POSIX       (getPOSIXTime)
+import           Control.Monad.IO.Class     (MonadIO, liftIO)
+import           Data.Aeson                 (Result (Error, Success),
+                                             Value (Number, Object, String),
+                                             encode, object)
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.HashMap.Strict        (HashMap)
+import           Data.Time.Clock.POSIX      (getPOSIXTime)
 import           Protolude
 import           System.Console.ANSI
-import qualified System.Process              as P
+import qualified System.Process             as P
 
-import           Qi.Program.Lambda.Interface (LambdaProgram)
 
 {-
 success

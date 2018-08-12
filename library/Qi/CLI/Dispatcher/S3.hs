@@ -28,7 +28,8 @@ import           Qi.Config.AWS                (Config, getAll, getAllWithIds,
                                                namePrefix)
 import           Qi.Config.AWS.S3             (S3Bucket, s3bName)
 import           Qi.Config.Identifier         (S3BucketId)
-import qualified Qi.Program.Lambda.Interface  as I
+import qualified Qi.Program.Gen.Lang          as I
+import qualified Qi.Program.S3.Lang           as I
 
 
 createBucket
@@ -47,7 +48,7 @@ putObject
 putObject bucketName objectKey =
   void . send . S3.putObject (BucketName bucketName) (ObjectKey objectKey) . toBody
 
-
+{-
 clearBuckets
   :: Config
   -> I.LambdaProgram ()
@@ -61,4 +62,4 @@ clearBuckets config = do
     bucketIds :: [S3BucketId]
     bucketIds = map fst $ getAllWithIds config
 
-
+-}

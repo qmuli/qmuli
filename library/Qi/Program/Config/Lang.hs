@@ -1,44 +1,49 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE NamedFieldPuns    #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators       #-}
 
 module Qi.Program.Config.Lang where
 
 import           Control.Monad.Freer
-import           Data.Aeson                  (FromJSON, ToJSON)
-import           Data.ByteString             (ByteString)
-import qualified Data.ByteString.Lazy.Char8  as LBS
-import           Data.Default                (Default, def)
+import           Data.Aeson                 (FromJSON, ToJSON)
+import           Data.ByteString            (ByteString)
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Default               (Default, def)
 import           Protolude
-import           Qi.Config.AWS               (Config)
+import           Qi.Config.AWS              (Config)
 {- import           Qi.Config.AWS.ApiGw -}
 {- import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ApiMethodProfile) -}
-import           Qi.Config.AWS.CF
-import           Qi.Config.AWS.CW
-import           Qi.Config.AWS.DDB
-import           Qi.Config.AWS.Lambda        (LambdaProfile)
+{- import           Qi.Config.AWS.CF -}
+{- import           Qi.Config.AWS.CW -}
+{- import           Qi.Config.AWS.DDB -}
+import           Qi.Config.AWS.Lambda       (LambdaProfile)
 import           Qi.Config.AWS.S3
 import           Qi.Config.Identifier
 import           Qi.Core.Curry
-import           Qi.Program.Lambda.Interface (ApiLambdaProgram,
-                                              CfCustomResourceLambdaProgram,
-                                              CwLambdaProgram,
-                                              DdbStreamLambdaProgram,
-                                              LambdaProgram, S3LambdaProgram)
+{- import           Qi.Program.Lambda.Cf.Lang  (CfCustomResourceLambdaProgram) -}
+{- import           Qi.Program.Lambda.Cw.Lang  (CwLambdaProgram) -}
+{- import           Qi.Program.Lambda.Ddb.Lang (DdbStreamLambdaProgram) -}
+import           Qi.Program.Gen.Lang
+{- import           Qi.Program.Lambda.Lang     (LbdEff) -}
+import           Qi.Program.S3.Lang
 
 
 
 
 data ResEff r where
   RGenericLambda
-    :: (FromJSON a, ToJSON b)
-    => Text
-    -> (a -> LambdaProgram b)
+    :: forall a b effs . (FromJSON a, ToJSON b, Member GenEff effs, Member S3Eff effs)
+    => Proxy effs
+    -> Proxy a
+    -> Proxy b
+    -> Text
+    -> (a -> Eff effs b)
     -> LambdaProfile
     -> ResEff LambdaId
 
@@ -48,12 +53,14 @@ data ResEff r where
     -> ResEff S3BucketId
 
   RS3BucketLambda
-    :: Text
+    :: forall a b effs . (Member GenEff effs, Member S3Eff effs)
+    => Proxy effs
+    -> Text
     -> S3BucketId
-    -> S3LambdaProgram
+    -> S3LambdaProgram effs
     -> LambdaProfile
     -> ResEff LambdaId
-
+{-
 -- DDB
   RDdbTable
     :: Text
@@ -64,7 +71,7 @@ data ResEff r where
   RDdbStreamLambda
     :: Text
     -> DdbTableId
-    -> DdbStreamLambdaProgram
+    -> (forall effs . Member DdbEff effs => a -> effs b)
     -> LambdaProfile
     -> ResEff LambdaId
 
@@ -88,6 +95,8 @@ data ResEff r where
     -> CwLambdaProgram
     -> LambdaProfile
     -> ResEff LambdaId
+-}
+
 
 {-
 -- Api
@@ -118,16 +127,15 @@ data ResEff r where
 -}
 
 
-
-
 genericLambda
-  :: (Member ResEff effs, FromJSON a, ToJSON b)
+  :: forall a b lbdEffs resEffs
+  .  (Member GenEff lbdEffs, Member S3Eff lbdEffs, Member ResEff resEffs, FromJSON a, ToJSON b)
   => Text
-  -> (a -> LambdaProgram b)
+  -> (a -> Eff lbdEffs b)
   -> LambdaProfile
-  -> Eff effs LambdaId
+  -> Eff resEffs LambdaId
 genericLambda =
-  send .:: RGenericLambda
+  send .:: RGenericLambda (Proxy :: Proxy lbdEffs) (Proxy :: Proxy a) (Proxy :: Proxy b)
 
 s3Bucket
   :: (Member ResEff effs)
@@ -137,16 +145,17 @@ s3Bucket =
   send . RS3Bucket
 
 s3BucketLambda
-  :: (Member ResEff effs)
+  :: forall lbdEffs resEffs
+  .  (Member GenEff lbdEffs, Member S3Eff lbdEffs, Member ResEff resEffs)
   => Text
   -> S3BucketId
-  -> S3LambdaProgram
+  -> (S3LambdaProgram lbdEffs)
   -> LambdaProfile
-  -> Eff effs LambdaId
+  -> Eff resEffs LambdaId
 s3BucketLambda =
-  send .::: RS3BucketLambda
+  send .::: RS3BucketLambda (Proxy :: Proxy lbdEffs)
 
-
+{-
 ddbTable
   :: (Member ResEff effs)
   => Text
@@ -192,7 +201,7 @@ cwEventLambda
   -> Eff effs LambdaId
 cwEventLambda =
   send .::: RCwEventLambda
-
+-}
 
 {-
 

@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
@@ -11,10 +10,29 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
-{-# LANGUAGE ViewPatterns               #-}
 
-module Qi.Program.Lambda.Interpreters.IO (LoggerType(..), runLambdaProgram) where
+module Qi.Program.Lambda.Interpreters.IO  where
 
+import           Control.Monad.Freer
+import           Protolude           hiding ((<&>))
+import           Qi.Config.AWS
+import           Qi.Program.Gen.Lang
+import           Qi.Program.S3.Lang
+
+
+data LoggerType = NoLogger | StdOutLogger
+
+runLambdaProgram
+  :: (Member GenEff effs, Member S3Eff effs)
+  => Text
+  -> Config
+  -> LoggerType
+  -> Proxy effs
+  -> Eff effs a
+  -> IO a
+runLambdaProgram = panic "unimplemented"
+
+{-
 --import           Network.AWS.S3.StreamingUpload
 import           Codec.Archive.Zip
 import           Control.Concurrent           hiding (yield)
@@ -587,3 +605,5 @@ interpretWithLogger config logMessage = interpret
     getCurrentTime
       :: QiAWS UTCTime
     getCurrentTime = liftIO C.getCurrentTime
+
+-}

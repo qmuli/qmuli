@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -25,7 +26,6 @@ import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
 import qualified Qi.Config.AWS.S3.Event               as S3Event
-import           Qi.Program.Lambda.Interface          (LambdaProgram)
 import qualified Qi.Program.Lambda.Interpreters.IO    as LIO
 
 
@@ -81,20 +81,29 @@ lbdIOMap config = SHM.fromList $ map toLbdIOPair $ getAll config
         lbdIO name' lbd eventJson =
           either
             (\err -> panic $ "Could not parse event: " <> eventJson <> ", error was: " <> toS err)
-            (LIO.runLambdaProgram name' config LIO.StdOutLogger)
-            (parseLambdaEvent lbd eventJson)
+            identity
+            (parseLambdaEvent lbd)
 
-    parseLambdaEvent
-      :: Lambda
-      -> Text
-      -> Either [Char] (LambdaProgram LBS.ByteString)
+    {- parseLambdaEvent -}
+      {- :: Lambda -}
+      {- -> Text -}
+      {- -> Either [Char] (Eff effs LBS.ByteString) -}
+    {- parseLambdaEvent = panic "parseLambdaEvent is unimplemented" -}
+-- TODO: rethink this
 
-    parseLambdaEvent GenericLambda{_lbdGenericLambdaProgram} eventJson =
-      fmap encode . _lbdGenericLambdaProgram <$> eitherDecode (toS eventJson)
+          where
+            parseLambdaEvent
+              :: Lambda
+              -> Either [Char] (IO LBS.ByteString)
 
-    parseLambdaEvent S3BucketLambda{_lbdS3BucketLambdaProgram} eventJson =
-      _lbdS3BucketLambdaProgram <$> (parseEither (S3Event.parse config) =<< eitherDecode (toS eventJson))
+            parseLambdaEvent GenericLambda{_lbdEffsProxy, _lbdGenericLambdaProgram} =
+              fmap encode . LIO.runLambdaProgram name' config LIO.StdOutLogger _lbdEffsProxy . _lbdGenericLambdaProgram
+                <$> eitherDecode (toS eventJson)
+            parseLambdaEvent S3BucketLambda{_lbdEffsProxy, _lbdS3BucketLambdaProgram} =
+              LIO.runLambdaProgram name' config LIO.StdOutLogger _lbdEffsProxy . _lbdS3BucketLambdaProgram
+                <$> (parseEither (S3Event.parse config) =<< eitherDecode (toS eventJson))
 
+{-
     parseLambdaEvent ApiLambda{_lbdApiMethodLambdaProgram} eventJson =
       _lbdApiMethodLambdaProgram <$> (parseEither (ApiMethodEvent.parse config) =<< eitherDecode (toS eventJson))
 
@@ -107,5 +116,5 @@ lbdIOMap config = SHM.fromList $ map toLbdIOPair $ getAll config
     parseLambdaEvent DdbStreamLambda{_lbdDdbStreamLambdaProgram} eventJson =
       _lbdDdbStreamLambdaProgram <$> (eitherDecode (toS eventJson) :: Either [Char] DdbStreamEvent)
 
-
+-}
 

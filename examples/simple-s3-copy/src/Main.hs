@@ -9,18 +9,17 @@ module Main where
 
 import           Control.Lens
 import           Control.Monad.Freer
-import           Data.Default                (def)
+import           Data.Default           (def)
 import           Protolude
-import           Qi                          (withConfig)
-import           Qi.Config.AWS.Lambda        (LambdaMemorySize (..),
-                                              lpMemorySize)
-import           Qi.Config.AWS.S3            (S3Event, s3Object, s3eObject,
-                                              s3oBucketId, s3oKey)
-import           Qi.Config.Identifier        (S3BucketId)
-import           Qi.Program.Config.Lang      (ResEff, s3Bucket, s3BucketLambda)
-import           Qi.Program.Lambda.Interface (S3LambdaProgram,
-                                              getS3ObjectContent,
-                                              putS3ObjectContent, say)
+import           Qi                     (withConfig)
+import           Qi.Config.AWS.Lambda   (LambdaMemorySize (..), lpMemorySize)
+import           Qi.Config.AWS.S3       (S3Event, s3Object, s3eObject,
+                                         s3oBucketId, s3oKey)
+import           Qi.Config.Identifier   (S3BucketId)
+import           Qi.Program.Config.Lang (ResEff, s3Bucket, s3BucketLambda)
+import           Qi.Program.Gen.Lang    (GenEff, say)
+import           Qi.Program.S3.Lang     (S3Eff, S3LambdaProgram,
+                                         getS3ObjectContent, putS3ObjectContent)
 
 
 main :: IO ()
@@ -46,7 +45,7 @@ main = withConfig config
 
     copyContentsLambda
       :: S3BucketId
-      -> S3LambdaProgram
+      -> S3LambdaProgram '[GenEff, S3Eff]
     copyContentsLambda sinkBucketId = lbd
       where
         lbd event = do

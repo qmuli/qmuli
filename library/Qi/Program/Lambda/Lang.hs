@@ -1,11 +1,16 @@
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs             #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE TypeOperators     #-}
 
-module Qi.Program.Lambda.Interface where
+module Qi.Program.Lambda.Lang where
 
-import           Control.Monad.Operational            (Program, singleton)
+import           Control.Monad.Freer
 import           Data.Aeson                           (FromJSON, ToJSON, Value)
 import qualified Data.ByteString                      as BS
 import qualified Data.ByteString.Lazy                 as LBS
@@ -35,7 +40,7 @@ import           Qi.Core.Curry
 import           Servant.Client                       (BaseUrl, ClientM,
                                                        ServantError)
 
-
+{-
 type LambdaProgram                  = Program LambdaInstruction
 type ApiLambdaProgram               = ApiMethodEvent        -> LambdaProgram LBS.ByteString
 type S3LambdaProgram                = S3Event               -> LambdaProgram LBS.ByteString
@@ -377,4 +382,4 @@ say
   :: Text
   -> LambdaProgram ()
 say = singleton . Say
-
+-}

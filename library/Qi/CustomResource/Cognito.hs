@@ -4,8 +4,8 @@
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Qi.CustomResource.Cognito (providerLambda) where
-
+module Qi.CustomResource.Cognito where
+{-
 import           Control.Lens                                             hiding
                                                                            (view,
                                                                            (.=))
@@ -260,3 +260,4 @@ providerLambda =
       drr <- amazonkaSend $ deleteRole roleName
 
       pure $ Right ()
+      -}

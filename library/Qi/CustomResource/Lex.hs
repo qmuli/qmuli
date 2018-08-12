@@ -3,8 +3,8 @@
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Qi.CustomResource.Lex (providerLambda) where
-
+module Qi.CustomResource.Lex where
+{-
 import           Control.Lens                         hiding (view, (.=))
 import           Control.Monad.Trans.Except           (ExceptT (..), runExceptT)
 import           Data.Aeson                           hiding (Result)
@@ -95,6 +95,7 @@ tryCreateBot botName@(BotName bname) = do
       pure . Left $ "Error: unexpected response status: '" <> show unexpected <> "', complete response: '" <> show resp <> "'"
 
 
+-}
 
 {-
     tryCreateUserPool
@@ -103,3 +104,4 @@ tryCreateBot botName@(BotName bname) = do
       say "creating user pool..."
       pure $ Right ()
 -}
+

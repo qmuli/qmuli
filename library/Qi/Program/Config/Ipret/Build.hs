@@ -47,10 +47,10 @@ run
   :: Eff '[ResEff, QiConfig] a -> QiConfig a
 run = runM . interpret (\case
 
-  RGenericLambda name programFunc profile -> send . QiConfig $
+  RGenericLambda effProxy inProxy outProxy name f profile -> send . QiConfig $
     withNextId $ \id -> do
-      let newLambda = GenericLambda name profile programFunc Proxy Proxy
-      lbdConfig.lcLambdas %= SHM.insert id newLambda
+      let newLambda = GenericLambda name profile effProxy inProxy outProxy f
+      lbdConfig . lcLambdas %= SHM.insert id newLambda
 
 -- S3
   RS3Bucket name -> send . QiConfig $
@@ -60,14 +60,14 @@ run = runM . interpret (\case
           insertNameToId = s3idxNameToId %~ SHM.insert name id
       s3Config . s3Buckets %= insertNameToId . insertIdToS3Bucket
 
-  RS3BucketLambda name bucketId programFunc profile -> send . QiConfig $
+  RS3BucketLambda effProxy name bucketId f profile -> send . QiConfig $
     withNextId $ \id -> do
-      let newLambda = S3BucketLambda name profile programFunc
+      let newLambda = S3BucketLambda name profile effProxy f
           modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll id):)
-      s3Config.s3Buckets.s3idxIdToS3Bucket %= SHM.adjust modifyBucket bucketId
-      lbdConfig.lcLambdas %= SHM.insert id newLambda
+      s3Config . s3Buckets . s3idxIdToS3Bucket %= SHM.adjust modifyBucket bucketId
+      lbdConfig . lcLambdas %= SHM.insert id newLambda
 
-
+{-
 -- DDB
   RDdbTable name hashAttrDef profile -> send . QiConfig $
     withNextId $ \id -> do
@@ -120,7 +120,7 @@ run = runM . interpret (\case
 
       cwConfig . ccRules %= SHM.insert newEventsRuleId newEventsRule
       lbdConfig . lcLambdas %= SHM.insert newLambdaId newLambda
-
+-}
   )
 
 

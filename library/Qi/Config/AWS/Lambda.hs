@@ -1,11 +1,14 @@
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE NamedFieldPuns            #-}
 {-# LANGUAGE RankNTypes                #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TemplateHaskell           #-}
 
 module Qi.Config.AWS.Lambda where
 
 import           Control.Lens
+import           Control.Monad.Freer
 import           Data.Aeson                           (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy.Char8           as LBS
 import           Data.Default                         (Default, def)
@@ -20,28 +23,33 @@ import           Qi.Config.AWS.CW                     (CwEvent)
 import           Qi.Config.AWS.DDB                    (DdbStreamEvent)
 import           Qi.Config.AWS.S3                     (S3Event)
 import           Qi.Config.Identifier
-import           Qi.Program.Lambda.Interface          (ApiLambdaProgram, CfCustomResourceLambdaProgram,
-                                                       CwLambdaProgram,
-                                                       DdbStreamLambdaProgram,
-                                                       LambdaProgram,
-                                                       S3LambdaProgram)
+import           Qi.Program.Gen.Lang
+import           Qi.Program.S3.Lang                   (S3Eff, S3LambdaProgram)
 import           Stratosphere
 
 
-data Lambda = forall a b. (FromJSON a, ToJSON b) =>
-    GenericLambda {
+data Lambda =
+    forall a b effs
+  . (Member GenEff effs, Member S3Eff effs, FromJSON a, ToJSON b)
+  => GenericLambda {
     _lbdName                 :: Text
   , _lbdProfile              :: LambdaProfile
-  , _lbdGenericLambdaProgram :: (a -> LambdaProgram b)
+  , _lbdEffsProxy            :: Proxy effs
   , _lbdInputProxy           :: Proxy a
   , _lbdOutputProxy          :: Proxy b
+  , _lbdGenericLambdaProgram :: (a -> Eff effs b)
   }
-  | S3BucketLambda {
+  |
+    forall effs
+  . (Member GenEff effs, Member S3Eff effs)
+  => S3BucketLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdS3BucketLambdaProgram :: S3LambdaProgram
+  , _lbdEffsProxy             :: Proxy effs
+  , _lbdS3BucketLambdaProgram :: S3LambdaProgram effs
   }
-  | ApiLambda {
+
+{-  | ApiLambda {
     _lbdName                   :: Text
   , _lbdProfile                :: LambdaProfile
   , _lbdApiMethodLambdaProgram :: ApiLambdaProgram
@@ -61,7 +69,7 @@ data Lambda = forall a b. (FromJSON a, ToJSON b) =>
   , _lbdProfile                :: LambdaProfile
   , _lbdDdbStreamLambdaProgram :: DdbStreamLambdaProgram
   }
-
+-}
 
 data LambdaConfig = LambdaConfig {
     _lcLambdas :: HashMap LambdaId Lambda

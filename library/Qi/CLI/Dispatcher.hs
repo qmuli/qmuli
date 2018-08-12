@@ -31,8 +31,7 @@ import           Qi.CLI.Dispatcher.CF              (createStack, deleteStack,
                                                     waitOnStackDeleted,
                                                     waitOnStackUpdated)
 import qualified Qi.CLI.Dispatcher.Lambda          as Lambda
-import           Qi.CLI.Dispatcher.S3              (clearBuckets, createBucket,
-                                                    putObject)
+import           Qi.CLI.Dispatcher.S3              (createBucket, putObject)
 import           Qi.Config.AWS                     (Config, getAll,
                                                     getPhysicalName, namePrefix)
 import           Qi.Config.AWS.Lambda              (Lambda)
@@ -146,7 +145,7 @@ destroyCfStack action =
 
     printSuccess "destroying the stack..."
 
-    liftIO $ runLambdaProgram "dispatcher" config StdOutLogger $ clearBuckets config
+    -- liftIO $ runLambdaProgram "dispatcher" config StdOutLogger $ clearBuckets config
 
     runAmazonka $ do
       deleteStack appName
