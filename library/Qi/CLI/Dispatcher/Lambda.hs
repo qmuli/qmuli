@@ -26,7 +26,7 @@ import           Qi.Config.AWS.DDB
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
 import qualified Qi.Config.AWS.S3.Event               as S3Event
-import qualified Qi.Program.Lambda.Interpreters.IO    as LIO
+import qualified Qi.Program.Wiring.IO                 as IO
 
 
 update
@@ -96,11 +96,11 @@ lbdIOMap config = SHM.fromList $ map toLbdIOPair $ getAll config
               :: Lambda
               -> Either [Char] (IO LBS.ByteString)
 
-            parseLambdaEvent GenericLambda{_lbdEffsProxy, _lbdGenericLambdaProgram} =
-              fmap encode . LIO.runLambdaProgram name' config LIO.StdOutLogger _lbdEffsProxy . _lbdGenericLambdaProgram
+            parseLambdaEvent GenericLambda{_lbdGenericLambdaProgram} =
+              fmap encode . IO.run name' config . _lbdGenericLambdaProgram
                 <$> eitherDecode (toS eventJson)
-            parseLambdaEvent S3BucketLambda{_lbdEffsProxy, _lbdS3BucketLambdaProgram} =
-              LIO.runLambdaProgram name' config LIO.StdOutLogger _lbdEffsProxy . _lbdS3BucketLambdaProgram
+            parseLambdaEvent S3BucketLambda{_lbdS3BucketLambdaProgram} =
+              IO.run name' config . _lbdS3BucketLambdaProgram
                 <$> (parseEither (S3Event.parse config) =<< eitherDecode (toS eventJson))
 
 {-

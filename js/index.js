@@ -19,7 +19,7 @@ exports.handler = (event, context, callback) => {
     // .replace(/'/g, "\\'")
     // .replace(/"/g, "\\\"");
 
-  console.log('lambda payload: \"', payload, '\"')
+  console.log('lambda payload: \"', payload, '\"');
 
   // the executable built in the AWS environment using Docker will always
   // be named 'lambda'
@@ -40,6 +40,7 @@ exports.handler = (event, context, callback) => {
 
 
   child.on('exit', output => {
+    console.log('lambda successfully exited with output: \"', output, '\"');
     callback(null, output);
   });
 

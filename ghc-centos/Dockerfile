@@ -13,6 +13,7 @@ RUN yum install -y curl\
     which \
     xz \
     zlib-devel \
+    bzip2-devel \
     && yum clean all --releasever=6 \
     && ln -s /lib64/libtinfo.so.5 /lib64/libtinfo.so
 

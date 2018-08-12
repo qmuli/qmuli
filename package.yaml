@@ -18,6 +18,12 @@ extra-source-files:
 default-extensions:
   - NoImplicitPrelude
   - OverloadedStrings
+  - NamedFieldPuns
+  - TupleSections
+  - FlexibleInstances
+  - FlexibleContexts
+  - ScopedTypeVariables
+  - MultiParamTypeClasses
 
 dependencies:
   - aeson
@@ -44,7 +50,6 @@ dependencies:
   - lens
   - lens-aeson
   - mtl
-  - operational
   - optparse-applicative
   - process
   - protolude
@@ -102,15 +107,15 @@ library:
     - amazonka
     - amazonka-cloudformation
     - amazonka-cloudwatch-logs
-    - amazonka-cognito-identity
-    - amazonka-cognito-idp
+    # - amazonka-cognito-identity
+    # - amazonka-cognito-idp
     - amazonka-core
     - amazonka-dynamodb
     - amazonka-iam
     - amazonka-lambda
-    - amazonka-lex-models
+    # - amazonka-lex-models
     - amazonka-s3
-    - amazonka-sqs
+    # - amazonka-sqs
     - zip
 
 

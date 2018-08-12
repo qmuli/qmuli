@@ -30,23 +30,18 @@ import           Stratosphere
 
 data Lambda =
     forall a b effs
-  . (Member GenEff effs, Member S3Eff effs, FromJSON a, ToJSON b)
+  . (FromJSON a, ToJSON b)
   => GenericLambda {
     _lbdName                 :: Text
   , _lbdProfile              :: LambdaProfile
-  , _lbdEffsProxy            :: Proxy effs
   , _lbdInputProxy           :: Proxy a
   , _lbdOutputProxy          :: Proxy b
-  , _lbdGenericLambdaProgram :: (a -> Eff effs b)
+  , _lbdGenericLambdaProgram :: forall effs . (Member GenEff effs, Member S3Eff effs) => a -> Eff effs b
   }
-  |
-    forall effs
-  . (Member GenEff effs, Member S3Eff effs)
-  => S3BucketLambda {
+  | forall effs . S3BucketLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdEffsProxy             :: Proxy effs
-  , _lbdS3BucketLambdaProgram :: S3LambdaProgram effs
+  , _lbdS3BucketLambdaProgram :: forall effs . (Member GenEff effs, Member S3Eff effs) => S3LambdaProgram effs
   }
 
 {-  | ApiLambda {

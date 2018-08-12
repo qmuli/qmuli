@@ -47,9 +47,9 @@ run
   :: Eff '[ResEff, QiConfig] a -> QiConfig a
 run = runM . interpret (\case
 
-  RGenericLambda effProxy inProxy outProxy name f profile -> send . QiConfig $
+  RGenericLambda inProxy outProxy name f profile -> send . QiConfig $
     withNextId $ \id -> do
-      let newLambda = GenericLambda name profile effProxy inProxy outProxy f
+      let newLambda = GenericLambda name profile inProxy outProxy f
       lbdConfig . lcLambdas %= SHM.insert id newLambda
 
 -- S3
@@ -60,9 +60,9 @@ run = runM . interpret (\case
           insertNameToId = s3idxNameToId %~ SHM.insert name id
       s3Config . s3Buckets %= insertNameToId . insertIdToS3Bucket
 
-  RS3BucketLambda effProxy name bucketId f profile -> send . QiConfig $
+  RS3BucketLambda name bucketId f profile -> send . QiConfig $
     withNextId $ \id -> do
-      let newLambda = S3BucketLambda name profile effProxy f
+      let newLambda = S3BucketLambda name profile f
           modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll id):)
       s3Config . s3Buckets . s3idxIdToS3Bucket %= SHM.adjust modifyBucket bucketId
       lbdConfig . lcLambdas %= SHM.insert id newLambda

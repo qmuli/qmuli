@@ -1,19 +1,22 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE QuasiQuotes                #-}
 
-module Qi.Amazonka (runAmazonka, currentRegion) where
+module Qi.Amazonka where
 
-import           Control.Lens            (set)
-import           Control.Monad.Trans.AWS (runAWST, send)
-import           Data.Aeson              (FromJSON (..), Value (Object),
-                                          eitherDecode, (.:))
-import           Data.Aeson.Types        (typeMismatch, withObject)
-import qualified Data.ByteString.Lazy    as LBS
-import           Data.Either             (either)
-import           Network.AWS             hiding (send)
+import           Control.Lens                 (set)
+import           Control.Monad.Catch          (MonadCatch, MonadThrow)
+import           Control.Monad.Trans.AWS      (AWST, runAWST, send)
+import           Control.Monad.Trans.Resource (MonadResource, ResourceT)
+import           Data.Aeson                   (FromJSON (..), Value (Object),
+                                               eitherDecode, (.:))
+import           Data.Aeson.Types             (typeMismatch, withObject)
+import qualified Data.ByteString.Lazy         as LBS
+import           Data.Either                  (either)
+import           Network.AWS                  hiding (send)
 import           Protolude
-import           System.IO               (stdout)
+import           System.IO                    (stdout)
 import           Text.Heredoc
 
 

@@ -10,6 +10,7 @@
 
 module Qi.Program.Lambda.Lang where
 
+{-
 import           Control.Monad.Freer
 import           Data.Aeson                           (FromJSON, ToJSON, Value)
 import qualified Data.ByteString                      as BS
@@ -40,7 +41,6 @@ import           Qi.Core.Curry
 import           Servant.Client                       (BaseUrl, ClientM,
                                                        ServantError)
 
-{-
 type LambdaProgram                  = Program LambdaInstruction
 type ApiLambdaProgram               = ApiMethodEvent        -> LambdaProgram LBS.ByteString
 type S3LambdaProgram                = S3Event               -> LambdaProgram LBS.ByteString

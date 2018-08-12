@@ -15,12 +15,14 @@ import           Data.Aeson                           (FromJSON, ToJSON, Value)
 import qualified Data.ByteString.Lazy                 as LBS
 import           Network.AWS                          hiding (Request, Response,
                                                        send)
+import           Network.AWS.Data.Body                (RsBody (..))
 import           Network.HTTP.Client
 import           Protolude
 import           Qi.Config.AWS.CfCustomResource.Types (CfCustomResourceEvent)
 import           Qi.Core.Curry
 import           Servant.Client                       (BaseUrl, ClientM,
                                                        ServantError)
+
 
 
 type CfCustomResourceLambdaProgram effs = CfCustomResourceEvent -> Eff effs LBS.ByteString
@@ -40,10 +42,16 @@ data GenEff r where
     -> ClientM a
     -> GenEff (Either ServantError a)
 
-  AmazonkaSend
+  Amazonka
     :: (AWSRequest a)
     => a
     -> GenEff (Rs a)
+
+  AmazonkaPostBodyExtract
+    :: (AWSRequest a)
+    => a
+    -> (Rs a -> RsBody)
+    -> GenEff (Either Text LBS.ByteString)
 
   Say
     :: Text
@@ -76,12 +84,20 @@ runServant =
   send .:: RunServant
 
 
-amazonkaSend
+amazonka
   :: (AWSRequest a, Member GenEff effs)
   => a
   -> Eff effs (Rs a)
-amazonkaSend =
-  send . AmazonkaSend
+amazonka req =
+  send $ Amazonka req
+
+amazonkaPostBodyExtract
+  :: (AWSRequest a, Member GenEff effs)
+  => a
+  -> (Rs a -> RsBody)
+  -> Eff effs (Either Text LBS.ByteString)
+amazonkaPostBodyExtract req post =
+  send $ AmazonkaPostBodyExtract req post
 
 {-
 getCurrentTime

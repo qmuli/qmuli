@@ -38,12 +38,12 @@ import           Qi.Program.S3.Lang
 
 data ResEff r where
   RGenericLambda
-    :: forall a b effs . (FromJSON a, ToJSON b, Member GenEff effs, Member S3Eff effs)
-    => Proxy effs
-    -> Proxy a
+    :: forall a b
+    .  (FromJSON a, ToJSON b)
+    => Proxy a
     -> Proxy b
     -> Text
-    -> (a -> Eff effs b)
+    -> (forall effs . (Member GenEff effs, Member S3Eff effs) => a -> Eff effs b)
     -> LambdaProfile
     -> ResEff LambdaId
 
@@ -53,11 +53,9 @@ data ResEff r where
     -> ResEff S3BucketId
 
   RS3BucketLambda
-    :: forall a b effs . (Member GenEff effs, Member S3Eff effs)
-    => Proxy effs
-    -> Text
+    :: Text
     -> S3BucketId
-    -> S3LambdaProgram effs
+    -> (forall effs . (Member GenEff effs, Member S3Eff effs) => S3LambdaProgram effs)
     -> LambdaProfile
     -> ResEff LambdaId
 {-
@@ -128,14 +126,14 @@ data ResEff r where
 
 
 genericLambda
-  :: forall a b lbdEffs resEffs
-  .  (Member GenEff lbdEffs, Member S3Eff lbdEffs, Member ResEff resEffs, FromJSON a, ToJSON b)
+  :: forall a b resEffs
+  .  (Member ResEff resEffs, FromJSON a, ToJSON b)
   => Text
-  -> (a -> Eff lbdEffs b)
+  -> (forall effs . (Member GenEff effs, Member S3Eff effs) => a -> Eff effs b)
   -> LambdaProfile
   -> Eff resEffs LambdaId
-genericLambda =
-  send .:: RGenericLambda (Proxy :: Proxy lbdEffs) (Proxy :: Proxy a) (Proxy :: Proxy b)
+genericLambda name f =
+  send . RGenericLambda (Proxy :: Proxy a) (Proxy :: Proxy b) name f
 
 s3Bucket
   :: (Member ResEff effs)
@@ -145,15 +143,15 @@ s3Bucket =
   send . RS3Bucket
 
 s3BucketLambda
-  :: forall lbdEffs resEffs
-  .  (Member GenEff lbdEffs, Member S3Eff lbdEffs, Member ResEff resEffs)
+  :: forall resEffs
+  .  (Member ResEff resEffs)
   => Text
   -> S3BucketId
-  -> (S3LambdaProgram lbdEffs)
+  -> (forall effs . (Member GenEff effs, Member S3Eff effs) => S3LambdaProgram effs)
   -> LambdaProfile
   -> Eff resEffs LambdaId
-s3BucketLambda =
-  send .::: RS3BucketLambda (Proxy :: Proxy lbdEffs)
+s3BucketLambda name bucketId f =
+  send . RS3BucketLambda name bucketId f
 
 {-
 ddbTable

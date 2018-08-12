@@ -14,32 +14,29 @@ module Qi.CLI.Dispatcher (
   ) where
 
 import           Control.Lens
-import           Data.Aeson.Encode.Pretty          (encodePretty)
-import qualified Data.ByteString.Lazy.Char8        as LBS
-import qualified Data.Text                         as T
-import           Network.AWS                       (AWS, send)
-import           Protolude                         hiding (FilePath, getAll)
-import           System.Environment.Executable     (splitExecutablePath)
-import           Turtle                            (FilePath, fromString,
-                                                    toText)
+import           Data.Aeson.Encode.Pretty      (encodePretty)
+import qualified Data.ByteString.Lazy.Char8    as LBS
+import qualified Data.Text                     as T
+import           Network.AWS                   (AWS, send)
+import           Protolude                     hiding (FilePath, getAll)
+import           System.Environment.Executable (splitExecutablePath)
+import           Turtle                        (FilePath, fromString, toText)
 
-import qualified Qi.Amazonka                       as A
-import           Qi.CLI.Dispatcher.Build           (build)
-import           Qi.CLI.Dispatcher.CF              (createStack, deleteStack,
-                                                    describeStack, updateStack,
-                                                    waitOnStackCreated,
-                                                    waitOnStackDeleted,
-                                                    waitOnStackUpdated)
-import qualified Qi.CLI.Dispatcher.Lambda          as Lambda
-import           Qi.CLI.Dispatcher.S3              (createBucket, putObject)
-import           Qi.Config.AWS                     (Config, getAll,
-                                                    getPhysicalName, namePrefix)
-import           Qi.Config.AWS.Lambda              (Lambda)
-import           Qi.Config.AWS.S3                  (S3Bucket)
-import qualified Qi.Config.CfTemplate              as CfTemplate
-import           Qi.Program.Lambda.Interpreters.IO (LoggerType (..),
-                                                    runLambdaProgram)
-import           Qi.Util                           (printPending, printSuccess)
+import qualified Qi.Amazonka                   as A
+import           Qi.CLI.Dispatcher.Build       (build)
+import           Qi.CLI.Dispatcher.CF          (createStack, deleteStack,
+                                                describeStack, updateStack,
+                                                waitOnStackCreated,
+                                                waitOnStackDeleted,
+                                                waitOnStackUpdated)
+import qualified Qi.CLI.Dispatcher.Lambda      as Lambda
+import           Qi.CLI.Dispatcher.S3          (createBucket, putObject)
+import           Qi.Config.AWS                 (Config, getAll, getPhysicalName,
+                                                namePrefix)
+import           Qi.Config.AWS.Lambda          (Lambda)
+import           Qi.Config.AWS.S3              (S3Bucket)
+import qualified Qi.Config.CfTemplate          as CfTemplate
+import           Qi.Util                       (printPending, printSuccess)
 
 
 type Dispatcher = ReaderT Config IO

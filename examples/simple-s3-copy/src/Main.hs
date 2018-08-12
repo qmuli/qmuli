@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE MonoLocalBinds      #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -44,19 +45,22 @@ main = withConfig config
         def & lpMemorySize .~ M1536
 
     copyContentsLambda
-      :: S3BucketId
-      -> S3LambdaProgram '[GenEff, S3Eff]
+      :: (Member S3Eff effs, Member GenEff effs)
+      => S3BucketId
+      -> S3LambdaProgram effs
     copyContentsLambda sinkBucketId = lbd
       where
         lbd event = do
           let incomingS3Obj = event ^. s3eObject
               outgoingS3Obj = s3oBucketId .~ sinkBucketId $ incomingS3Obj
 
+          say "getting content"
           -- get the content of the newly uploaded file
           eitherContent <- getS3ObjectContent incomingS3Obj
 
           case eitherContent of
             Right content -> do
+              say "putting content"
               -- write the content into a new file in the "output" bucket
               putS3ObjectContent outgoingS3Obj content
 

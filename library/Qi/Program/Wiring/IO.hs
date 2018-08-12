@@ -1,36 +1,32 @@
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE OverloadedLists            #-}
-{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 
-module Qi.Program.Lambda.Interpreters.IO  where
+module Qi.Program.Wiring.IO  where
 
 import           Control.Monad.Freer
-import           Protolude           hiding ((<&>))
+import           Protolude               hiding ((<&>))
 import           Qi.Config.AWS
+import qualified Qi.Program.Gen.Ipret.IO as Gen
 import           Qi.Program.Gen.Lang
+import qualified Qi.Program.S3.Ipret.Gen as S3
 import           Qi.Program.S3.Lang
 
 
-data LoggerType = NoLogger | StdOutLogger
-
-runLambdaProgram
-  :: (Member GenEff effs, Member S3Eff effs)
-  => Text
+run
+  :: Text
   -> Config
-  -> LoggerType
-  -> Proxy effs
-  -> Eff effs a
+  -> Eff '[S3Eff, GenEff, IO] a
   -> IO a
-runLambdaProgram = panic "unimplemented"
+run name config action =
+    runM
+  . Gen.run config
+  . S3.run config
+  $ action
 
 {-
 --import           Network.AWS.S3.StreamingUpload
