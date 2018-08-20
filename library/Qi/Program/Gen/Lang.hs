@@ -13,6 +13,7 @@ module Qi.Program.Gen.Lang where
 import           Control.Monad.Freer
 import           Data.Aeson                           (FromJSON, ToJSON, Value)
 import qualified Data.ByteString.Lazy                 as LBS
+import           Data.Time.Clock                      (UTCTime)
 import           Network.AWS                          hiding (Request, Response,
                                                        send)
 import           Network.AWS.Data.Body                (RsBody (..))
@@ -25,7 +26,7 @@ import           Servant.Client                       (BaseUrl, ClientM,
 
 
 
-type CfCustomResourceLambdaProgram effs = CfCustomResourceEvent -> Eff effs LBS.ByteString
+{- type CfCustomResourceLambdaProgram effs = CfCustomResourceEvent -> Eff effs LBS.ByteString -}
 
 data GenEff r where
   GetAppName
@@ -55,6 +56,13 @@ data GenEff r where
 
   Say
     :: Text
+    -> GenEff ()
+
+  GetCurrentTime
+    :: GenEff UTCTime
+
+  Sleep
+    :: Int
     -> GenEff ()
 
 
@@ -88,27 +96,32 @@ amazonka
   :: (AWSRequest a, Member GenEff effs)
   => a
   -> Eff effs (Rs a)
-amazonka req =
-  send $ Amazonka req
+amazonka =
+  send . Amazonka
+
 
 amazonkaPostBodyExtract
   :: (AWSRequest a, Member GenEff effs)
   => a
   -> (Rs a -> RsBody)
   -> Eff effs (Either Text LBS.ByteString)
-amazonkaPostBodyExtract req post =
-  send $ AmazonkaPostBodyExtract req post
+amazonkaPostBodyExtract =
+  send .: AmazonkaPostBodyExtract
 
-{-
+
 getCurrentTime
-  :: LambdaProgram UTCTime
-getCurrentTime = singleton GetCurrentTime
+  :: Member GenEff effs
+  => Eff effs UTCTime
+getCurrentTime =
+  send GetCurrentTime
+
 
 sleep
-  :: Int
-  -> LambdaProgram ()
-sleep = singleton . Sleep
--}
+  :: Member GenEff effs
+  => Int
+  -> Eff effs ()
+sleep = send . Sleep
+
 
 say
   :: Member GenEff effs

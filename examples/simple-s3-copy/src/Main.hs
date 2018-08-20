@@ -19,8 +19,8 @@ import           Qi.Config.AWS.S3       (S3Event, s3Object, s3eObject,
 import           Qi.Config.Identifier   (S3BucketId)
 import           Qi.Program.Config.Lang (ResEff, s3Bucket, s3BucketLambda)
 import           Qi.Program.Gen.Lang    (GenEff, say)
-import           Qi.Program.S3.Lang     (S3Eff, S3LambdaProgram,
-                                         getS3ObjectContent, putS3ObjectContent)
+import           Qi.Program.S3.Lang     (S3Eff, S3LambdaProgram, getContent,
+                                         putContent)
 
 
 main :: IO ()
@@ -56,13 +56,13 @@ main = withConfig config
 
           say "getting content"
           -- get the content of the newly uploaded file
-          eitherContent <- getS3ObjectContent incomingS3Obj
+          eitherContent <- getContent incomingS3Obj
 
           case eitherContent of
             Right content -> do
               say "putting content"
               -- write the content into a new file in the "output" bucket
-              putS3ObjectContent outgoingS3Obj content
+              putContent outgoingS3Obj content
 
               pure "lambda had executed successfully"
 

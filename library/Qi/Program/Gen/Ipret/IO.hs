@@ -16,6 +16,7 @@ import qualified Control.Monad.Trans.AWS as AWS (send)
 import           Data.Aeson              (FromJSON, ToJSON, Value (..), decode,
                                           encode, object, (.=))
 import           Data.Conduit.Binary     (sinkLbs)
+import qualified Data.Time.Clock         as C
 import           Network.AWS             hiding (Request, Response, send)
 import           Network.HTTP.Client     (ManagerSettings, Request, Response,
                                           httpLbs, newManager)
@@ -26,7 +27,6 @@ import           Qi.Program.Gen.Lang
 import           Servant.Client          (BaseUrl, ClientM, ServantError,
                                           mkClientEnv, runClientM)
 import           System.IO               (hFlush, stdout)
-
 
 run
   :: forall effs a
@@ -65,5 +65,9 @@ run config  = interpret (\case
   Say msg -> send $ do
     putStrLn . encode $ object ["message" .= String msg]
     hFlush stdout
+
+  GetCurrentTime -> send C.getCurrentTime
+
+  Sleep us -> send $ threadDelay us
 
   )

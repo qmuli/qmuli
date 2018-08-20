@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -6,6 +7,7 @@ module Qi.CLI.Dispatcher.S3 where
 
 import           Control.Lens
 import           Control.Monad                (forM_, void, (<=<))
+import           Control.Monad.Freer          hiding (send)
 import           Control.Monad.IO.Class       (liftIO)
 import           Data.List                    (intersect)
 import           Data.Text                    (Text)
@@ -32,34 +34,36 @@ import qualified Qi.Program.Gen.Lang          as I
 import qualified Qi.Program.S3.Lang           as I
 
 
-createBucket
-  :: Text
-  -> AWS ()
-createBucket name =
-  void $ send $ S3.createBucket (BucketName name)
+{- putObject -}
+  {- :: ToBody a -}
+  {- => Text -}
+  {- -> Text -}
+  {- -> a -}
+  {- -> AWS () -}
+{- putObject bucketName objectKey = -}
+  {- void . send . S3.putObject (BucketName bucketName) (ObjectKey objectKey) . toBody -}
 
-
-putObject
-  :: ToBody a
-  => Text
-  -> Text
-  -> a
-  -> AWS ()
-putObject bucketName objectKey =
-  void . send . S3.putObject (BucketName bucketName) (ObjectKey objectKey) . toBody
-
-{-
 clearBuckets
-  :: Config
-  -> I.LambdaProgram ()
+  :: (Member I.S3Eff effs, Member I.GenEff effs)
+  => Config
+  -> Eff effs ()
 clearBuckets config = do
   I.say "destroying buckets..."
   for_ bucketIds $ \bucketId -> do
     I.say $ "destroying bucket: '" <> (getById config bucketId) ^. s3bName <> "'"
-    I.listS3Objects bucketId $ \_ -> I.deleteS3Objects
+
+    forAll bucketId I.deleteObjects
 
   where
+    forAll bucketId action = go bucketId action Nothing False
+
+    go _ _ Nothing True = pass
+    go bucketId action maybeToken _ = do
+      (objs, maybeToken') <- I.listObjects bucketId maybeToken
+      action objs
+      go bucketId action maybeToken' True
+
+
     bucketIds :: [S3BucketId]
     bucketIds = map fst $ getAllWithIds config
 
--}

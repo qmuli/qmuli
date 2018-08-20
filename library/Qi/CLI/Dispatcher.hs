@@ -30,12 +30,15 @@ import           Qi.CLI.Dispatcher.CF          (createStack, deleteStack,
                                                 waitOnStackDeleted,
                                                 waitOnStackUpdated)
 import qualified Qi.CLI.Dispatcher.Lambda      as Lambda
-import           Qi.CLI.Dispatcher.S3          (createBucket, putObject)
+import           Qi.CLI.Dispatcher.S3          (clearBuckets, createBucket,
+                                                putObject)
 import           Qi.Config.AWS                 (Config, getAll, getPhysicalName,
                                                 namePrefix)
 import           Qi.Config.AWS.Lambda          (Lambda)
 import           Qi.Config.AWS.S3              (S3Bucket)
 import qualified Qi.Config.CfTemplate          as CfTemplate
+import qualified Qi.Program.S3.Lang            as S3
+import qualified Qi.Program.Wiring.IO          as IO
 import           Qi.Util                       (printPending, printSuccess)
 
 
@@ -94,10 +97,10 @@ deployApp =
       lambdaPackagePath <- fromString <$> build "." (toS execFilename)
       LBS.readFile . toS $ toTextIgnore lambdaPackagePath
 
-    runAmazonka $ do
-      createBucket appName
-      putObject appName "cf.json" $ CfTemplate.render config -- TODO: render this inside docker container: https://github.com/qmuli/qmuli/issues/60
-      putObject appName "lambda.zip" content
+    liftIO $ IO.run "dispatcher" config $ do
+      bucket <- S3.createBucket appName
+      S3.putContent (s3Object bucket $ S3Key "cf.json") $ CfTemplate.render config -- TODO: render this inside docker container: https://github.com/qmuli/qmuli/issues/60
+      S3.putContent (s3Object bucket $ S3Key "lambda.zip") content
 
   where
     toTextIgnore :: FilePath -> T.Text
@@ -142,7 +145,7 @@ destroyCfStack action =
 
     printSuccess "destroying the stack..."
 
-    -- liftIO $ runLambdaProgram "dispatcher" config StdOutLogger $ clearBuckets config
+    liftIO $ IO.run "dispatcher" config $ clearBuckets config
 
     runAmazonka $ do
       deleteStack appName

@@ -24,7 +24,8 @@ default-extensions:
   - FlexibleContexts
   - ScopedTypeVariables
   - MultiParamTypeClasses
-
+  - MonoLocalBinds
+    
 dependencies:
   - aeson
   - aeson-pretty
@@ -106,16 +107,16 @@ library:
   #- amazonka-s3-streaming
     - amazonka
     - amazonka-cloudformation
-    - amazonka-cloudwatch-logs
-    # - amazonka-cognito-identity
-    # - amazonka-cognito-idp
+    # - amazonka-cloudwatch-logs
+    - amazonka-cognito-identity
+    - amazonka-cognito-idp
     - amazonka-core
     - amazonka-dynamodb
     - amazonka-iam
     - amazonka-lambda
     # - amazonka-lex-models
     - amazonka-s3
-    # - amazonka-sqs
+    - amazonka-sqs
     - zip
 
 
