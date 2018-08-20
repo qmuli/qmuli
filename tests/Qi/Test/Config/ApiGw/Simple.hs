@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Qi.Test.Config.ApiGw.Simple where
-
+{-
 import           Control.Lens
 import           Control.Monad               (void)
 import           Data.Aeson
@@ -276,4 +276,4 @@ spec = describe "Template" $ do
           it "specifies Timeout" $
             properties `shouldContainKVPair` ("Timeout", String "30")
 
-
+-}

@@ -31,6 +31,7 @@ data S3EventConfig = S3EventConfig {
     _event :: S3EventType
   , _lbdId :: LambdaId
   }
+  deriving (Eq, Show)
 
 newtype S3Key = S3Key Text
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
@@ -50,12 +51,14 @@ s3Object = S3Object
 data S3Event = S3Event {
     _s3eObject :: S3Object
   }
+  deriving (Eq, Show)
 
 
 data S3Bucket = S3Bucket {
     _s3bName         :: Text
   , _s3bEventConfigs :: [S3EventConfig]
   }
+  deriving (Eq, Show)
 
 instance Default S3Bucket where
   def = S3Bucket {
@@ -68,6 +71,7 @@ data S3BucketIndex = S3BucketIndex {
     _s3idxIdToS3Bucket :: HashMap S3BucketId S3Bucket
   , _s3idxNameToId     :: HashMap Text S3BucketId
   }
+  deriving (Eq, Show)
 
 
 instance Default S3BucketIndex where
@@ -80,6 +84,7 @@ instance Default S3BucketIndex where
 data S3Config = S3Config {
     _s3Buckets :: S3BucketIndex
   }
+  deriving (Eq, Show)
 
 instance Default S3Config where
   def = S3Config {

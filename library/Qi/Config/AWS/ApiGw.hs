@@ -22,17 +22,19 @@ data RequestParams = RequestParams {
     _rpPath    :: HashMap Text Value
   , _rpHeaders :: HashMap Text Text
   }
+  deriving (Eq, Show)
 
 data RequestBody =
     EmptyBody
   | PlainTextBody { unPlainTextBody :: Text }
   | JsonBody { unJsonBody :: Value }
-  deriving Show
+  deriving (Eq, Show)
 
 data ApiMethodEvent = ApiMethodEvent {
     _aeParams :: RequestParams
   , _aeBody   :: RequestBody
   }
+  deriving (Eq, Show)
 
 
 type ApiAuthorizerDeps = HashMap ApiId [ApiAuthorizerId]
@@ -45,10 +47,12 @@ data ApiGwConfig = ApiGwConfig {
   , _acApiAuthorizers    :: HashMap ApiAuthorizerId ApiAuthorizer
   , _acApiAuthorizerDeps :: ApiAuthorizerDeps
   }
+  deriving (Eq, Show)
 
 data Api = Api {
     _aName :: Text
   }
+  deriving (Eq, Show)
 
 instance Default Api where
   def = Api {
@@ -67,25 +71,29 @@ data ApiVerb
   | Delete
   | Head
   | Options
-  deriving Show
+  deriving (Eq, Show)
+
 
 data ApiMethodConfig = ApiMethodConfig {
     amcVerb    :: ApiVerb
   , amcProfile :: ApiMethodProfile
   , amcLbdId   :: LambdaId
   }
+  deriving (Eq, Show)
 
 data ApiAuthorizer = ApiAuthorizer {
     _aaName      :: Text
   , _aaCognitoId :: CfCustomResourceId
   , _aaApiId     :: ApiId
   }
+  deriving (Eq, Show)
 
 data ApiResource = ApiResource {
     _arName          :: Text
   , _arParent        :: Either ApiId ApiResourceId
   , _arMethodConfigs :: [ApiMethodConfig]
   }
+  deriving (Eq, Show)
 
 apiResource
   :: Text

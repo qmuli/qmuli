@@ -4,6 +4,7 @@
 
 module Qi.Test.Config.DDB.Stream where
 
+{-
 import           Control.Lens
 import           Control.Monad               (void)
 import           Data.Aeson
@@ -23,7 +24,6 @@ import           Config                      (getConfig, getOutputs,
                                               getResources, getTemplate)
 import           Protolude
 import           Util
-
 
 configProgram :: ConfigProgram ()
 configProgram = do
@@ -93,4 +93,4 @@ spec = describe "Template" $ do
           it "specifies StartingPosition" $
             properties `shouldContainKVPair` ("StartingPosition", String "LATEST")
 -}
-
+-}

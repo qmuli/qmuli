@@ -39,6 +39,7 @@ data Config = Config {
   , _cwConfig     :: CwConfig
   , _sqsConfig    :: SqsConfig
 }
+  deriving (Eq, Show)
 
 instance Default Config where
   def = Config {

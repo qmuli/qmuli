@@ -17,7 +17,7 @@ import           Qi.Config.AWS.Lambda   (LambdaMemorySize (..), lpMemorySize)
 import           Qi.Config.AWS.S3       (S3Event, s3Object, s3eObject,
                                          s3oBucketId, s3oKey)
 import           Qi.Config.Identifier   (S3BucketId)
-import           Qi.Program.Config.Lang (ResEff, s3Bucket, s3BucketLambda)
+import           Qi.Program.Config.Lang (ConfigEff, s3Bucket, s3BucketLambda)
 import           Qi.Program.Gen.Lang    (GenEff, say)
 import           Qi.Program.S3.Lang     (S3Eff, S3LambdaProgram, getContent,
                                          putContent)

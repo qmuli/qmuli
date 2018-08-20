@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Qi.Test.Config.ApiGw.UserPoolsAuthorizer where
-
+{-
 import           Control.Lens
 import           Control.Monad                         (void)
 import           Data.Aeson
@@ -82,4 +82,4 @@ spec = describe "Template" $ do
             properties `shouldContainKVPair` ("AuthorizationType", String "COGNITO_USER_POOLS")
 
 
-
+-}

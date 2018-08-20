@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Qi.Test.Config.Template where
-
+{-
 import           Control.Lens
 import           Data.Default                (def)
 import           Test.Tasty.Hspec
@@ -32,5 +32,5 @@ spec = parallel $
   where
     template = getTemplate $ getConfig configProgram
 
-
+-}
 

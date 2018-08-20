@@ -34,15 +34,6 @@ import qualified Qi.Program.Gen.Lang          as I
 import qualified Qi.Program.S3.Lang           as I
 
 
-{- putObject -}
-  {- :: ToBody a -}
-  {- => Text -}
-  {- -> Text -}
-  {- -> a -}
-  {- -> AWS () -}
-{- putObject bucketName objectKey = -}
-  {- void . send . S3.putObject (BucketName bucketName) (ObjectKey objectKey) . toBody -}
-
 clearBuckets
   :: (Member I.S3Eff effs, Member I.GenEff effs)
   => Config

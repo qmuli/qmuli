@@ -23,20 +23,21 @@ import           Network.HTTP.Client     (ManagerSettings, Request, Response,
 import           Protolude               hiding ((<&>))
 import           Qi.Amazonka             (currentRegion)
 import           Qi.Config.AWS
+import           Qi.Program.Config.Lang  (ConfigEff, getConfig)
 import           Qi.Program.Gen.Lang
 import           Servant.Client          (BaseUrl, ClientM, ServantError,
                                           mkClientEnv, runClientM)
 import           System.IO               (hFlush, stdout)
 
+
 run
   :: forall effs a
-  .  (Member IO effs)
-  => Config
-  -> (Eff (GenEff ': effs) a -> Eff effs a)
-run config  = interpret (\case
+  .  (Member IO effs, Member ConfigEff effs)
+  => (Eff (GenEff ': effs) a -> Eff effs a)
+run = interpret (\case
 
   GetAppName ->
-    pure $ config ^. namePrefix
+    (^. namePrefix) <$> getConfig
 
   Http mgrSettings req -> send $
     httpLbs req =<< newManager mgrSettings

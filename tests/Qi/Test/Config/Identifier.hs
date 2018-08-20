@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Qi.Test.Config.Identifier where
-
+{-
 import           Control.Lens
 import           Control.Monad.State.Strict           (runState)
 import           Data.Default                         (def)
@@ -42,4 +42,4 @@ spec = parallel $
       . (`runState` (def & namePrefix .~ appName))
       . CB.unQiConfig
       $ CB.interpret configProgram
-
+-}

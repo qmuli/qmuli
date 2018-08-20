@@ -12,16 +12,17 @@
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeOperators              #-}
 
-module Qi.Program.Config.Ipret.Build where
+module Qi.Program.Config.Ipret.State where
 
 import           Control.Lens                             hiding (view)
 import           Control.Monad.Freer
 import           Control.Monad.State.Class                (MonadState)
-import           Control.Monad.State.Strict               (State)
+import           Control.Monad.State.Strict               (State, get, runState)
 import           Data.Default                             (def)
 import qualified Data.HashMap.Strict                      as SHM
 import           Data.Proxy                               (Proxy (Proxy))
-import           Protolude                                hiding (State)
+import           Protolude                                hiding (State,
+                                                           runState)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.CF
@@ -32,40 +33,42 @@ import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
 import           Qi.Config.AWS.SQS
 import           Qi.Config.Identifier
-import           Qi.Program.Config.Lang
+import           Qi.Program.Config.Lang                   (ConfigEff (..))
 
-
-newtype QiConfig a = QiConfig {unQiConfig :: State Config a}
-  deriving (
-      Functor
-    , Applicative
-    , Monad
-    , MonadState Config
-    )
 
 run
-  :: Eff '[ResEff, QiConfig] a -> QiConfig a
-run = runM . interpret (\case
+  :: forall effs a
+  .  (Member (State Config) effs)
+  => Eff (ConfigEff ': effs) a -> Eff effs a
+run = interpret (\case
 
-  RGenericLambda inProxy outProxy name f profile -> send . QiConfig $
-    withNextId $ \id -> do
-      let newLambda = GenericLambda name profile inProxy outProxy f
-      lbdConfig . lcLambdas %= SHM.insert id newLambda
+  GetConfig -> send (get :: State Config Config)
+
+  RegGenericLambda inProxy outProxy name f profile -> do
+    let action :: State Config LambdaId = withNextId $ \id -> do
+          let newLambda = GenericLambda name profile inProxy outProxy f
+          lbdConfig . lcLambdas %= SHM.insert id newLambda
+
+    send action
 
 -- S3
-  RS3Bucket name -> send . QiConfig $
-    withNextId $ \id -> do
-      let newBucket = def & s3bName .~ name
-          insertIdToS3Bucket = s3idxIdToS3Bucket %~ SHM.insert id newBucket
-          insertNameToId = s3idxNameToId %~ SHM.insert name id
-      s3Config . s3Buckets %= insertNameToId . insertIdToS3Bucket
+  RegS3Bucket name -> do
+    let action :: State Config S3BucketId = withNextId $ \id -> do
+          let newBucket = def & s3bName .~ name
+              insertIdToS3Bucket = s3idxIdToS3Bucket %~ SHM.insert id newBucket
+              insertNameToId = s3idxNameToId %~ SHM.insert name id
+          s3Config . s3Buckets %= insertNameToId . insertIdToS3Bucket
 
-  RS3BucketLambda name bucketId f profile -> send . QiConfig $
-    withNextId $ \id -> do
-      let newLambda = S3BucketLambda name profile f
-          modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll id):)
-      s3Config . s3Buckets . s3idxIdToS3Bucket %= SHM.adjust modifyBucket bucketId
-      lbdConfig . lcLambdas %= SHM.insert id newLambda
+    send action
+
+  RegS3BucketLambda name bucketId f profile -> do
+    let action :: State Config LambdaId = withNextId $ \id -> do
+          let newLambda = S3BucketLambda name profile f
+              modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll id):)
+          s3Config . s3Buckets . s3idxIdToS3Bucket %= SHM.adjust modifyBucket bucketId
+          lbdConfig . lcLambdas %= SHM.insert id newLambda
+
+    send action
 
 {-
 -- DDB

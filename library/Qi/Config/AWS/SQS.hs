@@ -17,10 +17,12 @@ import           Qi.Config.Identifier
 data SqsQueue = SqsQueue {
     _sqsQueueName         :: Text
   }
+  deriving (Eq, Show)
 
 data SqsConfig = SqsConfig {
     _sqsQueues :: HashMap SqsQueueId SqsQueue
   }
+  deriving (Eq, Show)
 
 instance Default SqsConfig where
   def = SqsConfig {

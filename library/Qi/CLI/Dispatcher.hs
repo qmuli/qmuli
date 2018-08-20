@@ -14,10 +14,11 @@ module Qi.CLI.Dispatcher (
   ) where
 
 import           Control.Lens
+import           Control.Monad.Freer           (send)
 import           Data.Aeson.Encode.Pretty      (encodePretty)
 import qualified Data.ByteString.Lazy.Char8    as LBS
 import qualified Data.Text                     as T
-import           Network.AWS                   (AWS, send)
+import           Network.AWS                   (AWS)
 import           Protolude                     hiding (FilePath, getAll)
 import           System.Environment.Executable (splitExecutablePath)
 import           Turtle                        (FilePath, fromString, toText)
@@ -30,13 +31,13 @@ import           Qi.CLI.Dispatcher.CF          (createStack, deleteStack,
                                                 waitOnStackDeleted,
                                                 waitOnStackUpdated)
 import qualified Qi.CLI.Dispatcher.Lambda      as Lambda
-import           Qi.CLI.Dispatcher.S3          (clearBuckets, createBucket,
-                                                putObject)
+import           Qi.CLI.Dispatcher.S3          (clearBuckets)
 import           Qi.Config.AWS                 (Config, getAll, getPhysicalName,
                                                 namePrefix)
 import           Qi.Config.AWS.Lambda          (Lambda)
-import           Qi.Config.AWS.S3              (S3Bucket)
+import           Qi.Config.AWS.S3              (S3Key (S3Key), s3Object)
 import qualified Qi.Config.CfTemplate          as CfTemplate
+import           Qi.Program.Config.Lang        (getConfig)
 import qualified Qi.Program.S3.Lang            as S3
 import qualified Qi.Program.Wiring.IO          as IO
 import           Qi.Util                       (printPending, printSuccess)
@@ -89,7 +90,7 @@ renderCfTemplate =
 deployApp :: Dispatcher ()
 deployApp =
   withConfig $ \config -> do
-    let appName = config^.namePrefix
+    let appName = config ^. namePrefix
 
     printSuccess "deploying the app..."
     content <- liftIO $ do
@@ -98,9 +99,13 @@ deployApp =
       LBS.readFile . toS $ toTextIgnore lambdaPackagePath
 
     liftIO $ IO.run "dispatcher" config $ do
-      bucket <- S3.createBucket appName
-      S3.putContent (s3Object bucket $ S3Key "cf.json") $ CfTemplate.render config -- TODO: render this inside docker container: https://github.com/qmuli/qmuli/issues/60
-      S3.putContent (s3Object bucket $ S3Key "lambda.zip") content
+      bucketId <- S3.createBucket appName
+      send (print bucketId :: IO ())
+      conf <- getConfig
+      send (print conf :: IO ())
+      S3.putContent (s3Object bucketId $ S3Key "cf.json") $ CfTemplate.render config -- TODO: render this inside docker container: https://github.com/qmuli/qmuli/issues/60
+      send (print ("done cf.json" :: Text) :: IO ())
+      S3.putContent (s3Object bucketId $ S3Key "lambda.zip") content
 
   where
     toTextIgnore :: FilePath -> T.Text

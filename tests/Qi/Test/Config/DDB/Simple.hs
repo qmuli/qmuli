@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Qi.Test.Config.DDB.Simple where
-
+{-
 import           Control.Lens
 import           Control.Monad               (void)
 import           Data.Aeson
@@ -81,4 +81,4 @@ spec = describe "Template" $ do
             properties `shouldContainKVPair` ("TableName", String "testApp_things")
 
 
-
+-}

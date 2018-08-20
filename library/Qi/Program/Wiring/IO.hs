@@ -9,24 +9,28 @@
 module Qi.Program.Wiring.IO  where
 
 import           Control.Monad.Freer
-import           Protolude               hiding ((<&>))
+import           Control.Monad.State.Strict    (State, runState)
+import           Protolude                     hiding (State, runState, (<&>))
 import           Qi.Config.AWS
-import qualified Qi.Program.Gen.Ipret.IO as Gen
+import qualified Qi.Program.Config.Ipret.State as Config
+import           Qi.Program.Config.Lang        (ConfigEff)
+import qualified Qi.Program.Gen.Ipret.IO       as Gen
 import           Qi.Program.Gen.Lang
-import qualified Qi.Program.S3.Ipret.Gen as S3
+import qualified Qi.Program.S3.Ipret.Gen       as S3
 import           Qi.Program.S3.Lang
 
 
 run
   :: Text
   -> Config
-  -> Eff '[S3Eff, GenEff, IO] a
+  -> Eff '[S3Eff, GenEff, ConfigEff, State Config, IO] a
   -> IO a
-run name config action =
+run name config =
     runM
-  . Gen.run config
-  . S3.run config
-  $ action
+  . interpret (pure . fst . (`runState` config))
+  . Config.run
+  . Gen.run
+  . S3.run
 
 {-
 --import           Network.AWS.S3.StreamingUpload

@@ -25,10 +25,12 @@ data CwEventsRule = CwEventsRule {
   , _cerProfile :: CwEventsRuleProfile
   , _cerLbdId   :: LambdaId
   }
+  deriving (Eq, Show)
 
 data CwConfig = CwConfig {
     _ccRules :: HashMap CwEventsRuleId CwEventsRule
   }
+  deriving (Eq, Show)
 
 instance Default CwConfig where
   def = CwConfig {
@@ -44,8 +46,10 @@ data CwEventsRuleProfile =
   | PatternedEventProfile {
     _cpepPattern :: Text
   }
+  deriving (Eq, Show)
 
 data CwEvent = CwEvent -- {}
+  deriving (Eq, Show)
 
 instance FromJSON CwEvent where
   parseJSON v = pure CwEvent

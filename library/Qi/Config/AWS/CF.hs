@@ -26,6 +26,7 @@ import           Qi.Config.Identifier
 data CfCustomResource = CfCustomResource {
     _cLbdId :: LambdaId
   }
+  deriving (Eq, Show)
 
 instance Hashable CfCustomResource where
   hashWithSalt s CfCustomResource{ _cLbdId = LambdaId lbdId } =
@@ -35,6 +36,7 @@ instance Hashable CfCustomResource where
 data CfConfig = CfConfig {
     _cfcCustomResources :: HashMap CfCustomResourceId CfCustomResource
   }
+  deriving (Eq, Show)
 
 instance Default CfConfig where
   def = CfConfig {

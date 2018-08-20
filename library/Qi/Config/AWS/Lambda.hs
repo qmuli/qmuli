@@ -16,7 +16,8 @@ import           Data.HashMap.Strict                  (HashMap)
 import qualified Data.HashMap.Strict                  as SHM
 import           Data.Proxy                           (Proxy)
 import           Data.Text                            (Text)
-import           Protolude
+import           GHC.Show                             as Show
+import           Protolude                            as P
 import           Qi.Config.AWS.ApiGw                  (ApiMethodEvent)
 import           Qi.Config.AWS.CfCustomResource.Types (CfCustomResourceEvent)
 import           Qi.Config.AWS.CW                     (CwEvent)
@@ -66,9 +67,19 @@ data Lambda =
   }
 -}
 
+instance Eq Lambda where
+  GenericLambda{} == GenericLambda{} = True
+  GenericLambda{} == S3BucketLambda{} = False
+  S3BucketLambda{} == GenericLambda{} = False
+
+instance Show Lambda where
+  show GenericLambda{}  = "GenericLambda"
+  show S3BucketLambda{} = "S3BucketLambda"
+
 data LambdaConfig = LambdaConfig {
     _lcLambdas :: HashMap LambdaId Lambda
   }
+  deriving (Eq, Show)
 
 instance Default LambdaConfig where
   def = LambdaConfig {
@@ -89,6 +100,7 @@ data LambdaMemorySize =
   | M2048
   | M2560
   | M3008
+  deriving (Eq, Show)
 
 instance Enum LambdaMemorySize where
   toEnum 128  = M128
@@ -103,7 +115,7 @@ instance Enum LambdaMemorySize where
   toEnum 2048 = M2048
   toEnum 2560 = M2560
   toEnum 3008 = M3008
-  toEnum x    = panic $ "no such memory configuration: " <> show x
+  toEnum x    = panic $ "no such memory configuration: " <> P.show x
 
   fromEnum M128  = 128
   fromEnum M192  = 192
@@ -122,6 +134,7 @@ data LambdaProfile = LambdaProfile {
     _lpMemorySize     :: LambdaMemorySize
   , _lpTimeoutSeconds :: Int
   }
+  deriving (Eq, Show)
 
 instance Default LambdaProfile where
   def = LambdaProfile {

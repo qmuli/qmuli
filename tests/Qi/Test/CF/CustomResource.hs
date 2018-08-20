@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Qi.Test.CF.CustomResource where
-
+{-
 import           Data.Aeson
 import           Data.Either
 import           Data.FileEmbed
@@ -49,4 +49,4 @@ spec = do
           , _cfeResourceType       = "AWS::CloudFormation::CustomResource"
           , _cfeResourceProperties = HM.fromList [("ServiceToken", String "arn:aws:lambda:us-east-1:910653408535:function:cognitotestxx_cognitoPoolProvider")]
           })
-
+-}

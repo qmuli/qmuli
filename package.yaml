@@ -98,7 +98,8 @@ library:
     - Qi.Program.Gen.Lang
     - Qi.Program.Lambda.Lang
     - Qi.Program.Config.Lang
-    - Qi.Program.Config.Ipret.Build
+    - Qi.Program.Config.Ipret.State
+    - Qi.Program.Wiring.IO
     - Qi.Util
     - Qi.Util.ApiGw
     - Qi.Util.DDB

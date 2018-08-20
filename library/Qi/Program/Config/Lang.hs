@@ -23,7 +23,7 @@ import           Qi.Config.AWS              (Config)
 {- import           Qi.Config.AWS.CW -}
 {- import           Qi.Config.AWS.DDB -}
 import           Qi.Config.AWS.Lambda       (LambdaProfile)
-import           Qi.Config.AWS.S3
+import           Qi.Config.AWS.S3           ()
 import           Qi.Config.Identifier
 import           Qi.Core.Curry
 {- import           Qi.Program.Lambda.Cf.Lang  (CfCustomResourceLambdaProgram) -}
@@ -36,8 +36,12 @@ import           Qi.Program.S3.Lang
 
 
 
-data ResEff r where
-  RGenericLambda
+data ConfigEff r where
+
+  GetConfig
+    :: ConfigEff Config
+
+  RegGenericLambda
     :: forall a b
     .  (FromJSON a, ToJSON b)
     => Proxy a
@@ -45,38 +49,38 @@ data ResEff r where
     -> Text
     -> (forall effs . (Member GenEff effs, Member S3Eff effs) => a -> Eff effs b)
     -> LambdaProfile
-    -> ResEff LambdaId
+    -> ConfigEff LambdaId
 
 -- S3
-  RS3Bucket
+  RegS3Bucket
     :: Text
-    -> ResEff S3BucketId
+    -> ConfigEff S3BucketId
 
-  RS3BucketLambda
+  RegS3BucketLambda
     :: Text
     -> S3BucketId
     -> (forall effs . (Member GenEff effs, Member S3Eff effs) => S3LambdaProgram effs)
     -> LambdaProfile
-    -> ResEff LambdaId
+    -> ConfigEff LambdaId
 {-
 -- DDB
   RDdbTable
     :: Text
     -> DdbAttrDef
     -> DdbTableProfile
-    -> ResEff DdbTableId
+    -> ConfigEff DdbTableId
 
   RDdbStreamLambda
     :: Text
     -> DdbTableId
     -> (forall effs . Member DdbEff effs => a -> effs b)
     -> LambdaProfile
-    -> ResEff LambdaId
+    -> ConfigEff LambdaId
 
 -- SQS
   RSqsQueue
     :: Text
-    -> ResEff SqsQueueId
+    -> ConfigEff SqsQueueId
 
 
 -- Custom
@@ -84,7 +88,7 @@ data ResEff r where
     :: Text
     -> CfCustomResourceLambdaProgram
     -> LambdaProfile
-    -> ResEff CfCustomResourceId
+    -> ConfigEff CfCustomResourceId
 
 -- CloudWatch Logs
   RCwEventLambda
@@ -92,7 +96,7 @@ data ResEff r where
     -> CwEventsRuleProfile
     -> CwLambdaProgram
     -> LambdaProfile
-    -> ResEff LambdaId
+    -> ConfigEff LambdaId
 -}
 
 
@@ -100,19 +104,19 @@ data ResEff r where
 -- Api
   RApi
     :: Text
-    -> ResEff ApiId
+    -> ConfigEff ApiId
 
   RApiAuthorizer
     :: Text
     -> CfCustomResourceId
     -> ApiId
-    -> ResEff ApiAuthorizerId
+    -> ConfigEff ApiAuthorizerId
 
   RApiResource
     :: ParentResource a
     => Text
     -> a
-    -> ResEff ApiResourceId
+    -> ConfigEff ApiResourceId
 
   RApiMethodLambda
     :: Text
@@ -121,41 +125,46 @@ data ResEff r where
     -> ApiMethodProfile
     -> ApiLambdaProgram
     -> LambdaProfile
-    -> ResEff LambdaId
+    -> ConfigEff LambdaId
 -}
 
+getConfig
+  :: forall effs
+  .  (Member ConfigEff effs)
+  => Eff effs Config
+getConfig = send GetConfig
 
 genericLambda
   :: forall a b resEffs
-  .  (Member ResEff resEffs, FromJSON a, ToJSON b)
+  .  (Member ConfigEff resEffs, FromJSON a, ToJSON b)
   => Text
   -> (forall effs . (Member GenEff effs, Member S3Eff effs) => a -> Eff effs b)
   -> LambdaProfile
   -> Eff resEffs LambdaId
 genericLambda name f =
-  send . RGenericLambda (Proxy :: Proxy a) (Proxy :: Proxy b) name f
+  send . RegGenericLambda (Proxy :: Proxy a) (Proxy :: Proxy b) name f
 
 s3Bucket
-  :: (Member ResEff effs)
+  :: (Member ConfigEff effs)
   => Text
   -> Eff effs S3BucketId
 s3Bucket =
-  send . RS3Bucket
+  send . RegS3Bucket
 
 s3BucketLambda
   :: forall resEffs
-  .  (Member ResEff resEffs)
+  .  (Member ConfigEff resEffs)
   => Text
   -> S3BucketId
   -> (forall effs . (Member GenEff effs, Member S3Eff effs) => S3LambdaProgram effs)
   -> LambdaProfile
   -> Eff resEffs LambdaId
 s3BucketLambda name bucketId f =
-  send . RS3BucketLambda name bucketId f
+  send . RegS3BucketLambda name bucketId f
 
 {-
 ddbTable
-  :: (Member ResEff effs)
+  :: (Member ConfigEff effs)
   => Text
   -> DdbAttrDef
   -> DdbTableProfile
@@ -164,7 +173,7 @@ ddbTable =
   send .:: RDdbTable
 
 ddbStreamLambda
-  :: (Member ResEff effs)
+  :: (Member ConfigEff effs)
   => Text
   -> DdbTableId
   -> DdbStreamLambdaProgram
@@ -174,7 +183,7 @@ ddbStreamLambda =
   send .::: RDdbStreamLambda
 
 sqsQueue
-  :: (Member ResEff effs)
+  :: (Member ConfigEff effs)
   => Text
   -> Eff effs SqsQueueId
 sqsQueue =
@@ -182,7 +191,7 @@ sqsQueue =
 
 
 customResource
-  :: (Member ResEff effs)
+  :: (Member ConfigEff effs)
   => Text
   -> CfCustomResourceLambdaProgram
   -> LambdaProfile
@@ -191,7 +200,7 @@ customResource =
   send .:: RCustomResource
 
 cwEventLambda
-  :: (Member ResEff effs)
+  :: (Member ConfigEff effs)
   => Text
   -> CwEventsRuleProfile
   -> CwLambdaProgram

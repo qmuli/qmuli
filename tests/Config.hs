@@ -1,12 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Config (
-    getTemplate
-  , getResources
-  , getOutputs
-  , getConfig
-  , appName) where
-
+module Config  where
+{-
 import           Control.Lens
 import           Control.Monad.State.Strict           (runState)
 import           Data.Aeson                           (Value, decode)
@@ -40,6 +35,6 @@ getConfig cp = snd
   . unQiConfig
   $ interpret cp
 
-
+-}
 
 
