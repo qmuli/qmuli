@@ -5,8 +5,8 @@
 module Qi where
 
 import           Control.Lens                  hiding (argument)
-import           Control.Monad.Freer           hiding (run)
-import           Control.Monad.State.Strict    (State, runState)
+import           Control.Monad.Freer
+import           Control.Monad.Freer.State
 import           Data.Char                     (isDigit, isLower)
 import           Data.Default                  (def)
 import           Protolude                     hiding (State, runState)
@@ -41,6 +41,11 @@ withConfig configProgram = do
       LbdLogs lbdName      -> lambdaLogs lbdName
 
   where
-    config name = snd . (`runState` def{_namePrefix = name}) . runM $ Config.run configProgram
+    config name =
+        snd
+      . run
+      . runState def{_namePrefix = name}
+      . Config.run
+      $ configProgram
 
 

@@ -9,7 +9,7 @@
 module Qi.Program.Wiring.IO  where
 
 import           Control.Monad.Freer
-import           Control.Monad.State.Strict    (State, runState)
+import           Control.Monad.Freer.State
 import           Protolude                     hiding (State, runState, (<&>))
 import           Qi.Config.AWS
 import qualified Qi.Program.Config.Ipret.State as Config
@@ -27,7 +27,8 @@ run
   -> IO a
 run name config =
     runM
-  . interpret (pure . fst . (`runState` config))
+  . map fst
+  . runState config
   . Config.run
   . Gen.run
   . S3.run

@@ -35,8 +35,11 @@ run
 run = interpret (\case
 
   CreateBucket name -> do
-    amazonka $ createBucket (BucketName name)
-    s3Bucket name
+    id      <- s3Bucket name
+    config  <- getConfig
+    let bucketName = BucketName . getPhysicalName config $ getById config id
+    amazonka $ createBucket bucketName
+    pure id
 
   GetContent S3Object{ _s3oBucketId, _s3oKey = S3Key (ObjectKey -> objKey) } ->
     action =<< getConfig

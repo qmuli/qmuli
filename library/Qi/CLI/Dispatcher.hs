@@ -100,11 +100,7 @@ deployApp =
 
     liftIO $ IO.run "dispatcher" config $ do
       bucketId <- S3.createBucket appName
-      send (print bucketId :: IO ())
-      conf <- getConfig
-      send (print conf :: IO ())
       S3.putContent (s3Object bucketId $ S3Key "cf.json") $ CfTemplate.render config -- TODO: render this inside docker container: https://github.com/qmuli/qmuli/issues/60
-      send (print ("done cf.json" :: Text) :: IO ())
       S3.putContent (s3Object bucketId $ S3Key "lambda.zip") content
 
   where

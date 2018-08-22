@@ -51,43 +51,7 @@ type DdbStreamLambdaProgram         = DdbStreamEvent        -> LambdaProgram LBS
 data LambdaInstruction a where
 
 
-  GetAppName
-    :: LambdaInstruction Text
-
-  -- this is needed for custom CF resources, which cannot use Servant because
-  -- we need to parse the url provided by requests from CF
-  Http
-    :: ManagerSettings
-    -> Request
-    -> LambdaInstruction (Response LBS.ByteString)
-
-  RunServant
-    :: ManagerSettings
-    -> BaseUrl
-    -> ClientM a
-    -> LambdaInstruction (Either ServantError a)
-
-  AmazonkaSend
-    :: (AWSRequest a)
-    => a
-    -> LambdaInstruction (Rs a)
-
-
--- Lambda
-
-  InvokeLambda
-    :: ToJSON a
-    => LambdaId
-    -> a
-    -> LambdaInstruction ()
-
-
 -- S3
-
-  GetS3ObjectContent
-    :: S3Object
-    -> LambdaInstruction (Either Text LBS.ByteString)
-
   MultipartS3Upload
     :: S3Object
     -> (S3Object -> Text -> LambdaProgram [(Int, ETag)])
@@ -99,7 +63,7 @@ data LambdaInstruction a where
     -> (Int, S3Object) -- source chunk
     -> LambdaInstruction (Maybe (Int, ETag))
 
-{-
+
   StreamFromS3Object
     :: S3Object
     -> (Sink BS.ByteString LambdaProgram a)
@@ -109,26 +73,6 @@ data LambdaInstruction a where
     :: S3Object
     -> S3Object
     -> Conduit BS.ByteString LambdaProgram BS.ByteString
-    -> LambdaInstruction ()
--}
-
-  PutS3ObjectContent
-    :: S3Object
-    -> LBS.ByteString
-    -> LambdaInstruction ()
-
-  ListS3Objects
-    :: Monoid a
-    => S3BucketId
-    -> (a -> [S3Object] -> LambdaProgram a)
-    -> LambdaInstruction a
-
-  DeleteS3Object
-    :: S3Object
-    -> LambdaInstruction ()
-
-  DeleteS3Objects
-    :: [S3Object]
     -> LambdaInstruction ()
 
 
@@ -160,25 +104,6 @@ data LambdaInstruction a where
     -> LambdaInstruction DeleteItemResponse
 
 
--- SQS
-
-  SendMessage
-    :: ToJSON a
-    => SqsQueueId
-    -> a
-    -> LambdaInstruction ()
-
-  ReceiveMessage
-    :: FromJSON a
-    => SqsQueueId
-    -> LambdaInstruction [(a, ReceiptHandle)] -- the json body and the receipt handle
-
-  DeleteMessage
-    :: SqsQueueId
-    -> ReceiptHandle
-    -> LambdaInstruction ()
-
-
 -- Lex
 
   StartBotImport
@@ -203,7 +128,7 @@ uploadS3Chunk
   -> LambdaProgram (Maybe (Int, ETag))
 uploadS3Chunk = singleton .:: UploadS3Chunk
 
-{-
+
 streamFromS3Object
   :: S3Object
   -> (Sink BS.ByteString LambdaProgram a)
@@ -216,14 +141,7 @@ streamS3Objects
     -> Conduit BS.ByteString LambdaProgram BS.ByteString
     -> LambdaProgram ()
 streamS3Objects = singleton .:: StreamS3Objects
--}
 
-listS3Objects
-  :: Monoid a
-  => S3BucketId
-  -> (a -> [S3Object] -> LambdaProgram a)
-  -> LambdaProgram a
-listS3Objects = singleton .: ListS3Objects
 
 
 -- DDB
@@ -256,28 +174,6 @@ deleteDdbRecord
   -> DdbAttrs
   -> LambdaProgram DeleteItemResponse
 deleteDdbRecord = singleton .: DeleteDdbRecord
-
-
--- SQS
-
-sendMessage
-  :: ToJSON a
-  => SqsQueueId
-  -> a
-  -> LambdaProgram ()
-sendMessage = singleton .: SendMessage
-
-receiveMessage
-  :: FromJSON a
-  => SqsQueueId
-  -> LambdaProgram [(a, ReceiptHandle)] -- the json body and the receipt handle
-receiveMessage = singleton . ReceiveMessage
-
-deleteMessage
-  :: SqsQueueId
-  -> ReceiptHandle
-  -> LambdaProgram ()
-deleteMessage = singleton .: DeleteMessage
 
 
 -- Lex

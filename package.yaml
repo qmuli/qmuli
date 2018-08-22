@@ -95,6 +95,7 @@ library:
     - Qi.CustomResource.Lex
     - Qi.Options
     - Qi.Program.S3.Lang
+    - Qi.Program.S3.Ipret.Gen
     - Qi.Program.Gen.Lang
     - Qi.Program.Lambda.Lang
     - Qi.Program.Config.Lang
@@ -103,6 +104,7 @@ library:
     - Qi.Util
     - Qi.Util.ApiGw
     - Qi.Util.DDB
+    - Qi.Program.Gen.Ipret.IO
       
   dependencies:
   #- amazonka-s3-streaming

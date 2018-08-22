@@ -14,7 +14,7 @@ import           Control.Lens         (Getting, (.~), (?~), (^.))
 import           Control.Monad.Freer
 import           Data.Aeson           (decode, encode)
 import           Network.AWS.SQS
-import           Protolude            hiding ((<&>))
+import           Protolude            hiding (handle, (<&>))
 import           Qi.AWS.SQS
 import           Qi.Config.AWS
 import           Qi.Config.Identifier (LambdaId)

@@ -11,8 +11,8 @@
 -- https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-custom-resources.html
 
 module Qi.Config.AWS.CfCustomResource where
-{-
 import           Control.Lens                         hiding (view, (.=))
+import           Control.Monad.Freer
 import           Data.Aeson                           hiding (Result)
 import           Data.Aeson.Types                     (fieldLabelModifier,
                                                        typeMismatch)
@@ -30,11 +30,13 @@ import           Qi.AWS.CF
 import           Qi.AWS.Types
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.CfCustomResource.Types
-import           Qi.Program.Gen.Lang                  (CfCustomResourceLambdaProgram,
-                                                       LambdaProgram,
-                                                       amazonkaSend, http, say)
+import           Qi.Program.Gen.Lang                  (amazonka, http, say)
 
 
+type CfCustomResourceLambdaProgram effs = CfCustomResourceEvent -> Eff effs LBS.ByteString
+
+
+{-
 data CustomResourceProvider = CustomResourceProvider {
     onCreate :: LambdaProgram (Either Text Result)
   , onUpdate :: CustomResourceId -> LambdaProgram (Either Text Result)

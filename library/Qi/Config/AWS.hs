@@ -57,15 +57,7 @@ instance Default Config where
 
 makeLenses ''Config
 
--- get a resource-specific identifier based on the next autoincremented numeric id
--- while keeping the autoincrement state in the global Config
-getNextId
-  :: (MonadState Config m, FromInt a)
-  => m a
-getNextId = do
-  nid <- use nextId
-  nextId += 1
-  pure $ fromInt nid
+
 
 underscoreNamePrefixWith
   :: Text
@@ -85,7 +77,7 @@ namePrefixWith
   -> Config
   -> Text
 namePrefixWith sep name config =
-  T.concat [config^.namePrefix, sep, name]
+  T.concat [config ^. namePrefix, sep, name]
 
 
 makeAlphaNumeric
@@ -130,7 +122,8 @@ class (Eq rid, Show rid, Hashable rid) => CfResource r rid | rid -> r, r -> rid 
     :: Config
     -> r
     -> Text
-  getLogicalName config r =  T.concat [makeAlphaNumeric (getName config r), rNameSuffix r]
+  getLogicalName config r =
+    T.concat [makeAlphaNumeric (getName config r), rNameSuffix r]
 
   getPhysicalName
     :: Config

@@ -39,8 +39,8 @@ toResources config = foldMap toAllLambdaResources $ getAll config
               GenericLambda{}  -> "lambda.amazonaws.com"
               S3BucketLambda{} -> "s3.amazonaws.com"
               {- ApiLambda{}       -> "apigateway.amazonaws.com" -}
-              {- CfCustomLambda{}  -> "*" -- TODO: not sure whether we even need the permission for CF Custom Resource -}
-              {- CwEventLambda{}   -> "events.amazonaws.com" -}
+              CfCustomLambda{} -> "*" -- TODO: not sure whether we even need the permission for CF Custom Resource
+              CwEventLambda{}  -> "events.amazonaws.com"
               {- DdbStreamLambda{} -> "dynamodb.amazonaws.com" -}
 
         lambdaResource = (

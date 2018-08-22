@@ -16,12 +16,12 @@ module Qi.Program.Config.Ipret.State where
 
 import           Control.Lens                             hiding (view)
 import           Control.Monad.Freer
-import           Control.Monad.State.Class                (MonadState)
-import           Control.Monad.State.Strict               (State, get, runState)
+import           Control.Monad.Freer.State
 import           Data.Default                             (def)
 import qualified Data.HashMap.Strict                      as SHM
 import           Data.Proxy                               (Proxy (Proxy))
-import           Protolude                                hiding (State,
+import           Protolude                                hiding (State, get,
+                                                           gets, modify,
                                                            runState)
 import           Qi.Config.AWS
 import           Qi.Config.AWS.ApiGw
@@ -42,33 +42,36 @@ run
   => Eff (ConfigEff ': effs) a -> Eff effs a
 run = interpret (\case
 
-  GetConfig -> send (get :: State Config Config)
+  GetConfig -> get
 
-  RegGenericLambda inProxy outProxy name f profile -> do
-    let action :: State Config LambdaId = withNextId $ \id -> do
+-- get a resource-specific identifier based on the next autoincremented numeric id
+-- while keeping the autoincrement state in the global Config
+  {- GetNextId -> getNextId -}
+
+
+  RegGenericLambda inProxy outProxy name f profile ->
+    withNextId (Proxy :: Proxy LambdaId) $ \id -> do
           let newLambda = GenericLambda name profile inProxy outProxy f
-          lbdConfig . lcLambdas %= SHM.insert id newLambda
+          modify (lbdConfig . lcLambdas %~ SHM.insert id newLambda)
 
-    send action
 
 -- S3
   RegS3Bucket name -> do
-    let action :: State Config S3BucketId = withNextId $ \id -> do
+    withNextId (Proxy :: Proxy S3BucketId) $ \id -> do
           let newBucket = def & s3bName .~ name
               insertIdToS3Bucket = s3idxIdToS3Bucket %~ SHM.insert id newBucket
               insertNameToId = s3idxNameToId %~ SHM.insert name id
-          s3Config . s3Buckets %= insertNameToId . insertIdToS3Bucket
 
-    send action
+          modify (s3Config . s3Buckets %~ insertNameToId . insertIdToS3Bucket)
 
-  RegS3BucketLambda name bucketId f profile -> do
-    let action :: State Config LambdaId = withNextId $ \id -> do
+
+  RegS3BucketLambda name bucketId f profile ->
+    withNextId (Proxy :: Proxy LambdaId) $ \id -> do
           let newLambda = S3BucketLambda name profile f
               modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll id):)
-          s3Config . s3Buckets . s3idxIdToS3Bucket %= SHM.adjust modifyBucket bucketId
-          lbdConfig . lcLambdas %= SHM.insert id newLambda
+          modify (s3Config . s3Buckets . s3idxIdToS3Bucket %~ SHM.adjust modifyBucket bucketId)
+          modify (lbdConfig . lcLambdas %~ SHM.insert id newLambda)
 
-    send action
 
 {-
 -- DDB
@@ -91,45 +94,59 @@ run = interpret (\case
       lbdConfig.lcLambdas %= SHM.insert id newLambda
 
 
+-}
 -- Sqs
-  RSqsQueue name -> send . QiConfig $
-    withNextId $ \id -> do
-      sqsConfig . sqsQueues %= SHM.insert id (SqsQueue{ _sqsQueueName = name })
+  RegSqsQueue name ->
+    withNextId (Proxy :: Proxy SqsQueueId) $ \id -> do
+      modify (sqsConfig . sqsQueues %~ SHM.insert id SqsQueue{ _sqsQueueName = name })
 
 
 -- Custom
-  RCustomResource name programFunc profile -> send . QiConfig $ do
+  RegCustomResource name programFunc profile -> do
     id <- getNextId
-    let newCustomResource = CfCustomResource id
-        (newCustomId, cfConfigModifier) = CustomResource.insert newCustomResource
+    let customResource = CfCustomResource id
+        (newCustomId, cfConfigModifier) = CustomResource.insert customResource
+        lbd = CfCustomLambda name profile programFunc
 
-        newLambda = CfCustomLambda name profile programFunc
-
-    lbdConfig . lcLambdas %= SHM.insert id newLambda
-    cfConfig %= cfConfigModifier
+    modify $ lbdConfig . lcLambdas %~ SHM.insert id lbd
+    modify $ cfConfig %~ cfConfigModifier
     pure newCustomId
 
 
 -- CloudWatch
-  RCwEventLambda name ruleProfile programFunc profile -> send . QiConfig $ do
-    newEventsRuleId <- getNextId
-    withNextId $ \newLambdaId -> do
-      let newLambda = CwEventLambda name profile programFunc
-          newEventsRule = CwEventsRule {
+  RegCwEventLambda name ruleProfile programFunc profile -> do
+    eventsRuleId <- getNextId
+    withNextId (Proxy :: Proxy LambdaId) $ \id -> do
+      let lbd = CwEventLambda name profile programFunc
+          eventsRule = CwEventsRule {
             _cerName    = name
           , _cerProfile = ruleProfile
-          , _cerLbdId   = newLambdaId
+          , _cerLbdId   = id
           }
 
-      cwConfig . ccRules %= SHM.insert newEventsRuleId newEventsRule
-      lbdConfig . lcLambdas %= SHM.insert newLambdaId newLambda
--}
+      modify $ cwConfig . ccRules %~ SHM.insert eventsRuleId eventsRule
+      modify $ lbdConfig . lcLambdas %~ SHM.insert id lbd
   )
 
 
   where
-    withNextId f = do
-      id <- getNextId
+
+    getNextId
+      :: FromInt id
+      => Eff effs id
+    getNextId = do
+      id <- gets (fromInt . (^. nextId))
+      modify (nextId %~ (+1))
+      pure id
+
+    withNextId
+      :: FromInt id
+      => Proxy id
+      -> (id -> Eff effs c)
+      -> Eff effs id
+    withNextId _ f = do
+      id <- gets (fromInt . (^. nextId))
+      modify (nextId %~ (+1))
       f id
       pure id
 

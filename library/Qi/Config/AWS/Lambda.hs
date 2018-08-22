@@ -19,18 +19,23 @@ import           Data.Text                            (Text)
 import           GHC.Show                             as Show
 import           Protolude                            as P
 import           Qi.Config.AWS.ApiGw                  (ApiMethodEvent)
+import           Qi.Config.AWS.CfCustomResource       (CfCustomResourceLambdaProgram)
 import           Qi.Config.AWS.CfCustomResource.Types (CfCustomResourceEvent)
-import           Qi.Config.AWS.CW                     (CwEvent)
+import           Qi.Config.AWS.CW                     (CwEvent, CwLambdaProgram)
 import           Qi.Config.AWS.DDB                    (DdbStreamEvent)
 import           Qi.Config.AWS.S3                     (S3Event)
 import           Qi.Config.Identifier
+import           Qi.Program.Gen.Lang
 import           Qi.Program.Gen.Lang
 import           Qi.Program.S3.Lang                   (S3Eff, S3LambdaProgram)
 import           Stratosphere
 
 
+--type ApiLambdaProgram effs              = ApiMethodEvent        -> Eff effs LBS.ByteString
+-- type DdbStreamLambdaProgram effs       = DdbStreamEvent        -> Eff effs LBS.ByteString
+
 data Lambda =
-    forall a b effs
+    forall a b
   . (FromJSON a, ToJSON b)
   => GenericLambda {
     _lbdName                 :: Text
@@ -39,7 +44,7 @@ data Lambda =
   , _lbdOutputProxy          :: Proxy b
   , _lbdGenericLambdaProgram :: forall effs . (Member GenEff effs, Member S3Eff effs) => a -> Eff effs b
   }
-  | forall effs . S3BucketLambda {
+  | S3BucketLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
   , _lbdS3BucketLambdaProgram :: forall effs . (Member GenEff effs, Member S3Eff effs) => S3LambdaProgram effs
@@ -50,16 +55,18 @@ data Lambda =
   , _lbdProfile                :: LambdaProfile
   , _lbdApiMethodLambdaProgram :: ApiLambdaProgram
   }
+-}
   | CfCustomLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdCfCustomLambdaProgram :: CfCustomResourceLambdaProgram
+  , _lbdCfCustomLambdaProgram :: forall effs . (Member GenEff effs) => CfCustomResourceLambdaProgram effs
   }
   | CwEventLambda {
     _lbdName                 :: Text
   , _lbdProfile              :: LambdaProfile
-  , _lbdCwEventLambdaProgram :: CwLambdaProgram
+  , _lbdCwEventLambdaProgram :: forall effs . (Member GenEff effs) => CwLambdaProgram effs
   }
+{-
   | DdbStreamLambda {
     _lbdName                   :: Text
   , _lbdProfile                :: LambdaProfile
@@ -68,9 +75,10 @@ data Lambda =
 -}
 
 instance Eq Lambda where
-  GenericLambda{} == GenericLambda{} = True
-  GenericLambda{} == S3BucketLambda{} = False
-  S3BucketLambda{} == GenericLambda{} = False
+  GenericLambda{}   == GenericLambda{} = True
+  S3BucketLambda{}  == S3BucketLambda{} = True
+  GenericLambda{}   == S3BucketLambda{} = False
+  S3BucketLambda{}  == GenericLambda{} = False
 
 instance Show Lambda where
   show GenericLambda{}  = "GenericLambda"

@@ -11,19 +11,19 @@
 module Qi.Program.Config.Lang where
 
 import           Control.Monad.Freer
-import           Data.Aeson                 (FromJSON, ToJSON)
-import           Data.ByteString            (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import           Data.Default               (Default, def)
+import           Data.Aeson                     (FromJSON, ToJSON)
+import           Data.ByteString                (ByteString)
+import qualified Data.ByteString.Lazy.Char8     as LBS
+import           Data.Default                   (Default, def)
 import           Protolude
-import           Qi.Config.AWS              (Config)
+import           Qi.Config.AWS                  (Config)
 {- import           Qi.Config.AWS.ApiGw -}
 {- import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ApiMethodProfile) -}
-{- import           Qi.Config.AWS.CF -}
-{- import           Qi.Config.AWS.CW -}
+import           Qi.Config.AWS.CF
+import           Qi.Config.AWS.CW
 {- import           Qi.Config.AWS.DDB -}
-import           Qi.Config.AWS.Lambda       (LambdaProfile)
-import           Qi.Config.AWS.S3           ()
+import           Qi.Config.AWS.CfCustomResource (CfCustomResourceLambdaProgram)
+import           Qi.Config.AWS.Lambda           (LambdaProfile)
 import           Qi.Config.Identifier
 import           Qi.Core.Curry
 {- import           Qi.Program.Lambda.Cf.Lang  (CfCustomResourceLambdaProgram) -}
@@ -34,12 +34,16 @@ import           Qi.Program.Gen.Lang
 import           Qi.Program.S3.Lang
 
 
-
-
 data ConfigEff r where
 
   GetConfig
     :: ConfigEff Config
+
+{-
+  GetNextId
+    :: FromInt a
+    => ConfigEff a
+-}
 
   RegGenericLambda
     :: forall a b
@@ -77,27 +81,27 @@ data ConfigEff r where
     -> LambdaProfile
     -> ConfigEff LambdaId
 
+-}
 -- SQS
-  RSqsQueue
+  RegSqsQueue
     :: Text
     -> ConfigEff SqsQueueId
 
 
 -- Custom
-  RCustomResource
+  RegCustomResource
     :: Text
-    -> CfCustomResourceLambdaProgram
+    -> (forall effs . (Member GenEff effs) => CfCustomResourceLambdaProgram effs)
     -> LambdaProfile
     -> ConfigEff CfCustomResourceId
 
 -- CloudWatch Logs
-  RCwEventLambda
+  RegCwEventLambda
     :: Text
     -> CwEventsRuleProfile
-    -> CwLambdaProgram
+    -> (forall effs . (Member GenEff effs) => CwLambdaProgram effs)
     -> LambdaProfile
     -> ConfigEff LambdaId
--}
 
 
 {-
@@ -133,6 +137,14 @@ getConfig
   .  (Member ConfigEff effs)
   => Eff effs Config
 getConfig = send GetConfig
+
+{-
+getNextId
+  :: forall effs a
+  .  (Member ConfigEff effs, FromInt a)
+  => Eff effs a
+getNextId = send GetNextId
+-}
 
 genericLambda
   :: forall a b resEffs
@@ -181,34 +193,37 @@ ddbStreamLambda
   -> Eff effs LambdaId
 ddbStreamLambda =
   send .::: RDdbStreamLambda
+-}
 
 sqsQueue
   :: (Member ConfigEff effs)
   => Text
   -> Eff effs SqsQueueId
 sqsQueue =
-  send . RSqsQueue
+  send . RegSqsQueue
 
 
 customResource
-  :: (Member ConfigEff effs)
+  :: forall resEffs
+  .  (Member ConfigEff resEffs)
   => Text
-  -> CfCustomResourceLambdaProgram
+  -> (forall effs . (Member GenEff effs) => CfCustomResourceLambdaProgram effs)
   -> LambdaProfile
-  -> Eff effs CfCustomResourceId
-customResource =
-  send .:: RCustomResource
+  -> Eff resEffs CfCustomResourceId
+customResource name f =
+  send . RegCustomResource name f
 
 cwEventLambda
-  :: (Member ConfigEff effs)
+  :: forall resEffs
+  .  (Member ConfigEff resEffs)
   => Text
   -> CwEventsRuleProfile
-  -> CwLambdaProgram
+  -> (forall effs . (Member GenEff effs) => CwLambdaProgram effs)
   -> LambdaProfile
-  -> Eff effs LambdaId
-cwEventLambda =
-  send .::: RCwEventLambda
--}
+  -> Eff resEffs LambdaId
+cwEventLambda name profile f =
+  send . RegCwEventLambda name profile f
+
 
 {-
 
