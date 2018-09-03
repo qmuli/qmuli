@@ -148,7 +148,7 @@ instance CfResource CwEventsRule CwEventsRuleId where
 instance CfResource Lambda LambdaId where
   rNameSuffix = const "Lambda"
   getName _ = (^. lbdName)
-  getMap = (^. lbdConfig . lcLambdas)
+  getMap = (^. lbdConfig . lbdIdToLambda)
 
 
 instance CfResource CfCustomResource CfCustomResourceId where

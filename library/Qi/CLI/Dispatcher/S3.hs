@@ -14,12 +14,6 @@ import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import           Network.AWS                  (AWS, send)
 import           Network.AWS.Data.Body        (ToBody, toBody)
-import           Network.AWS.S3               (BucketName (BucketName),
-                                               ObjectKey (ObjectKey), bName,
-                                               dObjects, dQuiet, delete',
-                                               deleteObjects, lbrsBuckets,
-                                               listObjectsV2, lovrsContents,
-                                               oKey, objectIdentifier)
 import qualified Network.AWS.S3               as S3
 import           Network.AWS.S3.DeleteObjects
 import           Network.AWS.S3.ListBuckets

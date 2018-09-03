@@ -39,11 +39,6 @@ data ConfigEff r where
   GetConfig
     :: ConfigEff Config
 
-{-
-  GetNextId
-    :: FromInt a
-    => ConfigEff a
--}
 
   RegGenericLambda
     :: forall a b

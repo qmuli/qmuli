@@ -12,6 +12,7 @@ module Qi.Program.Gen.Lang where
 
 import           Control.Monad.Freer
 import           Data.Aeson                           (FromJSON, ToJSON, Value)
+import qualified Data.ByteString                      as BS
 import qualified Data.ByteString.Lazy                 as LBS
 import           Data.Time.Clock                      (UTCTime)
 import           Network.AWS                          hiding (Request, Response,
@@ -23,7 +24,6 @@ import           Qi.Config.AWS.CfCustomResource.Types (CfCustomResourceEvent)
 import           Qi.Core.Curry
 import           Servant.Client                       (BaseUrl, ClientM,
                                                        ServantError)
-
 
 
 {- type CfCustomResourceLambdaProgram effs = CfCustomResourceEvent -> Eff effs LBS.ByteString -}
@@ -65,6 +65,19 @@ data GenEff r where
     :: Int
     -> GenEff ()
 
+  Build
+    :: GenEff Text -- TODO return status
+
+  ReadFileLazy
+    :: Text
+    -> GenEff LBS.ByteString
+
+  GetLine
+    :: GenEff BS.ByteString
+
+  PutStr
+    :: LBS.ByteString
+    -> GenEff ()
 
 getAppName
   :: (Member GenEff effs)
@@ -128,5 +141,27 @@ say
   => Text
   -> Eff effs ()
 say = send . Say
+
+build
+  :: Member GenEff effs
+  => Eff effs Text
+build = send Build
+
+readFileLazy
+    :: Member GenEff effs
+    => Text
+    -> Eff effs LBS.ByteString
+readFileLazy = send . ReadFileLazy
+
+getLine
+  :: Member GenEff effs
+  => Eff effs BS.ByteString
+getLine = send GetLine
+
+putStr
+  :: Member GenEff effs
+  => LBS.ByteString
+  -> Eff effs ()
+putStr = send . PutStr
 
 

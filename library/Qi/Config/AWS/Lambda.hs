@@ -31,6 +31,20 @@ import           Qi.Program.S3.Lang                   (S3Eff, S3LambdaProgram)
 import           Stratosphere
 
 
+data LambdaConfig = LambdaConfig {
+    _lbdIdToLambda :: HashMap LambdaId Lambda
+  , _lbdNameToId   :: HashMap Text LambdaId
+  }
+  deriving (Eq, Show)
+instance Default LambdaConfig where
+  def = LambdaConfig {
+    _lbdIdToLambda  = SHM.empty
+  , _lbdNameToId    = SHM.empty
+  }
+
+
+
+
 --type ApiLambdaProgram effs              = ApiMethodEvent        -> Eff effs LBS.ByteString
 -- type DdbStreamLambdaProgram effs       = DdbStreamEvent        -> Eff effs LBS.ByteString
 
@@ -75,24 +89,15 @@ data Lambda =
 -}
 
 instance Eq Lambda where
-  GenericLambda{}   == GenericLambda{} = True
-  S3BucketLambda{}  == S3BucketLambda{} = True
-  GenericLambda{}   == S3BucketLambda{} = False
-  S3BucketLambda{}  == GenericLambda{} = False
+  _ == _ = True -- TODO: do something about this aweful hack
 
 instance Show Lambda where
   show GenericLambda{}  = "GenericLambda"
   show S3BucketLambda{} = "S3BucketLambda"
+  show CfCustomLambda{} = "CfCustomLambda"
+  show CwEventLambda{}  = "CwEventLambda"
 
-data LambdaConfig = LambdaConfig {
-    _lcLambdas :: HashMap LambdaId Lambda
-  }
-  deriving (Eq, Show)
 
-instance Default LambdaConfig where
-  def = LambdaConfig {
-    _lcLambdas = SHM.empty
-  }
 
 
 data LambdaMemorySize =

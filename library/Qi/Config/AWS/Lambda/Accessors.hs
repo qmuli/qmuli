@@ -5,12 +5,9 @@ module Qi.Config.AWS.Lambda.Accessors where
 
 import           Control.Lens
 import qualified Data.HashMap.Strict  as SHM
-import           Data.Maybe           (fromMaybe)
-import           Data.Text            (Text)
-import qualified Data.Text            as T
-
+import           Protolude
 import           Qi.Config.AWS
-import           Qi.Config.AWS.Lambda (Lambda)
+import           Qi.Config.AWS.Lambda (Lambda, lbdNameToId)
 import           Qi.Config.Identifier
 
 
@@ -19,6 +16,15 @@ getPermissionLogicalName
   -> Lambda
   -> Text
 getPermissionLogicalName config r =
-  T.concat [getName config r, "LambdaPermission"]
+  getName config r <> "LambdaPermission"
 
-
+getIdByName
+  :: Config
+  -> Text
+  -> LambdaId
+getIdByName config name =
+  case SHM.lookup name bucketNameToIdMap of
+    Just bid -> bid
+    Nothing  -> panic $ "Could not find LambdaId with name: " <> show name
+  where
+    bucketNameToIdMap = config ^. lbdConfig . lbdNameToId

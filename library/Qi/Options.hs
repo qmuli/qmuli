@@ -135,11 +135,11 @@ lbdCmd =
       $ info (LbdSendEvent <$> lambdaNameOption)
       $ fullDesc <> progDesc "Send Event to Lambda"
 
-    lbdLogs :: Mod CommandFields Command
-    lbdLogs =
-        command "logs"
-      $ info (LbdLogs <$> lambdaNameOption)
-      $ fullDesc <> progDesc "Get Lambda logs"
+    {- lbdLogs :: Mod CommandFields Command -}
+    {- lbdLogs = -}
+        {- command "logs" -}
+      {- $ info (LbdLogs <$> lambdaNameOption) -}
+      {- $ fullDesc <> progDesc "Get Lambda logs" -}
 
 
 lambdaNameOption :: Parser Text

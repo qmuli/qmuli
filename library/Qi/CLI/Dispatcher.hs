@@ -1,169 +1,147 @@
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Qi.CLI.Dispatcher (
-    invokeLambda
-  , updateLambdas
+    updateLambdas
   , deployApp
   , createCfStack
   , updateCfStack
   , describeCfStack
   , destroyCfStack
   , cycleStack
-  , renderCfTemplate
-  , lambdaLogs
   ) where
 
 import           Control.Lens
-import           Control.Monad.Freer           (send)
-import           Data.Aeson.Encode.Pretty      (encodePretty)
-import qualified Data.ByteString.Lazy.Char8    as LBS
-import qualified Data.Text                     as T
-import           Network.AWS                   (AWS)
-import           Protolude                     hiding (FilePath, getAll)
-import           System.Environment.Executable (splitExecutablePath)
-import           Turtle                        (FilePath, fromString, toText)
-
-import qualified Qi.Amazonka                   as A
-import           Qi.CLI.Dispatcher.Build       (build)
-import           Qi.CLI.Dispatcher.CF          (createStack, deleteStack,
-                                                describeStack, updateStack,
-                                                waitOnStackCreated,
-                                                waitOnStackDeleted,
-                                                waitOnStackUpdated)
-import qualified Qi.CLI.Dispatcher.Lambda      as Lambda
-import           Qi.CLI.Dispatcher.S3          (clearBuckets)
-import           Qi.Config.AWS                 (Config, getAll, getPhysicalName,
-                                                namePrefix)
-import           Qi.Config.AWS.Lambda          (Lambda)
-import           Qi.Config.AWS.S3              (S3Key (S3Key), s3Object)
-import qualified Qi.Config.CfTemplate          as CfTemplate
-import           Qi.Program.Config.Lang        (getConfig)
-import qualified Qi.Program.S3.Lang            as S3
-import qualified Qi.Program.Wiring.IO          as IO
-import           Qi.Util                       (printPending, printSuccess)
+import           Control.Monad.Freer
+import           Data.Aeson.Encode.Pretty       (encodePretty)
+import qualified Data.ByteString.Lazy           as LBS
+import qualified Data.Map                       as Map
+import           Protolude                      hiding (FilePath, getAll)
+import           Qi.CLI.Dispatcher.S3           as S3 (clearBuckets)
+import           Qi.Config.AWS                  (Config, getAll,
+                                                 getPhysicalName, namePrefix)
+import           Qi.Config.AWS.Lambda           (Lambda)
+import qualified Qi.Config.AWS.Lambda.Accessors as Lbd
+import           Qi.Config.AWS.S3               (S3Key (S3Key), s3Object)
+import qualified Qi.Config.AWS.S3.Accessors     as S3
+import qualified Qi.Config.CfTemplate           as CF
+import           Qi.Program.CF.Lang
+import           Qi.Program.Gen.Lang
+import           Qi.Program.Lambda.Lang         (LambdaEff)
+import qualified Qi.Program.Lambda.Lang         as Lbd
+import           Qi.Program.S3.Lang
 
 
-type Dispatcher = ReaderT Config IO
 
-withConfig
-  :: (Config -> Dispatcher ())
-  -> Dispatcher ()
-withConfig action = action =<< ask
-
-withAppName
-  :: (Text -> Dispatcher ())
-  -> Dispatcher ()
-withAppName action = withConfig $ action . (^.namePrefix)
-
-runAmazonka
-  :: AWS a
-  -> Dispatcher a
-runAmazonka = liftIO . A.runAmazonka
-
-
-invokeLambda
-  :: Text
-  -> ReaderT Config IO ()
-invokeLambda name = Lambda.invoke name =<< liftIO getLine
-
-updateLambdas :: Dispatcher ()
-updateLambdas = withConfig $ \config -> do
+deployApp
+  :: Members '[ S3Eff, GenEff ] effs
+  => Config
+  -> LBS.ByteString
+  -> Eff effs ()
+deployApp config content = do
   let appName = config ^. namePrefix
 
-      allLambdas :: [Lambda]
-      allLambdas = getAll config
-
-  printSuccess "updating the lambdas..."
-  runAmazonka . Lambda.update appName $ map (getPhysicalName config) allLambdas
-
-
-lambdaLogs
-  :: Text
-  -> ReaderT Config IO ()
-lambdaLogs = const pass -- runAmazonka . Lambda.logs
+  say "deploying the app..."
+  bucketId <- createBucket appName
+  putContent (s3Object bucketId $ S3Key "cf.json") $ CF.render config -- TODO: render this inside docker container: https://github.com/qmuli/qmuli/issues/60
+  putContent (s3Object bucketId $ S3Key "lambda.zip") content
 
 
-renderCfTemplate :: Dispatcher ()
-renderCfTemplate =
-   withConfig $ liftIO . LBS.putStr . CfTemplate.render
 
-deployApp :: Dispatcher ()
-deployApp =
-  withConfig $ \config -> do
-    let appName = config ^. namePrefix
+createCfStack
+  :: Members '[ CfEff, GenEff ] effs
+  => Config
+  -> Eff effs ()
+createCfStack config = do
+  let name = config ^. namePrefix
+      stackName   = StackName name
+      stackS3Obj  = s3Object (S3.getIdByName config name) $ S3Key "cf.json"
 
-    printSuccess "deploying the app..."
-    content <- liftIO $ do
-      (_, execFilename) <- splitExecutablePath -- get the current executable filename
-      lambdaPackagePath <- fromString <$> build "." (toS execFilename)
-      LBS.readFile . toS $ toTextIgnore lambdaPackagePath
+  say "creating the stack..."
+  createStack stackName stackS3Obj
 
-    liftIO $ IO.run "dispatcher" config $ do
-      bucketId <- S3.createBucket appName
-      S3.putContent (s3Object bucketId $ S3Key "cf.json") $ CfTemplate.render config -- TODO: render this inside docker container: https://github.com/qmuli/qmuli/issues/60
-      S3.putContent (s3Object bucketId $ S3Key "lambda.zip") content
+  say "waiting on the stack to be created..."
+  waitOnStackStatus stackName SSCreateComplete NoAbsent
 
-  where
-    toTextIgnore :: FilePath -> T.Text
-    toTextIgnore x = case toText x of
-      Right s -> s
-      Left _  -> ""
+  say "stack was successfully created"
 
 
-createCfStack :: Dispatcher ()
-createCfStack =
-  withAppName $ \appName -> do
-    printSuccess "creating the stack..."
-    runAmazonka $ createStack appName
-    printPending "waiting on the stack to be created..."
-    liftIO $ waitOnStackCreated appName
-    printSuccess "stack was successfully created"
+updateCfStack
+  :: Members '[ LambdaEff, CfEff, GenEff ] effs
+  => Config
+  -> Eff effs ()
+updateCfStack config = do
+  let name = config ^. namePrefix
+      stackName   = StackName name
+      stackS3Obj  = s3Object (S3.getIdByName config name) $ S3Key "cf.json"
+
+  say "updating the stack..."
+  updateStack stackName stackS3Obj
+
+  say "waiting on the stack to be updated..."
+  waitOnStackStatus stackName SSUpdateComplete NoAbsent
+
+  -- TODO: make lambda updating concurrent with the above stack update?
+  updateLambdas config
+
+  say "stack was successfully updated"
 
 
-updateCfStack :: Dispatcher ()
-updateCfStack =
-  withAppName $ \appName -> do
-    printSuccess "updating the stack..."
-    runAmazonka $ updateStack appName
-    printPending "waiting on the stack to be updated..."
-    liftIO $ waitOnStackUpdated appName
-    -- TODO: make lambda updating concurrent with the above stack update?
-    updateLambdas
-    printSuccess "stack was successfully updated"
+updateLambdas
+  :: Members '[ LambdaEff, GenEff ] effs
+  => Config
+  -> Eff effs ()
+updateLambdas config = do
+  let name      = config ^. namePrefix
+      lbdS3Obj  = s3Object (S3.getIdByName config name) $ S3Key "lambda.zip"
 
-describeCfStack :: Dispatcher ()
-describeCfStack =
-  withAppName $ liftIO . LBS.putStrLn . encodePretty
-                  <=< runAmazonka . describeStack
+  say "updating the lambdas..."
+  traverse_ ((`Lbd.update` lbdS3Obj) . Lbd.getIdByName config . getPhysicalName config)
+    (getAll config :: [ Lambda ])
+
+
+describeCfStack
+  :: Members '[ CfEff, GenEff ] effs
+  => Config
+  -> Eff effs ()
+describeCfStack config = do
+  let stackName = StackName $ config ^. namePrefix
+  stackDict <- describeStacks
+  maybe (panic $ "stack '" <> show stackName <> "' not found") (say . toS . encodePretty) $ Map.lookup stackName stackDict
 
 
 destroyCfStack
-  :: Dispatcher ()
-  -> Dispatcher ()
-destroyCfStack action =
-  withConfig $ \config -> do
-    let appName = config ^. namePrefix
+  :: Members '[ LambdaEff, CfEff, S3Eff, GenEff ] effs
+  => Config
+  -> (Config -> Eff effs ())
+  -> Eff effs ()
+destroyCfStack config action = do
+  let stackName = StackName $ config ^. namePrefix
 
-    printSuccess "destroying the stack..."
+  say "destroying the stack..."
 
-    liftIO $ IO.run "dispatcher" config $ clearBuckets config
+  clearBuckets config
+  deleteStack stackName
 
-    runAmazonka $ do
-      deleteStack appName
+  action config
 
-    action
+  say "waiting on the stack to be destroyed..."
+  waitOnStackStatus stackName SSDeleteComplete AbsentOk
 
-    printPending "waiting on the stack to be destroyed..."
-    liftIO $ waitOnStackDeleted appName
-    printSuccess "stack was successfully destroyed"
+  say "stack was successfully destroyed"
 
 
-cycleStack :: Dispatcher ()
-cycleStack = do
-    destroyCfStack $
-      deployApp
-    createCfStack
-    printSuccess "all done!"
+cycleStack
+  :: Members '[ LambdaEff, CfEff, S3Eff, GenEff ] effs
+  => Config
+  -> LBS.ByteString
+  -> Eff effs ()
+cycleStack config content = do
+  destroyCfStack config
+    (`deployApp` content)
+  createCfStack config
+  say "all done!"
 
 
 

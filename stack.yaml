@@ -37,7 +37,7 @@ ghc-options:
     -Wno-unused-do-bind
     -Wno-deprecations
     -threaded
-    # -Werror
+    -Werror
     #-static 
 
     # "qmuli-stream-s3-objects": -static -threaded

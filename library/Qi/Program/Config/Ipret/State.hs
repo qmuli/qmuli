@@ -51,27 +51,26 @@ run = interpret (\case
 
   RegGenericLambda inProxy outProxy name f profile ->
     withNextId (Proxy :: Proxy LambdaId) $ \id -> do
-          let newLambda = GenericLambda name profile inProxy outProxy f
-          modify (lbdConfig . lcLambdas %~ SHM.insert id newLambda)
-
+      let lbd = GenericLambda name profile inProxy outProxy f
+      insertLambda id name lbd
 
 -- S3
   RegS3Bucket name -> do
     withNextId (Proxy :: Proxy S3BucketId) $ \id -> do
-          let newBucket = def & s3bName .~ name
-              insertIdToS3Bucket = s3idxIdToS3Bucket %~ SHM.insert id newBucket
-              insertNameToId = s3idxNameToId %~ SHM.insert name id
+      let newBucket = def & s3bName .~ name
+          insertIdToS3Bucket = s3idxIdToS3Bucket %~ SHM.insert id newBucket
+          insertNameToId = s3idxNameToId %~ SHM.insert name id
 
-          modify (s3Config . s3Buckets %~ insertNameToId . insertIdToS3Bucket)
+      modify (s3Config . s3Buckets %~ insertNameToId . insertIdToS3Bucket)
 
 
   RegS3BucketLambda name bucketId f profile ->
     withNextId (Proxy :: Proxy LambdaId) $ \id -> do
-          let newLambda = S3BucketLambda name profile f
-              modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll id):)
-          modify (s3Config . s3Buckets . s3idxIdToS3Bucket %~ SHM.adjust modifyBucket bucketId)
-          modify (lbdConfig . lcLambdas %~ SHM.insert id newLambda)
+      let lbd = S3BucketLambda name profile f
+          modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll id):)
+      modify (s3Config . s3Buckets . s3idxIdToS3Bucket %~ SHM.adjust modifyBucket bucketId)
 
+      insertLambda id name lbd
 
 {-
 -- DDB
@@ -88,11 +87,13 @@ run = interpret (\case
 
   RDdbStreamLambda name tableId programFunc profile -> send . QiConfig $
     withNextId $ \id -> do
-      let newLambda = DdbStreamLambda name profile programFunc
+      let lbd = DdbStreamLambda name profile programFunc
 
       ddbConfig.dcTables %= SHM.adjust (dtStreamHandler .~ Just id) tableId
-      lbdConfig.lcLambdas %= SHM.insert id newLambda
 
+      lbdConfig.lcLambdas %= SHM.insert id lbd
+
+      insertLambda id name lbd
 
 -}
 -- Sqs
@@ -108,7 +109,8 @@ run = interpret (\case
         (newCustomId, cfConfigModifier) = CustomResource.insert customResource
         lbd = CfCustomLambda name profile programFunc
 
-    modify $ lbdConfig . lcLambdas %~ SHM.insert id lbd
+    insertLambda id name lbd
+
     modify $ cfConfig %~ cfConfigModifier
     pure newCustomId
 
@@ -125,7 +127,7 @@ run = interpret (\case
           }
 
       modify $ cwConfig . ccRules %~ SHM.insert eventsRuleId eventsRule
-      modify $ lbdConfig . lcLambdas %~ SHM.insert id lbd
+      insertLambda id name lbd
   )
 
 
@@ -150,6 +152,17 @@ run = interpret (\case
       f id
       pure id
 
+    insertLambda
+      :: LambdaId
+      -> Text
+      -> Lambda
+      -> Eff effs ()
+    insertLambda id name lbd = do
+
+      let insertIdToLambda  = lbdIdToLambda %~ SHM.insert id lbd
+          insertNameToId    = lbdNameToId   %~ SHM.insert name id
+
+      void $ modify (lbdConfig %~ insertNameToId . insertIdToLambda)
 
 {-
 
