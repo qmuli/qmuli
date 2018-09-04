@@ -60,20 +60,20 @@ withConfig configProgram = do
         liftIO . IO.run "dispatcher" config $
               Gen.build
           >>= Gen.readFileLazy
-          >>= deployApp config
+          >>= deployApp
 
-      CfCreate             -> createCfStack config
-      CfUpdate             -> updateCfStack config
-      CfDescribe           -> describeCfStack config
-      CfDestroy            -> destroyCfStack config $ \_ -> pure ()
+      CfCreate             -> createCfStack
+      CfUpdate             -> updateCfStack
+      CfDescribe           -> describeCfStack
+      CfDestroy            -> destroyCfStack $ pure ()
 
       CfCycle              ->
         liftIO . IO.run "dispatcher" config $
               Gen.build
           >>= Gen.readFileLazy
-          >>= cycleStack config
+          >>= cycleStack
 
-      LbdUpdate -> updateLambdas config
+      LbdUpdate -> updateLambdas
       LbdSendEvent name -> do
         arg <- Gen.getLine
 

@@ -98,8 +98,6 @@ instance Show Lambda where
   show CwEventLambda{}  = "CwEventLambda"
 
 
-
-
 data LambdaMemorySize =
     M128
   | M192

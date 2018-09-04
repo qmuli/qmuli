@@ -27,6 +27,7 @@ import           Qi.Config.AWS.S3               (S3Key (S3Key), s3Object)
 import qualified Qi.Config.AWS.S3.Accessors     as S3
 import qualified Qi.Config.CfTemplate           as CF
 import           Qi.Program.CF.Lang
+import           Qi.Program.Config.Lang         (ConfigEff, getConfig)
 import           Qi.Program.Gen.Lang
 import           Qi.Program.Lambda.Lang         (LambdaEff)
 import qualified Qi.Program.Lambda.Lang         as Lbd
@@ -35,11 +36,11 @@ import           Qi.Program.S3.Lang
 
 
 deployApp
-  :: Members '[ S3Eff, GenEff ] effs
-  => Config
-  -> LBS.ByteString
+  :: Members '[ S3Eff, GenEff, ConfigEff ] effs
+  => LBS.ByteString
   -> Eff effs ()
-deployApp config content = do
+deployApp content = do
+  config <- getConfig
   let appName = config ^. namePrefix
 
   say "deploying the app..."
@@ -50,10 +51,10 @@ deployApp config content = do
 
 
 createCfStack
-  :: Members '[ CfEff, GenEff ] effs
-  => Config
-  -> Eff effs ()
-createCfStack config = do
+  :: Members '[ CfEff, GenEff, ConfigEff ] effs
+  => Eff effs ()
+createCfStack = do
+  config <- getConfig
   let name = config ^. namePrefix
       stackName   = StackName name
       stackS3Obj  = s3Object (S3.getIdByName config name) $ S3Key "cf.json"
@@ -68,10 +69,10 @@ createCfStack config = do
 
 
 updateCfStack
-  :: Members '[ LambdaEff, CfEff, GenEff ] effs
-  => Config
-  -> Eff effs ()
-updateCfStack config = do
+  :: Members '[ LambdaEff, CfEff, GenEff, ConfigEff ] effs
+  => Eff effs ()
+updateCfStack = do
+  config <- getConfig
   let name = config ^. namePrefix
       stackName   = StackName name
       stackS3Obj  = s3Object (S3.getIdByName config name) $ S3Key "cf.json"
@@ -83,16 +84,16 @@ updateCfStack config = do
   waitOnStackStatus stackName SSUpdateComplete NoAbsent
 
   -- TODO: make lambda updating concurrent with the above stack update?
-  updateLambdas config
+  updateLambdas
 
   say "stack was successfully updated"
 
 
 updateLambdas
-  :: Members '[ LambdaEff, GenEff ] effs
-  => Config
-  -> Eff effs ()
-updateLambdas config = do
+  :: Members '[ LambdaEff, GenEff, ConfigEff ] effs
+  => Eff effs ()
+updateLambdas = do
+  config <- getConfig
   let name      = config ^. namePrefix
       lbdS3Obj  = s3Object (S3.getIdByName config name) $ S3Key "lambda.zip"
 
@@ -102,29 +103,29 @@ updateLambdas config = do
 
 
 describeCfStack
-  :: Members '[ CfEff, GenEff ] effs
-  => Config
-  -> Eff effs ()
-describeCfStack config = do
+  :: Members '[ CfEff, GenEff, ConfigEff ] effs
+  => Eff effs ()
+describeCfStack = do
+  config <- getConfig
   let stackName = StackName $ config ^. namePrefix
   stackDict <- describeStacks
   maybe (panic $ "stack '" <> show stackName <> "' not found") (say . toS . encodePretty) $ Map.lookup stackName stackDict
 
 
 destroyCfStack
-  :: Members '[ LambdaEff, CfEff, S3Eff, GenEff ] effs
-  => Config
-  -> (Config -> Eff effs ())
+  :: Members '[ LambdaEff, CfEff, S3Eff, GenEff, ConfigEff ] effs
+  => Eff effs ()
   -> Eff effs ()
-destroyCfStack config action = do
+destroyCfStack action = do
+  config <- getConfig
   let stackName = StackName $ config ^. namePrefix
 
   say "destroying the stack..."
 
-  clearBuckets config
+  clearBuckets
   deleteStack stackName
 
-  action config
+  action
 
   say "waiting on the stack to be destroyed..."
   waitOnStackStatus stackName SSDeleteComplete AbsentOk
@@ -133,14 +134,12 @@ destroyCfStack config action = do
 
 
 cycleStack
-  :: Members '[ LambdaEff, CfEff, S3Eff, GenEff ] effs
-  => Config
-  -> LBS.ByteString
+  :: Members '[ LambdaEff, CfEff, S3Eff, GenEff, ConfigEff ] effs
+  => LBS.ByteString
   -> Eff effs ()
-cycleStack config content = do
-  destroyCfStack config
-    (`deployApp` content)
-  createCfStack config
+cycleStack content = do
+  destroyCfStack $ deployApp content
+  createCfStack
   say "all done!"
 
 
