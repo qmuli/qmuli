@@ -1,25 +1,27 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Qi.Test.Config.Identifier where
-{-
+
 import           Control.Lens
-import           Control.Monad.State.Strict           (runState)
-import           Data.Default                         (def)
-import qualified Data.HashMap.Strict                  as SHM
-import           Protolude                            hiding (runState)
-import           Qi.Config.AWS                        (Config, namePrefix,
-                                                       s3Config)
-import           Qi.Config.AWS.S3                     (s3Buckets,
-                                                       s3idxIdToS3Bucket)
-import           Qi.Program.Config.Interface          (ConfigProgram, s3Bucket)
-import qualified Qi.Program.Config.Interpreters.Build as CB
+import           Control.Monad.Freer
+import           Control.Monad.Freer.State
+import           Data.Default                  (def)
+import qualified Data.HashMap.Strict           as SHM
+import           Protolude                     hiding (runState)
+import           Qi.Config.AWS                 (Config (..), s3Config)
+import           Qi.Config.AWS.S3              (s3Buckets, s3idxIdToS3Bucket)
+import qualified Qi.Program.Config.Ipret.State as Config
+import           Qi.Program.Config.Lang        (ConfigEff, s3Bucket)
 import           Test.Tasty.Hspec
 
 
 appName :: Text
 appName = "testName"
 
-configProgram :: ConfigProgram ()
+configProgram
+  :: Member ConfigEff effs
+  => Eff effs ()
 configProgram = do
   void $ s3Bucket "bucket1"
   void $ s3Bucket "bucket2"
@@ -34,12 +36,12 @@ spec = parallel $
       idCount `shouldBe` 3
 
   where
-
     idCount = length . SHM.elems $ config ^. s3Config . s3Buckets . s3idxIdToS3Bucket
 
     config =
         snd
-      . (`runState` (def & namePrefix .~ appName))
-      . CB.unQiConfig
-      $ CB.interpret configProgram
--}
+      . run
+      . runState def{ _namePrefix = appName }
+      . Config.run $ configProgram
+
+
