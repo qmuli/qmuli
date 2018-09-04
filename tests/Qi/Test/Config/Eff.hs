@@ -27,8 +27,8 @@ spec = parallel $
             getConfig
 
           expected = def &
-                        (s3Config . s3Buckets . s3idxIdToS3Bucket .~ SHM.singleton (S3BucketId 0) (S3Bucket "mybucket" []))
-                      . (s3Config . s3Buckets . s3idxNameToId .~ SHM.singleton "mybucket" (S3BucketId 0) )
+                        (s3Config . s3Buckets . s3IdToBucket .~ SHM.singleton (S3BucketId 0) (S3Bucket "mybucket" []))
+                      . (s3Config . s3Buckets . s3NameToBucketId .~ SHM.singleton "mybucket" (S3BucketId 0) )
                       . (nextId .~ 1)
 
       exec `shouldReturn` expected

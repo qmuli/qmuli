@@ -166,7 +166,7 @@ instance CfResource DdbTable DdbTableId where
 instance CfResource S3Bucket S3BucketId where
   rNameSuffix = const "S3Bucket"
   getName _ = (^. s3bName)
-  getMap = (^. s3Config . s3Buckets . s3idxIdToS3Bucket)
+  getMap = (^. s3Config . s3Buckets . s3IdToBucket)
   getPhysicalName config r =
     makeAlphaNumeric (getName config r) `dotNamePrefixWith` config
 

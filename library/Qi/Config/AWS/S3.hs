@@ -29,14 +29,14 @@ instance Default S3Config where
   }
 
 data S3BucketIndex = S3BucketIndex {
-    _s3idxIdToS3Bucket :: HashMap S3BucketId S3Bucket
-  , _s3idxNameToId     :: HashMap Text S3BucketId
+    _s3IdToBucket     :: HashMap S3BucketId S3Bucket
+  , _s3NameToBucketId :: HashMap Text S3BucketId
   }
   deriving (Eq, Show)
 instance Default S3BucketIndex where
   def = S3BucketIndex {
-    _s3idxIdToS3Bucket  = SHM.empty
-  , _s3idxNameToId      = SHM.empty
+    _s3IdToBucket     = SHM.empty
+  , _s3NameToBucketId = SHM.empty
   }
 
 
