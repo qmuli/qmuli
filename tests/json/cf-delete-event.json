@@ -1,13 +1,12 @@
 {
   "RequestType":        "Delete", 
-  "ServiceToken":       "arn:aws:lambda:us-east-1:910653408535:function:cognitotestxx2_cognitoPoolProvider", 
-  "ResponseURL":        "https://cloudformation-custom-resource-response-useast1.s3.amazonaws.com/arn%3Aaws%3Acloudformation%3Aus-east-1%3A910653408535%3Astack/cognitotestxx2/dc747420-7718-11e8-a570-50d5cd265c36%7CcognitoPoolProviderLambdaCustom%7Cf55ae69f-e294-4c02-971e-838ec83c495d?AWSAccessKeyId=AKIAJGHTPRZJWHX6QVGA&Expires=1529791781&Signature=be3DkX9Iznjx21MhdIGEFdVpBGE%3D",
-  "StackId":            "arn:aws:cloudformation:us-east-1:910653408535:stack/cognitotestxx2/dc747420-7718-11e8-a570-50d5cd265c36",
-  "RequestId":          "f55ae69f-e294-4c02-971e-838ec83c495d",
+  "ResponseURL":        "https://cloudformation-custom-resource-response-useast1.s3.amazonaws.com/arn%3Aaws%3Acloudformation%3Aus-east-1%3A910653408535%3Astack/cognitotest/3b615fb0-7701-11e8-85ef-50fa5f2588d2%7CcognitoPoolProviderLambdaCustom%7C9616e4f8-9153-4bc6-bc02-53252002a8a3?AWSAccessKeyId=AKIAJGHTPRZJWHX6QVGA&Expires=1529778000&Signature=i3hplxObOjPQvet9UGeiCQZJ60A%3D",
+  "StackId":            "arn:aws:cloudformation:us-east-1:910653408535:stack/cognitotest/3b615fb0-7701-11e8-85ef-50fa5f2588d2",
+  "RequestId":          "9616e4f8-9153-4bc6-bc02-53252002a8a3",
   "LogicalResourceId":  "cognitoPoolProviderLambdaCustom",
-  "PhysicalResourceId": "cognitotestxx2-cognitoPoolProviderLambdaCustom-GFP8P49ZCC6Q",
+  "PhysicalResourceId": "CustomResourceId [UserPoolIdResourceId (UserPoolId \"da\"),IdPoolIdResourceId (IdPoolId \"net\")]",
   "ResourceType":       "AWS::CloudFormation::CustomResource",
   "ResourceProperties": {
-    "ServiceToken": "arn:aws:lambda:us-east-1:910653408535:function:cognitotestxx2_cognitoPoolProvider"
+    "ServiceToken": "arn:aws:lambda:us-east-1:910653408535:function:cognitotest_cognitoPoolProvider"
   }
 }

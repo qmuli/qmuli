@@ -41,9 +41,6 @@ instance Default S3BucketIndex where
 
 
 
-
-
-
 data S3EventType =
     S3ObjectCreatedAll
   | S3ObjectRemovedAll
@@ -74,7 +71,7 @@ data S3Event = S3Event {
 
 data S3Bucket = S3Bucket {
     _s3bName         :: Text
-  , _s3bEventConfigs :: [S3EventConfig]
+  , _s3bEventConfigs :: [ S3EventConfig ]
   }
   deriving (Eq, Show)
 instance Default S3Bucket where

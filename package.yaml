@@ -78,6 +78,7 @@ library:
   exposed-modules:
     - Qi
     - Qi.AWS.CF
+    - Qi.AWS.Cognito
     - Qi.AWS.Lex
     - Qi.AWS.Types
     - Qi.Config.AWS

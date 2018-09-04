@@ -21,7 +21,7 @@ newtype LogicalResourceId = LogicalResourceId Text
   deriving newtype (ToJSON, FromJSON)
 
 
-newtype CustomResourceId = CustomResourceId (NonEmpty PhysicalResourceId)
+newtype CustomResourceId = CustomResourceId [ PhysicalResourceId ]
   deriving (Eq, Show, Read, Generic)
   deriving newtype (Semigroup)
 
@@ -48,6 +48,6 @@ data PhysicalResourceId =
   | IdPoolIdResourceId IdPoolId
   | BotResourceId LatestBotDeployment
   | UnknownResourceIdType Text
-  deriving (Eq, Show, Read, Generic, ToJSON, FromJSON)
+  deriving (Eq, Show, Read)
 
 
