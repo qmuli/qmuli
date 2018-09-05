@@ -17,10 +17,9 @@ import           Control.Monad.Freer
 import           Control.Monad.Freer.Reader
 import           Control.Monad.Freer.State
 import           Control.Monad.Freer.Writer
+import qualified Data.ByteString.Lazy.Char8    as LBS
 import           Data.Default                  (Default, def)
 import qualified Data.HashMap.Strict           as SHM
-{- import           Network.AWS.CloudFormation -}
-import qualified Data.ByteString.Lazy.Char8    as LBS
 import           Protolude                     hiding (Reader, State, get, put,
                                                 runReader, runState)
 import           Qi.CLI.Dispatcher
@@ -36,188 +35,54 @@ import qualified Qi.Program.Lambda.Ipret.Gen   as Lbd
 import qualified Qi.Program.S3.Ipret.Gen       as S3
 import           Qi.Program.S3.Lang
 import qualified Qi.Program.Wiring.IO          as IO
+import           Qi.Test.Ipret
 import           Test.Tasty.Hspec
 
 
-data Journal = Journal {
-    cfActions :: [ CfAction ]
-  , s3Actions :: [ S3Action ]
-  }
-  deriving (Eq, Show)
-
-instance Semigroup Journal where
-  Journal as1 s31 <> Journal as2 s32 = Journal (as1 <> as2) (s31 <> s32)
-
-instance Monoid Journal where
-  mempty = Journal mempty mempty
-
-instance Default Journal where
-  def = mempty
-
-data CfAction =
-    CreateStackAction StackName S3Object
-  | UpdateStackAction StackName S3Object
-  | DeleteStackAction StackName
-  deriving (Eq, Show)
-
-
-data S3Action =
-    CreateBucketAction Text
-  | PutContentAction S3Object LBS.ByteString
-  | DeleteBucketAction Text
-  deriving (Eq, Show)
-
-
-data Params = Params
-
-
 spec :: Spec
-spec = parallel $
+spec = parallel $ do
   describe "Deploy" $ do
-    let params = Params
-        config = def :: Config
+    let params = Params {
+            config = def :: Config
+          , stacks = mempty
+          }
+
 
     it "works" $ do
-      let expected = def{
+      let action = deployApp "rendered template" "dummy binary"
+          expectedJournal = def{
               s3Actions = [ CreateBucketAction "qmuli"
                           , PutContentAction (S3Object {_s3oBucketId = S3BucketId 1, _s3oKey = S3Key "cf.json"}) "rendered template"
                           , PutContentAction (S3Object {_s3oBucketId = S3BucketId 1, _s3oKey = S3Key "lambda.zip"}) "dummy binary"
                           ]
+            , logs = ["deploying the app..."]
             }
-          result :: Journal =
-              run
-            . map snd . runWriter
-            . runReader params
-            . map fst . runState config
-            . Config.run
-            . testGenRun
-            . Lbd.run
-            . testS3Run
-            . testCfRun
-            $ deployApp "rendered template" "dummy binary"
+          (config', journal) = testRun params action
 
-      result `shouldBe` expected
+      journal `shouldBe` expectedJournal
+      config' `shouldBe` def
 
 
+  describe "Create stack" $ do
+    let params = def{
+            config
+          }
+        config = snd . run . runState def . Config.run $ do
+          s3Bucket "qmuli"
+
+    it "works" $ do
+      let action = createCfStack
+          expectedJournal = def{
+              cfActions = [ CreateStackAction (StackName "qmuli") (S3Object {_s3oBucketId = S3BucketId 0, _s3oKey = S3Key "cf.json"})]
+            , logs =  [ "creating the stack..."
+                      , "waiting on the stack to be created..."
+                      , "stack was successfully created"
+                      ]
+            }
+          (config', journal) = testRun params action
+
+      journal `shouldBe` expectedJournal
+      config' `shouldBe` config
 
 
-testGenRun
-  :: forall effs a
-  .  (Members '[ ConfigEff ] effs)
-  => (Eff (GenEff ': effs) a -> Eff effs a)
-testGenRun = interpret (\case
-
-  GetAppName ->
-    (^. namePrefix) <$> getConfig
-
-  Http mgrSettings _req ->
-    panic "Http"
-
-  RunServant _mgrSettings _baseUrl _req ->
-    panic "RunServant"
-
-  {- Amazonka cs@CreateStack{} -> do -}
-    {- send . tell $ AmzCreateStack cs -}
-    {- pure $ createStackResponse 201 -}
-
-  Amazonka _req ->
-    panic "Amazonka"
-
-  AmazonkaPostBodyExtract _req _post ->
-    panic "AmazonkaPostBodyExtract"
-
-  Say _msg ->
-    pass
-    -- panic "Say"
-
-  GetCurrentTime ->
-    panic "GetCurrentTime"
-
-  Sleep _us ->
-    panic "Sleep"
-
-  Build ->
-    panic "Build"
-
-  ReadFileLazy _path ->
-    panic "ReadFileLazy"
-
-  GetLine ->
-    panic "GetLine"
-
-  PutStr _content ->
-    panic "PutStr"
-
-  )
-
-
-testCfRun
-  :: forall effs a
-  .  (Members '[ ConfigEff, Reader Params, Writer Journal ] effs)
-  => (Eff (CfEff ': effs) a -> Eff effs a)
-testCfRun = interpret (\case
-
-  CreateStack name s3Obj -> do
-    tell $ cfAction $ CreateStackAction name s3Obj
-
-  UpdateStack name s3Obj -> do
-    tell $ cfAction $ UpdateStackAction name s3Obj
-
-  DeleteStack name ->
-    panic "DeleteStack"
-
-  DescribeStacks ->
-    panic "DescribeStacks"
-
-  WaitOnStackStatus name status' isAbsentOk -> do
-    panic "DescribeStacks"
-
-  )
-
-
-testS3Run
-  :: forall effs a
-  .  (Members '[ ConfigEff, Reader Params, Writer Journal ] effs)
-  => (Eff (S3Eff ': effs) a -> Eff effs a)
-testS3Run = interpret (\case
-
-  CreateBucket name -> do
-    tell $ s3Action $ CreateBucketAction name
-    pure $ S3BucketId 1
-
-  GetContent S3Object{ _s3oBucketId, _s3oKey } ->
-    panic "GetContent"
-
-
-  PutContent s3Obj@S3Object{_s3oBucketId, _s3oKey } payload -> do
-    tell $ s3Action $ PutContentAction s3Obj payload
-    {- panic "PutContent" -}
-
-
-  ListObjects id maybeToken -> do
-    panic "ListObjects"
-
-
-  DeleteObject s3Obj@S3Object{_s3oBucketId, _s3oKey } -> do
-    {- config <- getConfig -}
-    {- getName _s3oBucketId -}
-    {- tell $ s3Action $ DeleteBucketAction name -}
-    panic "DeleteObject"
-
-
-  DeleteObjects s3objs -> do
-    panic "DeleteObjects"
-
-  )
-
-
-cfAction
-  :: CfAction
-  -> Journal
-cfAction action = def{ cfActions = [action]}
-
-s3Action
-  :: S3Action
-  -> Journal
-s3Action action = def{ s3Actions = [action]}
 
