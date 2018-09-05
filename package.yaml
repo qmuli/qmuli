@@ -82,6 +82,7 @@ library:
     - Qi.AWS.Cognito
     - Qi.AWS.Lex
     - Qi.AWS.Types
+    - Qi.CLI.Dispatcher
     - Qi.Config.AWS
     - Qi.Config.AWS.ApiGw
     - Qi.Config.AWS.ApiGw.ApiMethod.Profile
@@ -97,12 +98,15 @@ library:
     - Qi.CustomResource.Cognito
     - Qi.CustomResource.Lex
     - Qi.Options
-    - Qi.Program.S3.Lang
-    - Qi.Program.S3.Ipret.Gen
-    - Qi.Program.Gen.Lang
-    - Qi.Program.Lambda.Lang
     - Qi.Program.Config.Lang
     - Qi.Program.Config.Ipret.State
+    - Qi.Program.CF.Ipret.Gen
+    - Qi.Program.CF.Lang
+    - Qi.Program.Gen.Lang
+    - Qi.Program.Lambda.Ipret.Gen
+    - Qi.Program.Lambda.Lang
+    - Qi.Program.S3.Lang
+    - Qi.Program.S3.Ipret.Gen
     - Qi.Program.Wiring.IO
     - Qi.Util
     - Qi.Util.ApiGw
@@ -110,7 +114,7 @@ library:
     - Qi.Program.Gen.Ipret.IO
       
   dependencies:
-  #- amazonka-s3-streaming
+    #- amazonka-s3-streaming
     - amazonka
     - amazonka-cloudformation
     # - amazonka-cloudwatch-logs
@@ -230,6 +234,7 @@ tests:
     source-dirs:
       - tests
     dependencies:
+      - amazonka-cloudformation
       - file-embed
       - qmuli
       - tasty

@@ -38,14 +38,15 @@ import           Qi.Program.S3.Lang
 deployApp
   :: Members '[ S3Eff, GenEff, ConfigEff ] effs
   => LBS.ByteString
+  -> LBS.ByteString
   -> Eff effs ()
-deployApp content = do
+deployApp template content = do
   config <- getConfig
   let appName = config ^. namePrefix
 
   say "deploying the app..."
   bucketId <- createBucket appName
-  putContent (s3Object bucketId $ S3Key "cf.json") $ CF.render config -- TODO: render this inside docker container: https://github.com/qmuli/qmuli/issues/60
+  putContent (s3Object bucketId $ S3Key "cf.json") template -- TODO: render this inside docker container: https://github.com/qmuli/qmuli/issues/60
   putContent (s3Object bucketId $ S3Key "lambda.zip") content
 
 
@@ -138,7 +139,8 @@ cycleStack
   => LBS.ByteString
   -> Eff effs ()
 cycleStack content = do
-  destroyCfStack $ deployApp content
+  config <- getConfig
+  destroyCfStack $ deployApp (CF.render config) content
   createCfStack
   say "all done!"
 

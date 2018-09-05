@@ -60,7 +60,7 @@ withConfig configProgram = do
         liftIO . IO.run "dispatcher" config $
               Gen.build
           >>= Gen.readFileLazy
-          >>= deployApp
+          >>= deployApp (CF.render config)
 
       CfCreate             -> createCfStack
       CfUpdate             -> updateCfStack
