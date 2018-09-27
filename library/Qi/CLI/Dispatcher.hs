@@ -34,21 +34,16 @@ import qualified Qi.Program.Lambda.Lang         as Lbd
 import           Qi.Program.S3.Lang
 
 
-
 deployApp
   :: Members '[ S3Eff, GenEff, ConfigEff ] effs
   => LBS.ByteString
   -> LBS.ByteString
   -> Eff effs ()
 deployApp template content = do
-  config <- getConfig
-  let appName = config ^. namePrefix
-
   say "deploying the app..."
-  bucketId <- createBucket appName
+  bucketId <- createBucket "app"
   putContent (s3Object bucketId $ S3Key "cf.json") template -- TODO: render this inside docker container: https://github.com/qmuli/qmuli/issues/60
   putContent (s3Object bucketId $ S3Key "lambda.zip") content
-
 
 
 createCfStack
@@ -56,9 +51,9 @@ createCfStack
   => Eff effs ()
 createCfStack = do
   config <- getConfig
-  let name = config ^. namePrefix
-      stackName   = StackName name
-      stackS3Obj  = s3Object (S3.getIdByName config name) $ S3Key "cf.json"
+  let appName     = config ^. namePrefix
+      stackName   = StackName appName
+      stackS3Obj  = s3Object (S3.getIdByName config "app") $ S3Key "cf.json"
 
   say "creating the stack..."
   createStack stackName stackS3Obj
@@ -74,9 +69,9 @@ updateCfStack
   => Eff effs ()
 updateCfStack = do
   config <- getConfig
-  let name = config ^. namePrefix
-      stackName   = StackName name
-      stackS3Obj  = s3Object (S3.getIdByName config name) $ S3Key "cf.json"
+  let appName     = config ^. namePrefix
+      stackName   = StackName appName
+      stackS3Obj  = s3Object (S3.getIdByName config "app") $ S3Key "cf.json"
 
   say "updating the stack..."
   updateStack stackName stackS3Obj
@@ -95,8 +90,7 @@ updateLambdas
   => Eff effs ()
 updateLambdas = do
   config <- getConfig
-  let name      = config ^. namePrefix
-      lbdS3Obj  = s3Object (S3.getIdByName config name) $ S3Key "lambda.zip"
+  let lbdS3Obj  = s3Object (S3.getIdByName config "app") $ S3Key "lambda.zip"
 
   say "updating the lambdas..."
   traverse_ ((`Lbd.update` lbdS3Obj) . Lbd.getIdByName config . getPhysicalName config)
@@ -137,10 +131,10 @@ destroyCfStack action = do
 cycleStack
   :: Members '[ LambdaEff, CfEff, S3Eff, GenEff, ConfigEff ] effs
   => LBS.ByteString
+  -> LBS.ByteString
   -> Eff effs ()
-cycleStack content = do
-  config <- getConfig
-  destroyCfStack $ deployApp (CF.render config) content
+cycleStack template content = do
+  destroyCfStack $ deployApp template content
   createCfStack
   say "all done!"
 

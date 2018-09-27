@@ -68,7 +68,7 @@ toResources config = foldMap toAllLambdaResources $ getAll config
               & lfcS3Key    ?~ lambdaS3Object
 
             lambdaS3Bucket :: Val Text
-            lambdaS3Bucket = Literal $ config ^. namePrefix
+            lambdaS3Bucket = Literal $ (config ^. namePrefix) <> ".app"
 
             lambdaS3Object :: Val Text
             lambdaS3Object = "lambda.zip"

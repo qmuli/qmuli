@@ -31,7 +31,7 @@ import qualified Qi.Config.AWS.S3.Event               as S3Event
 import qualified Qi.Config.CfTemplate                 as CF
 import           Qi.Options
 import qualified Qi.Program.Config.Ipret.State        as Config
-import           Qi.Program.Config.Lang               (ConfigEff)
+import           Qi.Program.Config.Lang               (ConfigEff, s3Bucket)
 import qualified Qi.Program.Gen.Lang                  as Gen
 import qualified Qi.Program.Lambda.Lang               as Lbd
 import qualified Qi.Program.Wiring.IO                 as IO
@@ -45,22 +45,32 @@ withConfig configProgram = do
   -- and gives the `Options` structure to `dispatch` that acts in accord to the options
   Options{ appName, cmd } <- showHelpOnErrorExecParser optionsSpec
 
-  let config =
-          snd
+  let template =
+          CF.render
+        . snd
         . run
         . runState def{_namePrefix = appName}
         . Config.run
         $ configProgram
 
+      config =
+          snd
+        . run
+        . runState def{_namePrefix = appName}
+        . Config.run
+        $ do
+          s3Bucket "app" -- always assume existance of the app bucket
+          configProgram
+
   (`runReaderT` config) $ liftIO . IO.run "dispatcher" config $
 
     case cmd of
-      CfRenderTemplate     -> Gen.say $ toS $ CF.render config
+      CfRenderTemplate     -> Gen.say $ toS template
       CfDeploy             ->
         liftIO . IO.run "dispatcher" config $
               Gen.build
           >>= Gen.readFileLazy
-          >>= deployApp (CF.render config)
+          >>= deployApp template
 
       CfCreate             -> createCfStack
       CfUpdate             -> updateCfStack
@@ -71,7 +81,7 @@ withConfig configProgram = do
         liftIO . IO.run "dispatcher" config $
               Gen.build
           >>= Gen.readFileLazy
-          >>= cycleStack
+          >>= cycleStack template
 
       LbdUpdate -> updateLambdas
       LbdSendEvent name -> do

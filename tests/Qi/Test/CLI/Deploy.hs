@@ -39,6 +39,10 @@ import           Qi.Test.Ipret
 import           Test.Tasty.Hspec
 
 
+execName :: Text
+execName = "qmuli"
+
+
 spec :: Spec
 spec = parallel $ do
   describe "Deploy" $ do
@@ -49,11 +53,13 @@ spec = parallel $ do
 
 
     it "works" $ do
-      let action = deployApp "rendered template" "dummy binary"
+      let renderedTemplate = "rendered template"
+          lambdaBinary = "lambda binary"
+          action = deployApp renderedTemplate lambdaBinary
           expectedJournal = def{
-              s3Actions = [ CreateBucketAction "qmuli"
-                          , PutContentAction (S3Object {_s3oBucketId = S3BucketId 1, _s3oKey = S3Key "cf.json"}) "rendered template"
-                          , PutContentAction (S3Object {_s3oBucketId = S3BucketId 1, _s3oKey = S3Key "lambda.zip"}) "dummy binary"
+              s3Actions = [ CreateBucketAction "app"
+                          , PutContentAction (S3Object {_s3oBucketId = S3BucketId 1, _s3oKey = S3Key "cf.json"}) renderedTemplate
+                          , PutContentAction (S3Object {_s3oBucketId = S3BucketId 1, _s3oKey = S3Key "lambda.zip"}) lambdaBinary
                           ]
             , logs = ["deploying the app..."]
             }
@@ -68,12 +74,12 @@ spec = parallel $ do
             config
           }
         config = snd . run . runState def . Config.run $ do
-          s3Bucket "qmuli"
+          s3Bucket "app"
 
     it "works" $ do
       let action = createCfStack
           expectedJournal = def{
-              cfActions = [ CreateStackAction (StackName "qmuli") (S3Object {_s3oBucketId = S3BucketId 0, _s3oKey = S3Key "cf.json"})]
+              cfActions = [ CreateStackAction (StackName execName) (S3Object {_s3oBucketId = S3BucketId 0, _s3oKey = S3Key "cf.json"})]
             , logs =  [ "creating the stack..."
                       , "waiting on the stack to be created..."
                       , "stack was successfully created"
