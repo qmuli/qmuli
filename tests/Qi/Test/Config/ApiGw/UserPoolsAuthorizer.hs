@@ -2,8 +2,8 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Config.ApiGw.UserPoolsAuthorizer where
-
+module Qi.Test.Config.ApiGw.UserPoolsAuthorizer where
+{-
 import           Control.Lens
 import           Control.Monad                         (void)
 import           Data.Aeson
@@ -13,13 +13,13 @@ import qualified Data.ByteString.Lazy.Char8            as LBS
 import           Data.Default                          (def)
 import           Qi.Config.AWS.ApiGw                   (ApiVerb (Get))
 import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ampAuthId)
+import qualified Qi.CustomResource.Cognito             as Cognito
 import           Qi.Program.Config.Interface           (ConfigProgram, api,
                                                         apiAuthorizer,
                                                         apiMethodLambda,
                                                         apiResource,
                                                         customResource)
 import           Qi.Program.Lambda.Interface           (ApiLambdaProgram)
-import           Qi.Util.Cognito                       (cognitoPoolProviderLambda)
 import           Test.Tasty.Hspec
 
 import           Config                                (getConfig, getOutputs,
@@ -32,7 +32,7 @@ import           Util
 configProgram :: ConfigProgram ()
 configProgram = do
   cognito <- customResource "cognitoPoolProvider"
-    cognitoPoolProviderLambda def
+    Cognito.providerLambda def
 
 
   api "world" >>= \world -> do
@@ -44,7 +44,7 @@ configProgram = do
               dummyLambda def
 
 dummyLambda :: ApiLambdaProgram
-dummyLambda _ = undefined
+dummyLambda _ = panic "lambda not implemented"
 
 
 spec :: Spec
@@ -82,4 +82,4 @@ spec = describe "Template" $ do
             properties `shouldContainKVPair` ("AuthorizationType", String "COGNITO_USER_POOLS")
 
 
-
+-}

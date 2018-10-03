@@ -1,12 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Config (
-    getTemplate
-  , getResources
-  , getOutputs
-  , getConfig
-  , appName) where
-
+module Config  where
+{-
 import           Control.Lens
 import           Control.Monad.State.Strict           (runState)
 import           Data.Aeson                           (Value, decode)
@@ -16,7 +11,7 @@ import           Data.Maybe                           (fromJust, isJust)
 import           Data.Text                            (Text)
 import           Protolude                            hiding (runState)
 import           Qi.Config.AWS                        (Config (..))
-import           Qi.Config.CF                         (render)
+import           Qi.Config.CfTemplate                 (render)
 import           Qi.Program.Config.Interface          (ConfigProgram)
 import           Qi.Program.Config.Interpreters.Build (interpret, unQiConfig)
 import           Util
@@ -40,6 +35,6 @@ getConfig cp = snd
   . unQiConfig
   $ interpret cp
 
-
+-}
 
 

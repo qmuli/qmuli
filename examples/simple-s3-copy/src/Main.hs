@@ -1,4 +1,6 @@
+{-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE MonoLocalBinds      #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -7,25 +9,23 @@
 module Main where
 
 import           Control.Lens
-import           Data.Default                (def)
+import           Control.Monad.Freer
+import           Data.Default           (def)
 import           Protolude
-import           Qi                          (withConfig)
-import           Qi.Config.AWS.Lambda        (LambdaMemorySize (..),
-                                              lpMemorySize)
-import           Qi.Config.AWS.S3            (S3Event, s3Object, s3eObject,
-                                              s3oBucketId, s3oKey)
-import           Qi.Config.Identifier        (S3BucketId)
-import           Qi.Program.Config.Interface (ConfigProgram, s3Bucket,
-                                              s3BucketLambda)
-import           Qi.Program.Lambda.Interface (S3LambdaProgram,
-                                              getS3ObjectContent,
-                                              putS3ObjectContent, say)
+import           Qi                     (withConfig)
+import           Qi.Config.AWS.Lambda   (LambdaMemorySize (..), lpMemorySize)
+import           Qi.Config.AWS.S3       (S3Event, s3Object, s3eObject,
+                                         s3oBucketId, s3oKey)
+import           Qi.Config.Identifier   (S3BucketId)
+import           Qi.Program.Config.Lang (ConfigEff, s3Bucket, s3BucketLambda)
+import           Qi.Program.Gen.Lang    (GenEff, say)
+import           Qi.Program.S3.Lang     (S3Eff, S3LambdaProgram, getContent,
+                                         putContent)
 
 
 main :: IO ()
 main = withConfig config
   where
-    config :: ConfigProgram ()
     config = do
 
       -- create an "input" s3 bucket
@@ -45,21 +45,24 @@ main = withConfig config
         def & lpMemorySize .~ M1536
 
     copyContentsLambda
-      :: S3BucketId
-      -> S3LambdaProgram
+      :: (Member S3Eff effs, Member GenEff effs)
+      => S3BucketId
+      -> S3LambdaProgram effs
     copyContentsLambda sinkBucketId = lbd
       where
         lbd event = do
           let incomingS3Obj = event ^. s3eObject
               outgoingS3Obj = s3oBucketId .~ sinkBucketId $ incomingS3Obj
 
+          say "getting content"
           -- get the content of the newly uploaded file
-          eitherContent <- getS3ObjectContent incomingS3Obj
+          eitherContent <- getContent incomingS3Obj
 
           case eitherContent of
             Right content -> do
+              say "putting content"
               -- write the content into a new file in the "output" bucket
-              putS3ObjectContent outgoingS3Obj content
+              putContent outgoingS3Obj content
 
               pure "lambda had executed successfully"
 

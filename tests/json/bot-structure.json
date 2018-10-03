@@ -1,0 +1,43 @@
+{
+  "metadata": {
+    "schemaVersion": "1.0",
+    "importType": "LEX",
+    "importFormat": "JSON"
+  },
+  "resource": {
+    "name": "bot name",
+    "version": "version number",
+    "intents": [
+
+
+
+    ],
+    "slotTypes": [
+      
+
+      
+    ],
+    "voiceId": "output voice ID",
+    "childDirected": false,
+    "locale": "en-US",
+    "idleSessionTTLInSeconds": 30,
+    "description": "bot description",
+    "clarificationPrompt": {
+      "messages": [
+        {
+          "contentType": "PlainText or SSML or CustomPayload",
+          "content": "string"
+        }
+      ],
+      "maxAttempts": 10 
+    },
+    "abortStatement": {
+      "messages": [
+        {
+          "contentType": "PlainText or SSML or CustomPayload",
+          "content": "string"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "schemaVersion": "1.0",
+    "importType": "LEX",
+    "importFormat": "JSON"
+  },
+  "resource": {
+    "name": "slot type name",
+    "version": "version number",
+    "enumerationValues": [
+      {
+        "value": "enumeration value",
+        "synonyms": []
+      },
+      {
+        "value": "enumeration value",
+        "synonyms": []
+      }
+    ],
+    "valueSelectionStrategy": "ORIGINAL_VALUE or TOP_RESOLUTION"
+  }
+}

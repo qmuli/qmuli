@@ -1,5 +1,5 @@
 name: qmuli
-version: "0.4.0"
+version: "0.5.0"
 synopsis: EDSL for building infrastructure on AWS
 description: EDSL for building infrastructure on AWS
 category: AWS, Cloud
@@ -14,11 +14,19 @@ extra-source-files:
   - CHANGELOG.md
   - README.md
   - stack.yaml
+  - tests/json/**/*
 
 default-extensions:
   - NoImplicitPrelude
   - OverloadedStrings
-
+  - NamedFieldPuns
+  - TupleSections
+  - FlexibleInstances
+  - FlexibleContexts
+  - ScopedTypeVariables
+  - MultiParamTypeClasses
+  - MonoLocalBinds
+    
 dependencies:
   - aeson
   - aeson-pretty
@@ -35,7 +43,9 @@ dependencies:
   - exceptions
   - executable-path
   - extra
+  - freer-simple 
   - hashable
+  - unordered-containers
   - heredoc
   - http-client
   - http-client-tls
@@ -43,7 +53,6 @@ dependencies:
   - lens
   - lens-aeson
   - mtl
-  - operational
   - optparse-applicative
   - process
   - protolude
@@ -69,10 +78,15 @@ library:
 
   exposed-modules:
     - Qi
+    - Qi.AWS.CF
+    - Qi.AWS.Cognito
+    - Qi.AWS.Lex
     - Qi.AWS.Types
+    - Qi.CLI.Dispatcher
     - Qi.Config.AWS
     - Qi.Config.AWS.ApiGw
     - Qi.Config.AWS.ApiGw.ApiMethod.Profile
+    - Qi.Config.AWS.CfCustomResource.Types
     - Qi.Config.AWS.CF
     - Qi.Config.AWS.CW
     - Qi.Config.AWS.DDB
@@ -81,28 +95,39 @@ library:
     - Qi.Config.CfTemplate
     - Qi.Config.Identifier
     - Qi.Core.Curry
+    - Qi.CustomResource.Cognito
+    - Qi.CustomResource.Lex
     - Qi.Options
-    - Qi.Program.Lambda.Interface
-    - Qi.Program.Config.Interface
+    - Qi.Program.Config.Lang
+    - Qi.Program.Config.Ipret.State
+    - Qi.Program.CF.Ipret.Gen
+    - Qi.Program.CF.Lang
+    - Qi.Program.Gen.Lang
+    - Qi.Program.Lambda.Ipret.Gen
+    - Qi.Program.Lambda.Lang
+    - Qi.Program.S3.Lang
+    - Qi.Program.S3.Ipret.Gen
+    - Qi.Program.Wiring.IO
     - Qi.Util
     - Qi.Util.ApiGw
-    - Qi.Util.Cognito
     - Qi.Util.DDB
-    - Qi.Program.Config.Interpreters.Build
+    - Qi.Program.Gen.Ipret.IO
       
   dependencies:
-  #- amazonka-s3-streaming
+    #- amazonka-s3-streaming
     - amazonka
     - amazonka-cloudformation
-    - amazonka-cloudwatch-logs
+    # - amazonka-cloudwatch-logs
     - amazonka-cognito-identity
     - amazonka-cognito-idp
     - amazonka-core
     - amazonka-dynamodb
     - amazonka-iam
     - amazonka-lambda
+    # - amazonka-lex-models
     - amazonka-s3
     - amazonka-sqs
+    - zip
 
 
 flags:
@@ -119,7 +144,7 @@ executables:
     dependencies:
       - base
       - qmuli
-    when:    
+    when:
     - condition: flag(build-examples)
       then:
         buildable: true
@@ -132,7 +157,7 @@ executables:
 #    dependencies:
 #      - base
 #      - qmuli
-#    when:    
+#    when:
 #    - condition: flag(build-examples)
 #      then:
 #        buildable: true
@@ -177,18 +202,18 @@ executables:
       # - base >= 4.8 && < 5
       # - qmuli
 
-  qmuli-cognito-apigw-lambda:
-    main: Main.hs
-    source-dirs: examples/cognito-apigw-lambda/src
-    dependencies:
-      - base
-      - qmuli
-    when:
-    - condition: flag(build-examples)
-      then:
-        buildable: true
-      else:
-        buildable: false
+  # qmuli-cognito-apigw-lambda:
+    # main: Main.hs
+    # source-dirs: examples/cognito-apigw-lambda/src
+    # dependencies:
+      # - base
+      # - qmuli
+    # when:
+    # - condition: flag(build-examples)
+      # then:
+        # buildable: true
+      # else:
+        # buildable: false
 
   # qmuli-cw-events:
     # main: Main.hs
@@ -209,6 +234,7 @@ tests:
     source-dirs:
       - tests
     dependencies:
+      - amazonka-cloudformation
       - file-embed
       - qmuli
       - tasty

@@ -39,6 +39,7 @@ data Config = Config {
   , _cwConfig     :: CwConfig
   , _sqsConfig    :: SqsConfig
 }
+  deriving (Eq, Show)
 
 instance Default Config where
   def = Config {
@@ -56,15 +57,7 @@ instance Default Config where
 
 makeLenses ''Config
 
--- get a resource-specific identifier based on the next autoincremented numeric id
--- while keeping the autoincrement state in the global Config
-getNextId
-  :: (MonadState Config m, FromInt a)
-  => m a
-getNextId = do
-  nid <- use nextId
-  nextId += 1
-  pure $ fromInt nid
+
 
 underscoreNamePrefixWith
   :: Text
@@ -84,7 +77,7 @@ namePrefixWith
   -> Config
   -> Text
 namePrefixWith sep name config =
-  T.concat [config^.namePrefix, sep, name]
+  T.concat [config ^. namePrefix, sep, name]
 
 
 makeAlphaNumeric
@@ -129,7 +122,8 @@ class (Eq rid, Show rid, Hashable rid) => CfResource r rid | rid -> r, r -> rid 
     :: Config
     -> r
     -> Text
-  getLogicalName config r =  T.concat [makeAlphaNumeric (getName config r), rNameSuffix r]
+  getLogicalName config r =
+    T.concat [makeAlphaNumeric (getName config r), rNameSuffix r]
 
   getPhysicalName
     :: Config
@@ -154,7 +148,7 @@ instance CfResource CwEventsRule CwEventsRuleId where
 instance CfResource Lambda LambdaId where
   rNameSuffix = const "Lambda"
   getName _ = (^. lbdName)
-  getMap = (^. lbdConfig . lcLambdas)
+  getMap = (^. lbdConfig . lbdIdToLambda)
 
 
 instance CfResource CfCustomResource CfCustomResourceId where
@@ -172,7 +166,7 @@ instance CfResource DdbTable DdbTableId where
 instance CfResource S3Bucket S3BucketId where
   rNameSuffix = const "S3Bucket"
   getName _ = (^. s3bName)
-  getMap = (^. s3Config . s3Buckets . s3idxIdToS3Bucket)
+  getMap = (^. s3Config . s3Buckets . s3IdToBucket)
   getPhysicalName config r =
     makeAlphaNumeric (getName config r) `dotNamePrefixWith` config
 

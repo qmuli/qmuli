@@ -1,11 +1,17 @@
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs             #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE TypeOperators     #-}
 
-module Qi.Program.Lambda.Interface where
+module Qi.Program.Lambda.Old where
 
-import           Control.Monad.Operational            (Program, singleton)
+{-
+import           Control.Monad.Freer
 import           Data.Aeson                           (FromJSON, ToJSON, Value)
 import qualified Data.ByteString                      as BS
 import qualified Data.ByteString.Lazy                 as LBS
@@ -21,6 +27,7 @@ import           Network.AWS.DynamoDB.Scan
 import           Network.AWS.S3.Types                 (ETag)
 import           Network.HTTP.Client
 import           Protolude
+import           Qi.AWS.Lex                           (BotSpec)
 import           Qi.AWS.SQS
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.CF
@@ -34,7 +41,6 @@ import           Qi.Core.Curry
 import           Servant.Client                       (BaseUrl, ClientM,
                                                        ServantError)
 
-
 type LambdaProgram                  = Program LambdaInstruction
 type ApiLambdaProgram               = ApiMethodEvent        -> LambdaProgram LBS.ByteString
 type S3LambdaProgram                = S3Event               -> LambdaProgram LBS.ByteString
@@ -44,37 +50,8 @@ type DdbStreamLambdaProgram         = DdbStreamEvent        -> LambdaProgram LBS
 
 data LambdaInstruction a where
 
-  GetAppName
-    :: LambdaInstruction Text
 
-  -- this is needed for custom CF resources, which cannot use Servant because
-  -- we need to parse the url provided by requests from CF
-  Http
-    :: ManagerSettings
-    -> Request
-    -> LambdaInstruction (Response LBS.ByteString)
-
-  RunServant
-    :: ManagerSettings
-    -> BaseUrl
-    -> ClientM a
-    -> LambdaInstruction (Either ServantError a)
-
-  AmazonkaSend
-    :: (AWSRequest a)
-    => a
-    -> LambdaInstruction (Rs a)
-
-  InvokeLambda
-    :: ToJSON a
-    => LambdaId
-    -> a
-    -> LambdaInstruction ()
-
-  GetS3ObjectContent
-    :: S3Object
-    -> LambdaInstruction (Either Text LBS.ByteString)
-
+-- S3
   MultipartS3Upload
     :: S3Object
     -> (S3Object -> Text -> LambdaProgram [(Int, ETag)])
@@ -87,7 +64,6 @@ data LambdaInstruction a where
     -> LambdaInstruction (Maybe (Int, ETag))
 
 
-{-
   StreamFromS3Object
     :: S3Object
     -> (Sink BS.ByteString LambdaProgram a)
@@ -98,26 +74,7 @@ data LambdaInstruction a where
     -> S3Object
     -> Conduit BS.ByteString LambdaProgram BS.ByteString
     -> LambdaInstruction ()
--}
 
-  PutS3ObjectContent
-    :: S3Object
-    -> LBS.ByteString
-    -> LambdaInstruction ()
-
-  ListS3Objects
-    :: Monoid a
-    => S3BucketId
-    -> (a -> [S3Object] -> LambdaProgram a)
-    -> LambdaInstruction a
-
-  DeleteS3Object
-    :: S3Object
-    -> LambdaInstruction ()
-
-  DeleteS3Objects
-    :: [S3Object]
-    -> LambdaInstruction ()
 
 -- DDB
 
@@ -147,83 +104,15 @@ data LambdaInstruction a where
     -> LambdaInstruction DeleteItemResponse
 
 
--- SQS
+-- Lex
 
-  SendMessage
-    :: ToJSON a
-    => SqsQueueId
-    -> a
+  StartBotImport
+    :: BotSpec
     -> LambdaInstruction ()
 
-  ReceiveMessage
-    :: FromJSON a
-    => SqsQueueId
-    -> LambdaInstruction [(a, ReceiptHandle)] -- the json body and the receipt handle
-
-  DeleteMessage
-    :: SqsQueueId
-    -> ReceiptHandle
-    -> LambdaInstruction ()
-
-
-
-  Say
-    :: Text
-    -> LambdaInstruction ()
-
-  Sleep
-    :: Int
-    -> LambdaInstruction ()
-
-  GetCurrentTime
-    :: LambdaInstruction UTCTime
-
-
--- Http
-
-http
-  :: ManagerSettings
-  -> Request
-  -> LambdaProgram (Response LBS.ByteString)
-http =
-  singleton .: Http
-
--- Servant
-
-runServant
-  :: ManagerSettings
-  -> BaseUrl
-  -> ClientM a
-  -> LambdaProgram (Either ServantError a)
-runServant =
-  singleton .:: RunServant
-
-
--- Amazonka
-
-amazonkaSend
-  :: (AWSRequest a)
-  => a
-  -> LambdaProgram (Rs a)
-amazonkaSend = singleton . AmazonkaSend
-
-
--- Lambda
-
-invokeLambda
-  :: ToJSON a
-  => LambdaId
-  -> a
-  -> LambdaProgram ()
-invokeLambda = singleton .: InvokeLambda
 
 
 -- S3
-
-getS3ObjectContent
-  :: S3Object
-  -> LambdaProgram (Either Text LBS.ByteString)
-getS3ObjectContent = singleton . GetS3ObjectContent
 
 
 multipartS3Upload
@@ -239,7 +128,7 @@ uploadS3Chunk
   -> LambdaProgram (Maybe (Int, ETag))
 uploadS3Chunk = singleton .:: UploadS3Chunk
 
-{-
+
 streamFromS3Object
   :: S3Object
   -> (Sink BS.ByteString LambdaProgram a)
@@ -252,30 +141,7 @@ streamS3Objects
     -> Conduit BS.ByteString LambdaProgram BS.ByteString
     -> LambdaProgram ()
 streamS3Objects = singleton .:: StreamS3Objects
--}
 
-putS3ObjectContent
-  :: S3Object
-  -> LBS.ByteString
-  -> LambdaProgram ()
-putS3ObjectContent = singleton .: PutS3ObjectContent
-
-listS3Objects
-  :: Monoid a
-  => S3BucketId
-  -> (a -> [S3Object] -> LambdaProgram a)
-  -> LambdaProgram a
-listS3Objects = singleton .: ListS3Objects
-
-deleteS3Object
-  :: S3Object
-  -> LambdaProgram ()
-deleteS3Object = singleton . DeleteS3Object
-
-deleteS3Objects
-  :: [S3Object]
-  -> LambdaProgram ()
-deleteS3Objects = singleton . DeleteS3Objects
 
 
 -- DDB
@@ -310,46 +176,11 @@ deleteDdbRecord
 deleteDdbRecord = singleton .: DeleteDdbRecord
 
 
--- SQS
+-- Lex
 
-sendMessage
-  :: ToJSON a
-  => SqsQueueId
-  -> a
+startBotImport
+  :: BotSpec
   -> LambdaProgram ()
-sendMessage = singleton .: SendMessage
+startBotImport = singleton . StartBotImport
 
-receiveMessage
-  :: FromJSON a
-  => SqsQueueId
-  -> LambdaProgram [(a, ReceiptHandle)] -- the json body and the receipt handle
-receiveMessage = singleton . ReceiveMessage
-
-deleteMessage
-  :: SqsQueueId
-  -> ReceiptHandle
-  -> LambdaProgram ()
-deleteMessage = singleton .: DeleteMessage
-
-
--- Util
-
-getAppName
-  :: LambdaProgram Text
-getAppName =
-  singleton GetAppName
-
-getCurrentTime
-  :: LambdaProgram UTCTime
-getCurrentTime = singleton GetCurrentTime
-
-sleep
-  :: Int
-  -> LambdaProgram ()
-sleep = singleton . Sleep
-
-say
-  :: Text
-  -> LambdaProgram ()
-say = singleton . Say
-
+-}

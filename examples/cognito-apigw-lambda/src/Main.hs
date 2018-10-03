@@ -15,13 +15,13 @@ import           Qi                                    (withConfig)
 import           Qi.Config.AWS.ApiGw                   (ApiVerb (Get), aeParams,
                                                         rpHeaders)
 import           Qi.Config.AWS.ApiGw.ApiMethod.Profile (ampAuthId)
+import qualified Qi.CustomResource.Cognito             as Cognito
 import           Qi.Program.Config.Interface           (ConfigProgram, api,
                                                         apiAuthorizer,
                                                         apiMethodLambda,
                                                         apiResource,
                                                         customResource)
 import           Qi.Program.Lambda.Interface           (ApiLambdaProgram, say)
-import           Qi.Util.Cognito                       (cognitoPoolProviderLambda)
 
 
 main :: IO ()
@@ -29,8 +29,8 @@ main = withConfig config
   where
     config :: ConfigProgram ()
     config = do
-      cognito <- customResource "cognitoPoolProvider"
-              cognitoPoolProviderLambda def
+      cognito <- customResource "cognitoProvider"
+              Cognito.providerLambda def
 
 
       void $ api "world" >>= \world -> do

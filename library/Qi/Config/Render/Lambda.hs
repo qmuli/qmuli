@@ -36,12 +36,12 @@ toResources config = foldMap toAllLambdaResources $ getAll config
               principal
           where
             principal = case lbd of
-              GenericLambda{}   -> "lambda.amazonaws.com"
-              S3BucketLambda{}  -> "s3.amazonaws.com"
-              ApiLambda{}       -> "apigateway.amazonaws.com"
-              CfCustomLambda{}  -> "*" -- TODO: not sure whether we even need the permission for CF Custom Resource
-              CwEventLambda{}   -> "events.amazonaws.com"
-              DdbStreamLambda{} -> "dynamodb.amazonaws.com"
+              GenericLambda{}  -> "lambda.amazonaws.com"
+              S3BucketLambda{} -> "s3.amazonaws.com"
+              {- ApiLambda{}       -> "apigateway.amazonaws.com" -}
+              CfCustomLambda{} -> "*" -- TODO: not sure whether we even need the permission for CF Custom Resource
+              CwEventLambda{}  -> "events.amazonaws.com"
+              {- DdbStreamLambda{} -> "dynamodb.amazonaws.com" -}
 
         lambdaResource = (
           resource lbdLName $
@@ -68,7 +68,7 @@ toResources config = foldMap toAllLambdaResources $ getAll config
               & lfcS3Key    ?~ lambdaS3Object
 
             lambdaS3Bucket :: Val Text
-            lambdaS3Bucket = Literal $ config ^. namePrefix
+            lambdaS3Bucket = Literal $ (config ^. namePrefix) <> ".app"
 
             lambdaS3Object :: Val Text
             lambdaS3Object = "lambda.zip"

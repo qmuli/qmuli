@@ -1,11 +1,14 @@
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE NamedFieldPuns            #-}
 {-# LANGUAGE RankNTypes                #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TemplateHaskell           #-}
 
 module Qi.Config.AWS.Lambda where
 
 import           Control.Lens
+import           Control.Monad.Freer
 import           Data.Aeson                           (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy.Char8           as LBS
 import           Data.Default                         (Default, def)
@@ -13,64 +16,86 @@ import           Data.HashMap.Strict                  (HashMap)
 import qualified Data.HashMap.Strict                  as SHM
 import           Data.Proxy                           (Proxy)
 import           Data.Text                            (Text)
-import           Protolude
+import           GHC.Show                             as Show
+import           Protolude                            as P
 import           Qi.Config.AWS.ApiGw                  (ApiMethodEvent)
+import           Qi.Config.AWS.CfCustomResource       (CfCustomResourceLambdaProgram)
 import           Qi.Config.AWS.CfCustomResource.Types (CfCustomResourceEvent)
-import           Qi.Config.AWS.CW                     (CwEvent)
+import           Qi.Config.AWS.CW                     (CwEvent, CwLambdaProgram)
 import           Qi.Config.AWS.DDB                    (DdbStreamEvent)
 import           Qi.Config.AWS.S3                     (S3Event)
 import           Qi.Config.Identifier
-import           Qi.Program.Lambda.Interface          (ApiLambdaProgram, CfCustomResourceLambdaProgram,
-                                                       CwLambdaProgram,
-                                                       DdbStreamLambdaProgram,
-                                                       LambdaProgram,
-                                                       S3LambdaProgram)
+import           Qi.Program.Gen.Lang
+import           Qi.Program.Gen.Lang
+import           Qi.Program.S3.Lang                   (S3Eff, S3LambdaProgram)
 import           Stratosphere
 
 
-data Lambda = forall a b. (FromJSON a, ToJSON b) =>
-    GenericLambda {
+data LambdaConfig = LambdaConfig {
+    _lbdIdToLambda :: HashMap LambdaId Lambda
+  , _lbdNameToId   :: HashMap Text LambdaId
+  }
+  deriving (Eq, Show)
+instance Default LambdaConfig where
+  def = LambdaConfig {
+    _lbdIdToLambda  = SHM.empty
+  , _lbdNameToId    = SHM.empty
+  }
+
+
+
+
+--type ApiLambdaProgram effs              = ApiMethodEvent        -> Eff effs LBS.ByteString
+-- type DdbStreamLambdaProgram effs       = DdbStreamEvent        -> Eff effs LBS.ByteString
+
+data Lambda =
+    forall a b
+  . (FromJSON a, ToJSON b)
+  => GenericLambda {
     _lbdName                 :: Text
   , _lbdProfile              :: LambdaProfile
-  , _lbdGenericLambdaProgram :: (a -> LambdaProgram b)
   , _lbdInputProxy           :: Proxy a
   , _lbdOutputProxy          :: Proxy b
+  , _lbdGenericLambdaProgram :: forall effs . (Member GenEff effs, Member S3Eff effs) => a -> Eff effs b
   }
   | S3BucketLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdS3BucketLambdaProgram :: S3LambdaProgram
+  , _lbdS3BucketLambdaProgram :: forall effs . (Member GenEff effs, Member S3Eff effs) => S3LambdaProgram effs
   }
-  | ApiLambda {
+
+{-  | ApiLambda {
     _lbdName                   :: Text
   , _lbdProfile                :: LambdaProfile
   , _lbdApiMethodLambdaProgram :: ApiLambdaProgram
   }
+-}
   | CfCustomLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdCfCustomLambdaProgram :: CfCustomResourceLambdaProgram
+  , _lbdCfCustomLambdaProgram :: forall effs . (Member GenEff effs) => CfCustomResourceLambdaProgram effs
   }
   | CwEventLambda {
     _lbdName                 :: Text
   , _lbdProfile              :: LambdaProfile
-  , _lbdCwEventLambdaProgram :: CwLambdaProgram
+  , _lbdCwEventLambdaProgram :: forall effs . (Member GenEff effs) => CwLambdaProgram effs
   }
+{-
   | DdbStreamLambda {
     _lbdName                   :: Text
   , _lbdProfile                :: LambdaProfile
   , _lbdDdbStreamLambdaProgram :: DdbStreamLambdaProgram
   }
+-}
 
+instance Eq Lambda where
+  _ == _ = True -- TODO: do something about this aweful hack
 
-data LambdaConfig = LambdaConfig {
-    _lcLambdas :: HashMap LambdaId Lambda
-  }
-
-instance Default LambdaConfig where
-  def = LambdaConfig {
-    _lcLambdas = SHM.empty
-  }
+instance Show Lambda where
+  show GenericLambda{}  = "GenericLambda"
+  show S3BucketLambda{} = "S3BucketLambda"
+  show CfCustomLambda{} = "CfCustomLambda"
+  show CwEventLambda{}  = "CwEventLambda"
 
 
 data LambdaMemorySize =
@@ -86,6 +111,7 @@ data LambdaMemorySize =
   | M2048
   | M2560
   | M3008
+  deriving (Eq, Show)
 
 instance Enum LambdaMemorySize where
   toEnum 128  = M128
@@ -100,7 +126,7 @@ instance Enum LambdaMemorySize where
   toEnum 2048 = M2048
   toEnum 2560 = M2560
   toEnum 3008 = M3008
-  toEnum x    = panic $ "no such memory configuration: " <> show x
+  toEnum x    = panic $ "no such memory configuration: " <> P.show x
 
   fromEnum M128  = 128
   fromEnum M192  = 192
@@ -119,6 +145,7 @@ data LambdaProfile = LambdaProfile {
     _lpMemorySize     :: LambdaMemorySize
   , _lpTimeoutSeconds :: Int
   }
+  deriving (Eq, Show)
 
 instance Default LambdaProfile where
   def = LambdaProfile {

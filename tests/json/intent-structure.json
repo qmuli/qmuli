@@ -1,0 +1,64 @@
+{
+  "metadata": {
+    "schemaVersion": "1.0",
+    "importType": "LEX",
+    "importFormat": "JSON"
+  },
+  "resource": {
+    "description": "intent description",
+    "rejectionStatement": {
+      "messages": [
+        {
+          "contentType": "PlainText or SSML or CustomPayload",
+          "content": "string"
+        }
+      ]
+    },
+    "name": "intent name",
+    "version": "version number",
+    "fulfillmentActivity": {
+      "type": "ReturnIntent or CodeHook"
+    },
+    "sampleUtterances": [
+      "string",
+      "string"
+    ],
+    "slots": [
+      {
+        "name": "slot name",
+        "description": "slot description",
+        "slotConstraint": "Required or Optional",
+        "slotType": "slot type",
+        "valueElicitationPrompt": {
+          "messages": [
+            {
+              "contentType": "PlainText or SSML or CustomPayload",
+              "content": "string"
+            }
+          ],
+          "maxAttempts": 10 
+        },
+        "priority": 3,
+        "sampleUtterances": []
+      }
+    ],
+    "confirmationPrompt": {
+      "messages": [
+        {
+          "contentType": "PlainText or SSML or CustomPayload",
+          "content": "string"
+        },
+        {
+          "contentType": "PlainText or SSML or CustomPayload",
+          "content": "string"
+        }
+      ],
+      "maxAttempts": 2
+    },
+    "slotTypes": [
+
+
+
+    ]
+  }
+}

@@ -10,19 +10,19 @@ import           Protolude
 
 
 newtype IdPoolId = IdPoolId Text
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show, Read, Generic)
   deriving newtype (ToJSON, FromJSON)
 
 newtype AuthRoleId = AuthRoleId Text
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show, Read, Generic)
   deriving newtype (ToJSON, FromJSON)
 
 newtype UserPoolId = UserPoolId Text
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show, Read, Generic)
   deriving newtype (ToJSON, FromJSON)
 
 newtype UserPoolClientId = UserPoolClientId Text
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show, Read, Generic)
   deriving newtype (ToJSON, FromJSON)
 
 

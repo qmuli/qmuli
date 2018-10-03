@@ -45,7 +45,7 @@ data CfCustomResourceEvent =
   , _cfeRequestId             :: Text
   , _cfeResourceType          :: Text
   , _cfeLogicalResourceId     :: LogicalResourceId
-  , _cfePhysicalResourceId    :: CompositeResourceId
+  , _cfePhysicalResourceId    :: CustomResourceId
   , _cfeResourceProperties    :: Object
   , _cfeOldResourceProperties :: Object
   }
@@ -55,7 +55,7 @@ data CfCustomResourceEvent =
   , _cfeRequestId          :: Text
   , _cfeResourceType       :: Text
   , _cfeLogicalResourceId  :: LogicalResourceId
-  , _cfePhysicalResourceId :: CompositeResourceId
+  , _cfePhysicalResourceId :: CustomResourceId
   , _cfeResourceProperties :: Object
   }
   deriving (Eq, Show, Generic)
@@ -66,7 +66,7 @@ instance FromJSON CfCustomResourceEvent where
   parseJSON = genericParseJSON defaultOptions {
                   fieldLabelModifier = drop 4
                 , sumEncoding = TaggedObject "RequestType" ""
-                , constructorTagModifier = drop 7
+                , constructorTagModifier = drop 16
                 }
 
 
@@ -76,7 +76,7 @@ data CfCustomResourceRequestType =
   | CfCustomResourceRequestDelete
 
 instance FromJSON CfCustomResourceRequestType where
-  parseJSON = withText "CfRequestType" $ \case
+  parseJSON = withText "CfCustomResourceRequestType" $ \case
     "Create" -> pure CfCustomResourceRequestCreate
     "Update" -> pure CfCustomResourceRequestUpdate
     "Delete" -> pure CfCustomResourceRequestDelete
@@ -92,7 +92,7 @@ instance ToJSON CustomResourceStatus where
 data Response = Response {
     rStatus             :: CustomResourceStatus
   , rReason             :: Text
-  , rPhysicalResourceId :: Maybe CompositeResourceId
+  , rPhysicalResourceId :: Maybe CustomResourceId
   , rStackId            :: Arn
   , rRequestId          :: Text
   , rLogicalResourceId  :: LogicalResourceId
@@ -104,7 +104,7 @@ instance ToJSON Response where
 
 
 data Result = Result {
-    rId    :: Maybe CompositeResourceId
+    rId    :: Maybe CustomResourceId
   , rAttrs :: Object
   }
 

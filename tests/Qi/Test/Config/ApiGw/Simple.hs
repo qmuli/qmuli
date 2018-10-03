@@ -2,8 +2,8 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Config.ApiGw.Simple where
-
+module Qi.Test.Config.ApiGw.Simple where
+{-
 import           Control.Lens
 import           Control.Monad               (void)
 import           Data.Aeson
@@ -32,7 +32,7 @@ configProgram =
 
 dummyLambda
   :: ApiLambdaProgram
-dummyLambda _ = undefined
+dummyLambda _ = panic "lambda not implemented"
 
 
 
@@ -276,4 +276,4 @@ spec = describe "Template" $ do
           it "specifies Timeout" $
             properties `shouldContainKVPair` ("Timeout", String "30")
 
-
+-}

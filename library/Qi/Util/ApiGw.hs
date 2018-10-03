@@ -4,25 +4,24 @@
 
 module Qi.Util.ApiGw where
 
-import           Control.Lens                hiding (view, (.=))
+{-
+import           Control.Lens               hiding (view, (.=))
 import           Data.Aeson
-import           Data.Aeson.Types            (typeMismatch)
-import qualified Data.ByteString.Char8       as BS
-import qualified Data.ByteString.Lazy.Char8  as LBS
-import qualified Data.HashMap.Strict         as SHM
-import qualified Data.Text                   as T
-import           Network.AWS.DynamoDB        (AttributeValue)
+import           Data.Aeson.Types           (typeMismatch)
+import qualified Data.ByteString.Char8      as BS
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.HashMap.Strict        as SHM
+import qualified Data.Text                  as T
+import           Network.AWS.DynamoDB       (AttributeValue)
 import           Protolude
-import           Qi.Config.AWS.ApiGw         (ApiMethodEvent (..),
-                                              ApiVerb (Delete, Get, Post),
-                                              RequestBody (..), aeBody,
-                                              aeParams, rpPath)
-import           Qi.Config.AWS.DDB           (DdbAttrDef (..), DdbAttrType (..),
-                                              DdbProvCap (..))
-import           Qi.Program.Lambda.Interface (LambdaProgram)
+import           Qi.Config.AWS.ApiGw        (ApiMethodEvent (..),
+                                             ApiVerb (Delete, Get, Post),
+                                             RequestBody (..), aeBody, aeParams,
+                                             rpPath)
+import           Qi.Config.AWS.DDB          (DdbAttrDef (..), DdbAttrType (..),
+                                             DdbProvCap (..))
 import           Qi.Util
 
-{-
 withPathParam
   :: Text
   -> ApiMethodEvent

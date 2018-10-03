@@ -24,5 +24,5 @@ getIdByName config bucketName =
     Just bid -> bid
     Nothing  -> panic $ "Could not find s3 bucket id with name: " <> show bucketName
   where
-    bucketNameToIdMap = config ^. s3Config . s3Buckets . s3idxNameToId
+    bucketNameToIdMap = config ^. s3Config . s3Buckets . s3NameToBucketId
 
