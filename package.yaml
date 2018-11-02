@@ -15,6 +15,7 @@ extra-source-files:
   - README.md
   - stack.yaml
   - tests/json/**/*
+  - js/*
 
 default-extensions:
   - NoImplicitPrelude

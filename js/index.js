@@ -28,10 +28,11 @@ exports.handler = (event, context, callback) => {
   child.stdin.setEncoding('utf-8');
 
   child.stdout.on('data', data => {
-    data.toString().split("\n").map(line => {
-      if (line != "") // sometimes we get transient spurious empty lines from this node.js stdout event mechanism
-        console.log(line);
-    });
+    console.log( JSON.stringify({ message: data.toString(), source: "stdout", level: "INFO" }) );
+    // data.toString().split("\n").map(line => {
+      // if (line != "") // sometimes we get transient spurious empty lines from this node.js stdout event mechanism
+        // console.log(line);
+    // });
   });
 
   child.stderr.on('data', data => {

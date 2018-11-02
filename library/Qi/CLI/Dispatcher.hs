@@ -48,15 +48,15 @@ deployApp template content = do
 
 createCfStack
   :: Members '[ CfEff, GenEff, ConfigEff ] effs
-  => Eff effs ()
-createCfStack = do
+  => LBS.ByteString
+  -> Eff effs ()
+createCfStack template = do
   config <- getConfig
   let appName     = config ^. namePrefix
       stackName   = StackName appName
-      stackS3Obj  = s3Object (S3.getIdByName config "app") $ S3Key "cf.json"
 
   say "creating the stack..."
-  createStack stackName stackS3Obj
+  createStack stackName template
 
   say "waiting on the stack to be created..."
   waitOnStackStatus stackName SSCreateComplete NoAbsent
@@ -66,15 +66,15 @@ createCfStack = do
 
 updateCfStack
   :: Members '[ LambdaEff, CfEff, GenEff, ConfigEff ] effs
-  => Eff effs ()
-updateCfStack = do
+  => LBS.ByteString
+  -> Eff effs ()
+updateCfStack template = do
   config <- getConfig
   let appName     = config ^. namePrefix
       stackName   = StackName appName
-      stackS3Obj  = s3Object (S3.getIdByName config "app") $ S3Key "cf.json"
 
   say "updating the stack..."
-  updateStack stackName stackS3Obj
+  updateStack stackName template
 
   say "waiting on the stack to be updated..."
   waitOnStackStatus stackName SSUpdateComplete NoAbsent
@@ -135,7 +135,7 @@ cycleStack
   -> Eff effs ()
 cycleStack template content = do
   destroyCfStack $ deployApp template content
-  createCfStack
+  createCfStack template
   say "all done!"
 
 

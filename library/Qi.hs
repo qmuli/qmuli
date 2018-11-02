@@ -35,6 +35,9 @@ import           Qi.Program.Config.Lang               (ConfigEff, s3Bucket)
 import qualified Qi.Program.Gen.Lang                  as Gen
 import qualified Qi.Program.Lambda.Lang               as Lbd
 import qualified Qi.Program.Wiring.IO                 as IO
+import           System.IO                            (BufferMode (..),
+                                                       hSetBuffering, stderr,
+                                                       stdout)
 
 
 withConfig
@@ -44,6 +47,9 @@ withConfig configProgram = do
   -- `showHelpOnErrorExecParser` parses out commands, arguments and options using the rules in `opts`
   -- and gives the `Options` structure to `dispatch` that acts in accord to the options
   Options{ appName, cmd } <- showHelpOnErrorExecParser optionsSpec
+
+  hSetBuffering stdout LineBuffering
+  hSetBuffering stderr LineBuffering
 
   let template =
           CF.render
@@ -72,8 +78,8 @@ withConfig configProgram = do
           >>= Gen.readFileLazy
           >>= deployApp template
 
-      CfCreate             -> createCfStack
-      CfUpdate             -> updateCfStack
+      CfCreate             -> createCfStack template
+      CfUpdate             -> updateCfStack template
       CfDescribe           -> describeCfStack
       CfDestroy            -> destroyCfStack $ pure ()
 

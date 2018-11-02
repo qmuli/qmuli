@@ -15,16 +15,16 @@ import           Control.Monad.Freer        hiding (run)
 import           Data.Map                   (Map)
 import qualified Data.Map                   as Map
 import           Network.AWS.CloudFormation (Capability (CapabilityNamedIAM), StackStatus (SSCreateComplete, SSDeleteComplete, SSUpdateComplete),
-                                             StackStatus, createStack,
-                                             csCapabilities, csTemplateURL,
-                                             dStackName, deleteStack,
-                                             describeStacks, dsRetainResources,
-                                             dsrsStacks, lsrsStackSummaries,
-                                             oOutputKey, oOutputValue, sOutputs,
-                                             sStackName, sStackStatus,
-                                             ssStackName, ssStackStatus,
-                                             updateStack, usCapabilities,
-                                             usTemplateURL)
+                                             StackStatus, cloudFormation,
+                                             createStack, csCapabilities,
+                                             csTemplateBody, dStackName,
+                                             deleteStack, describeStacks,
+                                             dsRetainResources, dsrsStacks,
+                                             lsrsStackSummaries, oOutputKey,
+                                             oOutputValue, sOutputs, sStackName,
+                                             sStackStatus, ssStackName,
+                                             ssStackStatus, updateStack,
+                                             usCapabilities, usTemplateBody)
 import           Network.AWS.S3             (BucketName (BucketName),
                                              ObjectKey (ObjectKey))
 import           Protolude                  hiding ((<&>))
@@ -45,24 +45,24 @@ run
   => (Eff (CfEff ': effs) a -> Eff effs a)
 run = interpret (\case
 
-  CreateStack (StackName name) s3Obj -> do
+  CreateStack (StackName name) template -> do
     config  <- getConfig
 
-    void . amazonka $ createStack name
-                & csTemplateURL ?~ getUrl config s3Obj
+    void . amazonka cloudFormation $ createStack name
+                & csTemplateBody ?~ toS template
                 & csCapabilities .~ [ CapabilityNamedIAM ]
 
 
-  UpdateStack (StackName name) s3Obj -> do
+  UpdateStack (StackName name) template -> do
     config  <- getConfig
 
-    void . amazonka $ updateStack name
-                & usTemplateURL ?~ getUrl config s3Obj
+    void . amazonka cloudFormation $ updateStack name
+                & usTemplateBody ?~ toS template
                 & usCapabilities .~ [ CapabilityNamedIAM ]
 
 
   DeleteStack (StackName name) ->
-    void . amazonka $ deleteStack name
+    void . amazonka cloudFormation $ deleteStack name
                 & dsRetainResources .~ []
 
   DescribeStacks ->
@@ -87,15 +87,10 @@ run = interpret (\case
 
 
   where
-    getUrl config S3Object{ _s3oBucketId, _s3oKey = S3Key s3Key } =
-      let bucketName = getPhysicalName config $ getById config _s3oBucketId in
-      "https://s3.amazonaws.com/" <> bucketName <> "/" <> s3Key
-
-
 
     getStackDescriptions :: Eff effs StackDescriptionDict
     getStackDescriptions = do
-      r <- amazonka $ describeStacks
+      r <- amazonka cloudFormation $ describeStacks
                   -- & dStackName ?~ name
       pure . Map.fromList $ (\stack ->
         ( StackName $ stack ^. sStackName
