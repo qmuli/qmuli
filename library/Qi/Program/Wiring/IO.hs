@@ -24,6 +24,11 @@ import qualified Qi.Program.S3.Ipret.Gen       as S3
 import           Qi.Program.S3.Lang            (S3Eff)
 
 
+
+
+
+
+
 run
   :: Text
   -> Config
@@ -34,7 +39,7 @@ run name config =
   . map fst
   . runState config
   . Config.run
-  . Gen.run
+  . Gen.run Gen.LocalStack
   . Lbd.run
   . S3.run
   . CF.run

@@ -50,8 +50,9 @@ import           Text.Heredoc                  (there)
 run
   :: forall effs a
   .  Members '[ IO, ConfigEff ] effs
-  => (Eff (GenEff ': effs) a -> Eff effs a)
-run = interpret (\case
+  => AwsMode
+  -> (Eff (GenEff ': effs) a -> Eff effs a)
+run mode = interpret (\case
 
   GetAppName ->
     (^. namePrefix) <$> getConfig
@@ -64,21 +65,23 @@ run = interpret (\case
     runClientM req $ mkClientEnv mgr baseUrl
 
 
-  Amazonka svc req -> send $ do
-    (pass :: IO ()) -- to force the concrete IO monad
-    logger  <- mkLogger
-    env     <- newEnv Discover <&>  set envLogger logger
-                                  . set envRegion currentRegion
+  Amazonka svc req ->
+    send $ do
+      (pass :: IO ()) -- to force the concrete IO monad
+      logger  <- mkLogger
+      env     <- newEnv Discover <&>  set envLogger logger
+                                    . set envRegion currentRegion
 
-    runResourceT . runAWST env . reconf svc $ AWS.send req
+      runResourceT . runAWST env . reconf mode svc $ AWS.send req
 
-  AmazonkaPostBodyExtract svc req post -> send $ do
-    (pass :: IO ()) -- to force the concrete IO monad
-    logger  <- mkLogger
-    env     <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion
+  AmazonkaPostBodyExtract svc req post ->
+    send $ do
+      (pass :: IO ()) -- to force the concrete IO monad
+      logger  <- mkLogger
+      env     <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion
 
-    runResourceT . runAWST env . reconf svc $
-      map Right . (`sinkBody` sinkLbs) . post =<< AWS.send req
+      runResourceT . runAWST env . reconf mode svc $
+        map Right . (`sinkBody` sinkLbs) . post =<< AWS.send req
 
   Say msg -> send $ do
     hPutStrLn stderr . encode $ object ["message" .= String msg]
@@ -100,16 +103,6 @@ run = interpret (\case
   PutStr content -> send $ LBS.putStr content
 
   )
-
-reconf svc = case _svcAbbrev svc of
-  "S3"             -> setport 4572
-  "CloudFormation" -> setport 4581
-  unknown          -> panic $ show unknown
-  {- _       -> identity -}
-  where
-    setport port = reconfigure (setEndpoint False "localhost" port svc)
-
-
 
 mkLogger
   :: MonadIO m
@@ -159,4 +152,34 @@ build srcDir exeTarget = do
                                                           ]
 
 
+data AwsMode = RealDeal | LocalStack
+  deriving Eq
 
+reconf
+  :: forall x
+  .  AwsMode
+  -> Service
+  -> (AWS x -> AWS x)
+reconf RealDeal _     = identity
+reconf LocalStack svc = case _svcAbbrev svc of
+  "API Gateway"      -> setport 4567
+  "CloudFormation"   -> setport 4581
+  "CloudWatch"       -> setport 4582
+  "DynamoDB"         -> setport 4569
+  "DynamoDB Streams" -> setport 4570
+  "Elasticsearch"    -> setport 4571
+  "Firehose"         -> setport 4573
+  "Kinesis"          -> setport 4568
+  "Lambda"           -> setport 4574
+  "Redshift"         -> setport 4577
+  "Route53"          -> setport 4580
+  "S3"               -> setport 4572
+  "SES"              -> setport 4579
+  "Secrets Manager"  -> setport 4584
+  "SNS"              -> setport 4575
+  "SQS"              -> setport 4576
+  "SSM"              -> setport 4583
+  unknown            -> panic $ show unknown
+  {- _       -> identity -}
+  where
+    setport port = reconfigure (setEndpoint False "localhost" port svc)
