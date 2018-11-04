@@ -17,9 +17,11 @@ import           Control.Monad.Freer
 import           Data.Aeson.Encode.Pretty       (encodePretty)
 import qualified Data.ByteString.Lazy           as LBS
 import qualified Data.Map                       as Map
+import           Network.AWS.Data.Body          (toBody)
+import           Network.AWS.S3
 import           Protolude                      hiding (FilePath, getAll)
 import           Qi.CLI.Dispatcher.S3           as S3 (clearBuckets)
-import           Qi.Config.AWS                  (Config, getAll,
+import           Qi.Config.AWS                  (Config, getAll, getName,
                                                  getPhysicalName, namePrefix)
 import           Qi.Config.AWS.Lambda           (Lambda)
 import qualified Qi.Config.AWS.Lambda.Accessors as Lbd
@@ -41,10 +43,16 @@ deployApp
   -> Eff effs ()
 deployApp template content = do
   say "deploying the app..."
-  bucketId <- createBucket "app"
-  putContent (s3Object bucketId $ S3Key "cf.json") template -- TODO: render this inside docker container: https://github.com/qmuli/qmuli/issues/60
-  putContent (s3Object bucketId $ S3Key "lambda.zip") content
+  config <- getConfig
+  let appName     = config ^. namePrefix
+      bucketName = BucketName $ appName <> ".app"
 
+  say $ "creating bucket '" <> show bucketName <> "'"
+  amazonka s3 $ createBucket bucketName
+
+  say $ "writing lambda executable into bucket '" <> show bucketName <> "'"
+  amazonka s3 $ putObject bucketName "lambda.zip" (toBody content) & poACL ?~ OPublicReadWrite
+  pass
 
 createCfStack
   :: Members '[ CfEff, GenEff, ConfigEff ] effs
@@ -90,10 +98,10 @@ updateLambdas
   => Eff effs ()
 updateLambdas = do
   config <- getConfig
-  let lbdS3Obj  = s3Object (S3.getIdByName config "app") $ S3Key "lambda.zip"
+  let lbdS3Obj    = s3Object (S3.getIdByName config "app") $ S3Key "lambda.zip"
 
   say "updating the lambdas..."
-  traverse_ ((`Lbd.update` lbdS3Obj) . Lbd.getIdByName config . getPhysicalName config)
+  traverse_ ((`Lbd.update` lbdS3Obj) . Lbd.getIdByName config . getName config)
     (getAll config :: [ Lambda ])
 
 

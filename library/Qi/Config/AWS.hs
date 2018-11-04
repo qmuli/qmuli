@@ -25,6 +25,7 @@ import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
 import           Qi.Config.AWS.SQS
 import           Qi.Config.Identifier
+import           Qi.Config.Types
 
 
 data Config = Config {

@@ -14,7 +14,9 @@ import           Qi.Config.AWS                  (Config, getAll, getById,
 import qualified Qi.Config.AWS.Lambda.Accessors as L
 import           Qi.Config.AWS.S3               (S3Bucket (..),
                                                  S3EventConfig (..), event,
-                                                 lbdId, s3bEventConfigs)
+                                                 lbdId, s3bEventConfigs,
+                                                 s3bProfile, s3bpExistence)
+import           Qi.Config.Types                (ResourceExistence (AlreadyExists))
 import           Stratosphere                   (CannedACL (..), ResourceProperties (S3BucketProperties),
                                                  Resources (Resources),
                                                  Val (GetAtt, Literal))
@@ -32,7 +34,7 @@ import qualified Stratosphere                   as S (resource,
 toResources
   :: Config
   -> Resources
-toResources config = Resources . map toS3BucketRes $ getAll config
+toResources config = Resources . map toS3BucketRes $ filter (\s3b -> s3b ^. s3bProfile . s3bpExistence /= AlreadyExists) $ getAll config
   where
     toS3BucketRes bucket@S3Bucket{_s3bEventConfigs} = (
       S.resource lname $

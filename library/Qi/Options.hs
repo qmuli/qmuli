@@ -13,12 +13,14 @@ import           Data.Text           (Text)
 import qualified Data.Text           as T
 import           Options.Applicative
 import           Protolude           hiding (runState)
+import           Qi.AWS.Types        (AwsMode (..))
 
 
 
 data Options = Options {
     cmd     :: Command
   , appName :: Text
+  , awsMode :: AwsMode
   }
 
 data Command =
@@ -41,6 +43,7 @@ optionsParser :: Parser Options
 optionsParser = Options
   <$> hsubparser (cfCmd <> lbdCmd)
   <*> nameParser
+  <*> awsModeOption
 
 
 nameParser :: Parser Text
@@ -83,7 +86,7 @@ cfCmd =
     cfDescribe :: Mod CommandFields Command
     cfDescribe =
         command "describe"
-      $ info (pure CfDeploy)
+      $ info (pure CfDescribe)
       $ fullDesc <> progDesc "Describe a CloudFormation stack"
 
     cfUpdate :: Mod CommandFields Command
@@ -147,6 +150,11 @@ lambdaNameOption = strOption $
   long "lambda-name"
     <> metavar "LAMBDA_NAME"
     <> help "Name of the Lambda function to call"
+
+awsModeOption :: Parser AwsMode
+awsModeOption = flag RealDeal LocalStack $
+  long "local-stack"
+    <> help "Specify whether to use localstack mock or the real AWS"
 
 -- | A version of 'execParser' which shows full help on error.
 --

@@ -1,4 +1,4 @@
-resolver: lts-12.11
+resolver: lts-12.15
 
 packages:
 - '.'
@@ -21,28 +21,13 @@ packages:
     - core
   extra-dep: true
 
-extra-deps: []
+extra-deps: 
+  - random-string-0.1.0.1
+  - base58-bytestring-0.1.0
   
 flags: {}
 
 extra-package-dbs: []
-
-ghc-options:
-  "$everything": -O0
-
-  "qmuli": 
-    -Wall
-    -Wno-unused-imports 
-    -Wno-unused-matches 
-    -Wno-unused-do-bind
-    -Wno-deprecations
-    -threaded
-    -Werror
-    #-static 
-
-    # "qmuli-stream-s3-objects": -static -threaded
-    # "qmuli-fold-s3-content": -static -threaded
-    # "qmuli-apigw-lambda-dynamodb": -static -threaded
 
 build:
   library-profiling: false

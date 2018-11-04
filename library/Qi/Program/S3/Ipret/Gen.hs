@@ -34,13 +34,6 @@ run
   => (Eff (S3Eff ': effs) a -> Eff effs a)
 run = interpret (\case
 
-  CreateBucket name -> do
-    id      <- s3Bucket name
-    config  <- getConfig
-    let bucketName = BucketName . getPhysicalName config $ getById config id
-    amazonka s3 $ createBucket bucketName
-    pure id
-
   GetContent S3Object{ _s3oBucketId, _s3oKey = S3Key (ObjectKey -> objKey) } ->
     action =<< getConfig
     -- TODO: handle errors

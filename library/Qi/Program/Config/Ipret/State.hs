@@ -55,9 +55,10 @@ run = interpret (\case
       insertLambda id name lbd
 
 -- S3
-  RegS3Bucket name -> do
+  RegS3Bucket name profile -> do
     withNextId (Proxy :: Proxy S3BucketId) $ \id -> do
       let newBucket = def & s3bName .~ name
+                          & s3bProfile .~ profile
           insertIdToS3Bucket = s3IdToBucket %~ SHM.insert id newBucket
           insertNameToId = s3NameToBucketId %~ SHM.insert name id
 

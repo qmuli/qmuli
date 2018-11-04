@@ -29,10 +29,10 @@ main = withConfig config
     config = do
 
       -- create an "input" s3 bucket
-      incoming <- s3Bucket "incoming"
+      incoming <- s3Bucket "incoming" def
 
       -- create an "output" s3 bucket
-      outgoing <- s3Bucket "outgoing"
+      outgoing <- s3Bucket "outgoing" def
 
       -- create a lambda, which will copy an s3 object from "incoming" to "outgoing" buckets
       -- upon an S3 "Put" event.

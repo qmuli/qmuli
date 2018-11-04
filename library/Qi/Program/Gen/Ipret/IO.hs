@@ -28,6 +28,7 @@ import           Network.HTTP.Client           (ManagerSettings, Request,
                                                 Response, httpLbs, newManager)
 import           Protolude                     hiding ((<&>))
 import           Qi.Amazonka                   (currentRegion)
+import           Qi.AWS.Types                  (AwsMode (..))
 import           Qi.Config.AWS                 (namePrefix)
 import           Qi.Program.Config.Lang        (ConfigEff, getConfig)
 import           Qi.Program.Gen.Lang           (GenEff (..))
@@ -49,10 +50,11 @@ import           Text.Heredoc                  (there)
 
 run
   :: forall effs a
-  .  Members '[ IO, ConfigEff ] effs
+  .  (Members '[ IO, ConfigEff ] effs)
   => AwsMode
+  -> IO Logger
   -> (Eff (GenEff ': effs) a -> Eff effs a)
-run mode = interpret (\case
+run mode mkLogger = interpret (\case
 
   GetAppName ->
     (^. namePrefix) <$> getConfig
@@ -67,7 +69,6 @@ run mode = interpret (\case
 
   Amazonka svc req ->
     send $ do
-      (pass :: IO ()) -- to force the concrete IO monad
       logger  <- mkLogger
       env     <- newEnv Discover <&>  set envLogger logger
                                     . set envRegion currentRegion
@@ -76,7 +77,6 @@ run mode = interpret (\case
 
   AmazonkaPostBodyExtract svc req post ->
     send $ do
-      (pass :: IO ()) -- to force the concrete IO monad
       logger  <- mkLogger
       env     <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion
 
@@ -104,13 +104,7 @@ run mode = interpret (\case
 
   )
 
-mkLogger
-  :: MonadIO m
-  => m Logger
-mkLogger = liftIO $ do
-  hSetBuffering stderr LineBuffering
-  pure $ \lvl b ->
-    hPutStrLn stderr . encode $ object ["level" .= String (show lvl), "message" .= String (toS $ Build.toLazyByteString b)]
+
 
 build
   :: FilePath
@@ -152,8 +146,7 @@ build srcDir exeTarget = do
                                                           ]
 
 
-data AwsMode = RealDeal | LocalStack
-  deriving Eq
+
 
 reconf
   :: forall x
@@ -180,6 +173,5 @@ reconf LocalStack svc = case _svcAbbrev svc of
   "SQS"              -> setport 4576
   "SSM"              -> setport 4583
   unknown            -> panic $ show unknown
-  {- _       -> identity -}
   where
     setport port = reconfigure (setEndpoint False "localhost" port svc)

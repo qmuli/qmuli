@@ -11,6 +11,7 @@ module Qi.Program.Wiring.IO  where
 import           Control.Monad.Freer
 import           Control.Monad.Freer.State
 import           Protolude                     hiding (State, runState, (<&>))
+import           Qi.AWS.Types                  (AwsMode (..), MkAwsLogger)
 import           Qi.Config.AWS
 import qualified Qi.Program.CF.Ipret.Gen       as CF
 import           Qi.Program.CF.Lang            (CfEff)
@@ -24,22 +25,18 @@ import qualified Qi.Program.S3.Ipret.Gen       as S3
 import           Qi.Program.S3.Lang            (S3Eff)
 
 
-
-
-
-
-
 run
   :: Text
   -> Config
-  -> Eff '[CfEff, S3Eff, LambdaEff, GenEff, ConfigEff, State Config, IO] a
-  -> IO a
-run name config =
+  -> AwsMode
+  -> MkAwsLogger
+  -> (Eff '[CfEff, S3Eff, LambdaEff, GenEff, ConfigEff, State Config, IO] a -> IO a)
+run name config awsMode mkLogger =
     runM
   . map fst
   . runState config
   . Config.run
-  . Gen.run Gen.LocalStack
+  . Gen.run awsMode mkLogger
   . Lbd.run
   . S3.run
   . CF.run

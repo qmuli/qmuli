@@ -23,8 +23,9 @@ getIdByName
   -> Text
   -> LambdaId
 getIdByName config name =
-  case SHM.lookup name bucketNameToIdMap of
+  case SHM.lookup name nameToIdMap of
     Just bid -> bid
-    Nothing  -> panic $ "Could not find LambdaId with name: " <> show name
+    Nothing  -> panic $ "Could not find LambdaId with name: " <> show name <>
+      " following lambdas were found in the registry: " <> show (SHM.keys nameToIdMap)
   where
-    bucketNameToIdMap = config ^. lbdConfig . lbdNameToId
+    nameToIdMap = config ^. lbdConfig . lbdNameToId

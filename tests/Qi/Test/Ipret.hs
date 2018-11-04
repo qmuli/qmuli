@@ -56,16 +56,15 @@ instance Default Journal where
   def = mempty
 
 data CfAction =
-    CreateStackAction StackName S3Object
-  | UpdateStackAction StackName S3Object
+    CreateStackAction StackName LBS.ByteString
+  | UpdateStackAction StackName LBS.ByteString
   | DeleteStackAction StackName
   | DescribeStacksAction
   deriving (Eq, Show)
 
 
 data S3Action =
-    CreateBucketAction Text
-  | PutContentAction S3Object LBS.ByteString
+    PutContentAction S3Object LBS.ByteString
   | DeleteBucketAction Text
   deriving (Eq, Show)
 
@@ -97,10 +96,10 @@ testGenRun = interpret (\case
   RunServant _mgrSettings _baseUrl _req ->
     panic "RunServant"
 
-  Amazonka _req ->
+  Amazonka _svc _req ->
     panic "Amazonka"
 
-  AmazonkaPostBodyExtract _req _post ->
+  AmazonkaPostBodyExtract _svc _req _post ->
     panic "AmazonkaPostBodyExtract"
 
   Say msg ->
@@ -134,11 +133,11 @@ testCfRun
   => (Eff (CfEff ': effs) a -> Eff effs a)
 testCfRun = interpret (\case
 
-  CreateStack name s3Obj -> do
-    cfAction $ CreateStackAction name s3Obj
+  CreateStack name template -> do
+    cfAction $ CreateStackAction name template
 
-  UpdateStack name s3Obj -> do
-    cfAction $ UpdateStackAction name s3Obj
+  UpdateStack name template -> do
+    cfAction $ UpdateStackAction name template
 
   DeleteStack name ->
     panic "DeleteStack"
@@ -159,10 +158,6 @@ testS3Run
   .  (Members '[ ConfigEff, Reader Params, Writer Journal ] effs)
   => (Eff (S3Eff ': effs) a -> Eff effs a)
 testS3Run = interpret (\case
-
-  CreateBucket name -> do
-    s3Action $ CreateBucketAction name
-    pure $ S3BucketId 1
 
   GetContent S3Object{ _s3oBucketId, _s3oKey } ->
     panic "GetContent"

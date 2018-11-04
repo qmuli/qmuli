@@ -23,9 +23,10 @@ configProgram
   :: Member ConfigEff effs
   => Eff effs ()
 configProgram = do
-  void $ s3Bucket "bucket1"
-  void $ s3Bucket "bucket2"
-  void $ s3Bucket "bucket3"
+  s3Bucket "bucket1" def
+  s3Bucket "bucket2" def
+  s3Bucket "bucket3" def
+  pass
 
 
 spec :: Spec

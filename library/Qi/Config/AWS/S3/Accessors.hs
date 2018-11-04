@@ -22,7 +22,8 @@ getIdByName
 getIdByName config bucketName =
   case SHM.lookup bucketName bucketNameToIdMap of
     Just bid -> bid
-    Nothing  -> panic $ "Could not find s3 bucket id with name: " <> show bucketName
+    Nothing  -> panic $ "Could not find s3 bucket id with name: " <> show bucketName <>
+      " following buckets were found in the registry: " <> show (SHM.keys bucketNameToIdMap)
   where
     bucketNameToIdMap = config ^. s3Config . s3Buckets . s3NameToBucketId
 
