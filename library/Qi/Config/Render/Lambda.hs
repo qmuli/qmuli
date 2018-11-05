@@ -4,14 +4,13 @@
 
 module Qi.Config.Render.Lambda (toResources) where
 
-import           Data.Aeson                     (Value (Array), object)
 import qualified Data.HashMap.Strict            as SHM
 import qualified Data.Text                      as T
 import           Protolude                      hiding (getAll)
 import           Stratosphere
 
 import           Qi.Config.AWS
-import           Qi.Config.AWS.DDB
+{- import           Qi.Config.AWS.DDB -}
 import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.Lambda.Accessors
 import qualified Qi.Config.Render.Role          as Role

@@ -5,7 +5,6 @@
 module Qi.Config.Render.S3 (toResources) where
 
 import           Control.Lens
-import           Data.Aeson                     (Value (Array), object)
 import           Protolude                      hiding (getAll)
 import           Qi.Config.AWS                  (Config, getAll, getById,
                                                  getLogicalName,

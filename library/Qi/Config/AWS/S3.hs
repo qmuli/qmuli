@@ -19,23 +19,14 @@ import           Qi.Config.Types
 
 
 data S3Config = S3Config {
-    _s3Buckets :: S3BucketIndex
+    _s3IdToBucket :: HashMap S3BucketId S3Bucket
+  , _s3NameToId   :: HashMap Text S3BucketId
   }
   deriving (Eq, Show)
 instance Default S3Config where
   def = S3Config {
-      _s3Buckets = def
-    }
-
-data S3BucketIndex = S3BucketIndex {
-    _s3IdToBucket     :: HashMap S3BucketId S3Bucket
-  , _s3NameToBucketId :: HashMap Text S3BucketId
-  }
-  deriving (Eq, Show)
-instance Default S3BucketIndex where
-  def = S3BucketIndex {
       _s3IdToBucket     = SHM.empty
-    , _s3NameToBucketId = SHM.empty
+    , _s3NameToId = SHM.empty
     }
 
 data S3Bucket = S3Bucket {
@@ -101,7 +92,6 @@ makeLenses ''S3Object
 makeLenses ''S3Bucket
 makeLenses ''S3BucketProfile
 makeLenses ''S3Event
-makeLenses ''S3BucketIndex
 makeLenses ''S3Config
 
 

@@ -93,6 +93,7 @@ withConfig configProgram = do
           reportBadArgument lbdType err =
             panic $ "Could not parse event: '" <> toS arg <>
               "', for lambda type: '" <> lbdType <> "' error was: '" <> toS err <> "'"
+
       Gen.putStr =<< case getById config id of
 
         GenericLambda{ _lbdGenericLambdaProgram } ->
