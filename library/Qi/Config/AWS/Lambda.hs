@@ -99,6 +99,7 @@ instance Show Lambda where
   show CfCustomLambda{} = "CfCustomLambda"
   show CwEventLambda{}  = "CwEventLambda"
 
+data LambdaPermission
 
 data LambdaMemorySize =
     M128

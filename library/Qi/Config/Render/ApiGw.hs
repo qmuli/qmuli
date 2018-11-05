@@ -3,8 +3,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
-module Qi.Config.Render.ApiGw (toResources, toOutputs) where
-
+module Qi.Config.Render.ApiGw where
+{-
 import           Data.Aeson                                  (Value (Bool),
                                                               object)
 import qualified Data.ByteString.Lazy                        as LBS
@@ -339,4 +339,4 @@ toOutputs config =
 
         apiLName = getLogicalName config api
 
-
+-}

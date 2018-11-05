@@ -7,16 +7,16 @@ import           Control.Lens
 import qualified Data.HashMap.Strict  as SHM
 import           Protolude
 import           Qi.Config.AWS
-import           Qi.Config.AWS.Lambda (Lambda, lbdNameToId)
+import           Qi.Config.AWS.Lambda
 import           Qi.Config.Identifier
 
 
 getPermissionLogicalName
   :: Config
   -> Lambda
-  -> Text
+  -> LogicalName LambdaPermission
 getPermissionLogicalName config r =
-  getName config r <> "LambdaPermission"
+  LogicalName $ getName config r <> "LambdaPermission"
 
 getIdByName
   :: Config

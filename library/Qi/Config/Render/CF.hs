@@ -23,14 +23,13 @@ toResources :: Config -> Resources
 toResources config = Resources . map toResource $ getAll config
   where
     toResource customResource@CfCustomResource{ _cLbdId } =
-      resource lname $
+      resource (unLogicalName $ getLogicalName config customResource) $
         CloudFormationCustomResourceProperties $
-        cloudFormationCustomResource
-          (GetAtt lbdLogicalName "Arn")
+        cloudFormationCustomResource $
+          GetAtt (unLogicalName lbdName) "Arn"
 
       where
-        lname = getLogicalName config customResource
-        lbdLogicalName = getLogicalNameFromId config _cLbdId
+        lbdName = getLogicalNameFromId config _cLbdId
 
 toOutputs :: Config -> Outputs
 toOutputs config =
@@ -53,7 +52,7 @@ toOutputs config =
       ]
 
       where
-        lname = getLogicalName config custom
+        lname = unLogicalName $ getLogicalName config custom
 
         userPoolId        = GetAtt lname "UserPoolId"
         userPoolClientId  = GetAtt lname "UserPoolClientId"

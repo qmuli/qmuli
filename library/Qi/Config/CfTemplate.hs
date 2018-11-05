@@ -35,7 +35,7 @@ toResources config = mconcat [
     S3.toResources config
   , Role.toResources config
   , Lambda.toResources config
-  , ApiGw.toResources config
+  {- , ApiGw.toResources config -}
   , DDB.toResources config
   , SQS.toResources config
   , CF.toResources config
@@ -46,6 +46,6 @@ toOutputs
   :: Config
   -> Outputs
 toOutputs config = mconcat [
-    ApiGw.toOutputs config
-  , CF.toOutputs config
+    {- ApiGw.toOutputs config -}
+    CF.toOutputs config
   ]

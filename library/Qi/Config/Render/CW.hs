@@ -21,11 +21,11 @@ toResources :: Config -> Resources
 toResources config = Resources . map toResource $ getAll config
   where
     toResource rule =
-      resource lname $
+      resource (unLogicalName $ getLogicalName config rule) $
         EventsRuleProperties $
         eventsRule
-        & erName ?~ (Literal pname)
-        & erScheduleExpression ?~ Literal (rule^.cerProfile.csepSchedule)
+        & erName ?~ (Literal $ unPhysicalName name)
+        & erScheduleExpression ?~ Literal (rule ^. cerProfile . csepSchedule)
         & erState ?~ Literal ENABLED
         & erTargets ?~ [target]
 
@@ -33,7 +33,6 @@ toResources config = Resources . map toResource $ getAll config
         target = eventsRuleTarget
           tarn
           (Literal tname)
-        tname = T.concat [pname, "Lambda"]
-        tarn  = GetAtt (getLogicalNameFromId config $ rule^.cerLbdId) "Arn"
-        lname = getLogicalName config rule
-        pname = getPhysicalName config rule
+        tname = T.concat [unPhysicalName name, "Lambda"]
+        tarn  = GetAtt (unLogicalName $ getLogicalNameFromId config $ rule ^. cerLbdId) "Arn"
+        name  = getPhysicalName config rule

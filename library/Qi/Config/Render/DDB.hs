@@ -9,8 +9,8 @@ import           Data.Aeson           (Value (Array), object)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict  as SHM
 import qualified Data.Text            as T
-import           Protolude            hiding (getAll)
-import           Stratosphere
+import           Protolude            hiding (from, getAll)
+import           Stratosphere         hiding (from)
 
 import           Qi.Config.AWS
 import           Qi.Config.AWS.DDB    hiding (DdbAttrType (..))
@@ -28,12 +28,12 @@ toResources config = Resources . foldMap toDdbTableResources $ getAll config
         _          -> []
 
     tableRes table =
-      resource lname $
+      resource (unLogicalName $ getLogicalName config table) $
         DynamoDBTableProperties $
         dynamoDBTable
           keySchema
           provisionedThroughput
-          & ddbtTableName ?~ (Literal pname)
+          & ddbtTableName ?~ (Literal $ unPhysicalName pname)
           & ddbtStreamSpecification .~ streamSpec
           & ddbtAttributeDefinitions ?~ attributeDefinitions
 
@@ -41,37 +41,36 @@ toResources config = Resources . foldMap toDdbTableResources $ getAll config
         streamSpec = const (dynamoDBTableStreamSpecification $ Literal NEW_AND_OLD_IMAGES)
           <$> (table^.dtStreamHandler)
 
-        lname = getLogicalName config table
         pname = getPhysicalName config table
 
 
         attributeDefinitions = [
             dynamoDBTableAttributeDefinition
-              (Literal $ table^.dtHashAttrDef.daName)
-              (Literal . toAttrType $ table^.dtHashAttrDef.daType)
-          ] <> case table^.dtProfile.dtpRangeKey of
+              (Literal $ table ^. dtHashAttrDef . daName)
+              (Literal . toAttrType $ table ^. dtHashAttrDef . daType)
+          ] <> case table ^. dtProfile . dtpRangeKey of
                 Just rangeKey ->
                   [dynamoDBTableAttributeDefinition
-                    (Literal $ rangeKey^.daName)
-                    (Literal . toAttrType $ rangeKey^.daType)
+                    (Literal $ rangeKey ^. daName)
+                    (Literal . toAttrType $ rangeKey ^. daType)
                   ]
                 Nothing ->
                   []
 
         keySchema = [
-            dynamoDBTableKeySchema (Literal $ table^.dtHashAttrDef.daName) $ Literal HASH
-          ] <> case table^.dtProfile.dtpRangeKey of
+            dynamoDBTableKeySchema (Literal $ table ^. dtHashAttrDef . daName) $ Literal HASH
+          ] <> case table ^. dtProfile . dtpRangeKey of
                 Just rangeKey ->
-                  [dynamoDBTableKeySchema (Literal $ rangeKey^.daName) $ Literal RANGE]
+                  [dynamoDBTableKeySchema (Literal $ rangeKey ^. daName) $ Literal RANGE]
                 Nothing ->
                   []
 
         provisionedThroughput =
           dynamoDBTableProvisionedThroughput
-            (Literal $ provCap^.dpcRead)
-            (Literal $ provCap^.dpcWrite)
+            (Literal $ provCap ^. dpcRead)
+            (Literal $ provCap ^. dpcWrite)
           where
-            provCap = table^.dtProfile.dtpProvCap
+            provCap = table ^. dtProfile . dtpProvCap
 
         toAttrType DDB.S = S
         toAttrType DDB.N = N
@@ -79,13 +78,12 @@ toResources config = Resources . foldMap toDdbTableResources $ getAll config
 
 
     tableStreamEventSourceMappingRes table lbdId =
-      resource lname . LambdaEventSourceMappingProperties $
-          lambdaEventSourceMapping tableStreamArn (Literal lbdPName)
+      resource (unLogicalName name <> "EventSourteMapping") . LambdaEventSourceMappingProperties $
+          lambdaEventSourceMapping tableStreamArn (Literal $ unPhysicalName lbdName)
 
       where
-        lname = tableLName `T.append` "EventSourceMapping"
-        tableLName = getLogicalName config table
-        tableStreamArn = GetAtt tableLName "StreamArn"
-        lbdPName = getPhysicalName config $ getById config lbdId
+        name            = getLogicalName config table
+        tableStreamArn  = GetAtt (unLogicalName $ name) "StreamArn"
+        lbdName         = getPhysicalName config $ getById config lbdId
 
 

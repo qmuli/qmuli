@@ -23,15 +23,15 @@ toResources config = foldMap toAllLambdaResources $ getAll config
     toAllLambdaResources lbd = Resources $ [lambdaPermissionResource, lambdaResource]
 
       where
-        lbdLName = getLogicalName config lbd
-        lbdPermLName = getPermissionLogicalName config lbd
+        lbdName = getLogicalName config lbd
+        lbdPermName = getPermissionLogicalName config lbd
 
         lambdaPermissionResource =
-          resource lbdPermLName $
+          resource (unLogicalName lbdPermName) $
             LambdaPermissionProperties $
             lambdaPermission
               "lambda:*"
-              (GetAtt lbdLName "Arn")
+              (GetAtt (unLogicalName lbdName) "Arn")
               principal
           where
             principal = case lbd of
@@ -43,23 +43,21 @@ toResources config = foldMap toAllLambdaResources $ getAll config
               {- DdbStreamLambda{} -> "dynamodb.amazonaws.com" -}
 
         lambdaResource = (
-          resource lbdLName $
+          resource (unLogicalName lbdName) $
             LambdaFunctionProperties $
             lambdaFunction
               lbdCode
               "index.handler"
               (GetAtt Role.lambdaBasicExecutionIAMRoleLogicalName "Arn")
               (Literal NodeJS810)
-            & lfFunctionName ?~ Literal lambdaName
-            & lfMemorySize ?~ Literal memorySize
-            & lfTimeout ?~ Literal timeOut
+            & lfFunctionName  ?~ Literal (unPhysicalName $ getPhysicalName config lbd)
+            & lfMemorySize    ?~ Literal memorySize
+            & lfTimeout       ?~ Literal timeOut
           )
 
           where
-            lambdaName = getPhysicalName config lbd
-
-            memorySize = fromIntegral . fromEnum $ lbd ^. lbdProfile . lpMemorySize
-            timeOut = fromIntegral $ lbd ^. lbdProfile . lpTimeoutSeconds
+            memorySize  = fromIntegral . fromEnum $ lbd ^. lbdProfile . lpMemorySize
+            timeOut     = fromIntegral $ lbd ^. lbdProfile . lpTimeoutSeconds
 
             lbdCode :: LambdaFunctionCode
             lbdCode = lambdaFunctionCode

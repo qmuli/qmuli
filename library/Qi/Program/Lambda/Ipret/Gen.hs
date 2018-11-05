@@ -36,7 +36,7 @@ run = interpret (\case
   Invoke id payload -> do
     config  <- getConfig
     let pname = getPhysicalName config $ getById config id
-    void . amazonka lambda $ invoke pname (toS $ encode payload)
+    void . amazonka lambda $ invoke (unPhysicalName pname) (toS $ encode payload)
                         & iInvocationType ?~ Event
 
 
@@ -44,8 +44,8 @@ run = interpret (\case
     config  <- getConfig
     let pname = getPhysicalName config $ getById config id
         bucketName = getPhysicalName config $ getById config _s3oBucketId
-    void . amazonka lambda $ updateFunctionCode pname
-                        & uS3Bucket ?~ bucketName
+    void . amazonka lambda $ updateFunctionCode (unPhysicalName pname)
+                        & uS3Bucket ?~ unPhysicalName bucketName
                         & uS3Key    ?~ s3Key
 
 
