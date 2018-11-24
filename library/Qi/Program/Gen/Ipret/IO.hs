@@ -7,7 +7,6 @@
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE TypeOperators              #-}
 
-
 module Qi.Program.Gen.Ipret.IO  where
 
 import           Control.Lens                  hiding ((.=))
@@ -68,20 +67,11 @@ run mode mkLogger = interpret (\case
 
 
   Amazonka svc req ->
-    send $ do
-      logger  <- mkLogger
-      env     <- newEnv Discover <&>  set envLogger logger
-                                    . set envRegion currentRegion
-
-      runResourceT . runAWST env . reconf mode svc $ AWS.send req
+    send . runAmazonka svc $ AWS.send req
 
   AmazonkaPostBodyExtract svc req post ->
-    send $ do
-      logger  <- mkLogger
-      env     <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion
-
-      runResourceT . runAWST env . reconf mode svc $
-        map Right . (`sinkBody` sinkLbs) . post =<< AWS.send req
+    send $ runAmazonka svc $
+      map Right . (`sinkBody` sinkLbs) . post =<< AWS.send req
 
   Say msg -> send $ do
     hPutStrLn stderr . encode $ object ["message" .= String msg]
@@ -104,6 +94,14 @@ run mode mkLogger = interpret (\case
 
   )
 
+  where
+    runAmazonka :: Service -> AWS b -> IO b
+    runAmazonka svc action = do
+      logger  <- mkLogger
+      env     <- newEnv Discover <&>  set envLogger logger
+                                    . set envRegion currentRegion
+
+      runResourceT . runAWST env $ reconf mode svc action
 
 
 build

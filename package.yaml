@@ -69,7 +69,6 @@ dependencies:
   - heredoc
   - http-client
   - http-client-tls
-  - jwt
   - lens
   - lens-aeson
   - mtl
@@ -138,7 +137,7 @@ library:
     #- amazonka-s3-streaming
     - amazonka
     - amazonka-cloudformation
-    # - amazonka-cloudwatch-logs
+    - amazonka-cloudwatch-logs
     - amazonka-cognito-identity
     - amazonka-cognito-idp
     - amazonka-core

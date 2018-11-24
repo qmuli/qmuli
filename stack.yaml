@@ -1,4 +1,4 @@
-resolver: lts-12.15
+resolver: nightly-2018-11-24
 
 packages:
 - '.'
@@ -14,7 +14,7 @@ packages:
 
 - location:
     git: https://github.com/brendanhay/amazonka.git
-    commit: 248f7b2a7248222cc21cef6194cd1872ba99ac5d
+    commit: e7077512c08f58a8e0a5e6448b6d73c16de46e8d
     subdirs:
     - amazonka
     - amazonka-lex-models

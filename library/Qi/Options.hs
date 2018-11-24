@@ -8,9 +8,6 @@ module Qi.Options (
   , showHelpOnErrorExecParser
   ) where
 
-import           Data.Default        (def)
-import           Data.Text           (Text)
-import qualified Data.Text           as T
 import           Options.Applicative
 import           Protolude           hiding (runState)
 import           Qi.AWS.Types        (AwsMode (..))
@@ -124,7 +121,7 @@ lbdCmd =
   $ info lbdUpdateParser
   $ fullDesc <> progDesc "Perform Lambda operations"
   where
-    lbdUpdateParser = hsubparser (lbdUpdate <> lbdSendEvent)
+    lbdUpdateParser = hsubparser (lbdUpdate <> lbdSendEvent <> lbdLogs)
 
     lbdUpdate :: Mod CommandFields Command
     lbdUpdate =
@@ -138,11 +135,11 @@ lbdCmd =
       $ info (LbdSendEvent <$> lambdaNameOption)
       $ fullDesc <> progDesc "Send Event to Lambda"
 
-    {- lbdLogs :: Mod CommandFields Command -}
-    {- lbdLogs = -}
-        {- command "logs" -}
-      {- $ info (LbdLogs <$> lambdaNameOption) -}
-      {- $ fullDesc <> progDesc "Get Lambda logs" -}
+    lbdLogs :: Mod CommandFields Command
+    lbdLogs =
+        command "logs"
+      $ info (LbdLogs <$> lambdaNameOption)
+      $ fullDesc <> progDesc "Get Lambda logs"
 
 
 lambdaNameOption :: Parser Text

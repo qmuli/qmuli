@@ -116,7 +116,7 @@ withConfig configProgram = do
                   _lbdCwEventLambdaProgram
                   $ eitherDecode (toS arg)
 
-    LbdLogs _ -> pass -- lambdaLogs name
+    LbdLogs name -> runCli $ printLogs name
 
   where
 
