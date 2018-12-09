@@ -4,14 +4,12 @@
 
 module Qi.Config.Render.Lambda (toResources) where
 
-import qualified Data.HashMap.Strict            as SHM
-import qualified Data.Text                      as T
 import           Protolude                      hiding (getAll)
 import           Stratosphere
 
 import           Qi.Config.AWS
 {- import           Qi.Config.AWS.DDB -}
-import           Qi.Config.AWS.Lambda
+import           Qi.Config.AWS.Lambda           hiding (lbdName)
 import           Qi.Config.AWS.Lambda.Accessors
 import qualified Qi.Config.Render.Role          as Role
 
@@ -49,7 +47,7 @@ toResources config = foldMap toAllLambdaResources $ getAll config
               lbdCode
               "index.handler"
               (GetAtt Role.lambdaBasicExecutionIAMRoleLogicalName "Arn")
-              (Literal NodeJS810)
+              (Literal $ OtherRuntime "provided")
             & lfFunctionName  ?~ Literal (unPhysicalName $ getPhysicalName config lbd)
             & lfMemorySize    ?~ Literal memorySize
             & lfTimeout       ?~ Literal timeOut
