@@ -101,7 +101,7 @@ spec = parallel $ do
 
       result <- do
         -- deploy the stack
-            IO.run "test" config LocalStack mkTestLogger $ do
+            IO.run config LocalStack mkTestLogger $ do
               let incoming = s3Object (getIdByName config "incoming") $ S3Key filename
                   outgoing = s3Object (getIdByName config "outgoing") $ S3Key filename
 
@@ -125,7 +125,7 @@ spec = parallel $ do
 
       result <- do
         -- deploy the stack
-            IO.run "test" config LocalStack $ do
+            IO.run config LocalStack $ do
               builtLambda <- Gen.readFileLazy =<< Gen.build
               deployApp template builtLambda
               createCfStack template

@@ -10,6 +10,6 @@ mkTestLogger
   :: MkAwsLogger
 mkTestLogger = do
   hSetBuffering stderr LineBuffering
-  pure $ \lvl b ->
+  pure $ \_lvl b ->
     hPutStrLn stderr $ Build.toLazyByteString b
 

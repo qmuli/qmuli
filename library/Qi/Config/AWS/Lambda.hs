@@ -18,7 +18,7 @@ import           Data.HashMap.Strict                  (HashMap)
 import qualified Data.HashMap.Strict                  as SHM
 import           Data.Proxy                           (Proxy)
 import           Data.Text                            (Text)
-import           GHC.Show                             as Show
+import           GHC.Show                             (Show (..))
 import           Protolude                            as P
 import           Qi.Config.AWS.ApiGw                  (ApiMethodEvent)
 import           Qi.Config.AWS.CfCustomResource       (CfCustomResourceLambdaProgram)

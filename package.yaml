@@ -257,6 +257,7 @@ tests:
       - tests
     dependencies:
       - amazonka-cloudformation
+      - amazonka-core
       - file-embed
       - hspec
       - qmuli

@@ -20,6 +20,7 @@ import           Control.Monad.Freer.Writer
 import qualified Data.ByteString.Lazy.Char8    as LBS
 import           Data.Default                  (Default, def)
 import qualified Data.HashMap.Strict           as SHM
+import           Network.AWS.Types
 import           Protolude                     hiding (Reader, State, asks, get,
                                                 log, put, runReader, runState)
 import           Qi.CLI.Dispatcher
@@ -39,21 +40,26 @@ import           Test.Tasty.Hspec
 
 
 data Journal = Journal {
-    cfActions :: [ CfAction ]
-  , s3Actions :: [ S3Action ]
-  , logs      :: [ Text ]
+    cfActions  :: [ CfAction ]
+  , s3Actions  :: [ S3Action ]
+  , genActions :: [ GenAction ]
+  , logs       :: [ Text ]
   }
   deriving (Eq, Show)
 
 instance Semigroup Journal where
-  Journal cf1 s31 ls1 <> Journal cf2 s32 ls2 =
-    Journal (cf1 <> cf2) (s31 <> s32) (ls1 <> ls2)
+  Journal cf1 s31 gen1 ls1 <> Journal cf2 s32 gen2 ls2 =
+    Journal (cf1 <> cf2) (s31 <> s32) (gen1 <> gen2) (ls1 <> ls2)
 
 instance Monoid Journal where
-  mempty = Journal mempty mempty mempty
+  mempty = Journal mempty mempty mempty mempty
 
 instance Default Journal where
   def = mempty
+
+data GenAction =
+    AmazonkaAction
+  deriving (Eq, Show)
 
 data CfAction =
     CreateStackAction StackName LBS.ByteString
@@ -96,8 +102,9 @@ testGenRun = interpret (\case
   RunServant _mgrSettings _baseUrl _req ->
     panic "RunServant"
 
-  Amazonka _svc _req ->
-    panic "Amazonka"
+  Amazonka _svc (_req :: b)  -> do
+    genAction AmazonkaAction
+    pure (panic "response cannot be evaluated" :: (Rs b))
 
   AmazonkaPostBodyExtract _svc _req _post ->
     panic "AmazonkaPostBodyExtract"
@@ -118,8 +125,8 @@ testGenRun = interpret (\case
   ReadFileLazy _path ->
     panic "ReadFileLazy"
 
-  GetLine ->
-    panic "GetLine"
+  {- GetLine -> -}
+    {- panic "GetLine" -}
 
   PutStr _content ->
     panic "PutStr"
@@ -196,6 +203,11 @@ testRun params@Params{ config } = run
   . testS3Run
   . testCfRun
 
+genAction
+  :: Member (Writer Journal) effs
+  => GenAction
+  -> Eff effs ()
+genAction action = tell $ def{ genActions = [action]}
 
 cfAction
   :: Member (Writer Journal) effs

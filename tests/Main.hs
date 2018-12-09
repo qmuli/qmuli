@@ -1,7 +1,7 @@
 module Main where
 
 import           Protolude
-import           Qi.Config.AWS.CF
+{- import           Qi.Config.AWS.CF -}
 import qualified Qi.Test.CF.CustomResource        as CF.CustomResource
 {- import qualified Qi.Test.Config.ApiGw.Simple              as ApiGw.Simple -}
 {- import qualified Qi.Test.Config.ApiGw.UserPoolsAuthorizer as ApiGw.UserPoolsAuthorizer -}
