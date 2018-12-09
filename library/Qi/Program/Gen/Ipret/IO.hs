@@ -44,7 +44,6 @@ import           System.IO                     (BufferMode (LineBuffering),
                                                 hSetBuffering, stderr, stdout)
 import           System.Posix.Files
 import           System.Posix.Types            (FileMode)
-import           Text.Heredoc                  (there)
 
 
 run
@@ -88,7 +87,7 @@ run mode mkLogger = interpret (\case
   ReadFileLazy path ->
     send . LBS.readFile $ toS path
 
-  GetLine -> send $ BS.getLine
+  {- GetReq -> send $ do -}
 
   PutStr content -> send $ LBS.putStr content
 
@@ -121,15 +120,13 @@ build srcDir exeTarget = do
   createDirectoryIfMissing True buildDir
 
   -- move and rename the exe to the .build dir
-  let lambdaPath = buildDir <> "/lambda"
-  renameFile exe lambdaPath
-  setFileMode lambdaPath executableByAll
+  let lbdHandlerPath = buildDir <> "/bootstrap"
+  renameFile exe lbdHandlerPath
+  setFileMode lbdHandlerPath executableByAll
 
   -- pack executable with js shim in .zip file
   let archivePath = buildDir <> "/lambda.zip"
-      jsShimPath  = buildDir <> "/index.js"
-  writeFile jsShimPath [there|./js/index.js|]
-  callProcess "zip" $ [ "-j", archivePath, jsShimPath, lambdaPath ]
+  callProcess "zip" $ [ "-j", archivePath, lbdHandlerPath ]
 
   pure archivePath
 

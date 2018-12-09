@@ -25,11 +25,13 @@ import           Protolude                      hiding (FilePath, getAll)
 import           Qi.CLI.Dispatcher.S3           as S3 (clearBuckets)
 import           Qi.Config.AWS                  (Config, getAll, getName,
                                                  getPhysicalName, namePrefix)
+import           Qi.Config.AWS                  (getById)
 import           Qi.Config.AWS.Lambda           (Lambda)
 import qualified Qi.Config.AWS.Lambda.Accessors as Lbd
 import           Qi.Config.AWS.S3               (S3Key (S3Key), s3Object)
 import qualified Qi.Config.AWS.S3.Accessors     as S3
 import qualified Qi.Config.CfTemplate           as CF
+import           Qi.Config.Identifier           (LambdaId)
 import           Qi.Program.CF.Lang
 import           Qi.Program.Config.Lang         (ConfigEff, getConfig)
 import           Qi.Program.Gen.Lang
@@ -151,12 +153,14 @@ cycleStack template content = do
 
 
 printLogs
-  :: Members '[ GenEff ] effs
+  :: Members '[ GenEff, ConfigEff ] effs
   => Text
   -> Eff effs ()
 printLogs lbdName = do
+  config <- getConfig
+  let lbdId = Lbd.getIdByName config lbdName
+      lbd   = getById config lbdId :: Lambda
+      groupName = "/aws/lambda/" <> show (getPhysicalName config lbd)
   res <- amazonka cloudWatchLogs $ filterLogEvents groupName
   traverse_ say . catMaybes $ (^.fleMessage) <$> res ^. flersEvents
-  where
-    groupName = "/aws/lambda/" <> lbdName
 

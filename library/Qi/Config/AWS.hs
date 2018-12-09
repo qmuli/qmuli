@@ -7,17 +7,16 @@
 module Qi.Config.AWS where
 
 import           Control.Lens
-import           Control.Monad.State.Class (MonadState)
-import           Data.Char                 (isAlphaNum)
-import           Data.Default              (Default, def)
-import           Data.Hashable             (Hashable)
-import qualified Data.HashMap.Strict       as SHM
-import           Data.Maybe                (fromMaybe)
-import           Data.Text                 (Text)
-import qualified Data.Text                 as T
-import           GHC.Show                  (Show (..))
-import           Protolude                 hiding (show)
-import qualified Protolude                 as P
+import           Data.Char            (isAlphaNum)
+import           Data.Default         (Default, def)
+import           Data.Hashable        (Hashable)
+import qualified Data.HashMap.Strict  as SHM
+import           Data.Maybe           (fromMaybe)
+import           Data.Text            (Text)
+import qualified Data.Text            as T
+import           GHC.Show             (Show (..))
+import           Protolude            hiding (show)
+import qualified Protolude            as P
 import           Qi.Config.AWS.ApiGw
 import           Qi.Config.AWS.CF
 import           Qi.Config.AWS.CW
@@ -26,7 +25,6 @@ import           Qi.Config.AWS.Lambda
 import           Qi.Config.AWS.S3
 import           Qi.Config.AWS.SQS
 import           Qi.Config.Identifier
-import           Qi.Config.Types
 
 
 data Config = Config {
@@ -98,6 +96,7 @@ instance Show (PhysicalName r) where
   show (PhysicalName ln) = toS ln
 
 
+
 class (Eq rid, Show rid, Hashable rid) => CfResource r rid | rid -> r, r -> rid where
 
   rNameSuffix
@@ -122,8 +121,7 @@ class (Eq rid, Show rid, Hashable rid) => CfResource r rid | rid -> r, r -> rid 
   getAll = SHM.elems . getMap
 
   getById
-    :: (Show rid, Eq rid, Hashable rid)
-    => Config
+    :: Config
     -> rid
     -> r
   getById config rid =
@@ -207,4 +205,7 @@ instance CfResource SqsQueue SqsQueueId where
   getMap = (^. sqsConfig . sqsQueues)
   getPhysicalName config r =
     PhysicalName $ makeAlphaNumeric (getName config r) `dotNamePrefixWith` config
+
+
+
 

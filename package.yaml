@@ -58,6 +58,7 @@ dependencies:
   - conduit-extra
   - containers
   - data-default
+  - data-default-class
   - directory
   - either
   - exceptions
@@ -75,6 +76,7 @@ dependencies:
   - optparse-applicative
   - process
   - protolude
+  - req
   - resourcet
   - safe
   - servant-client

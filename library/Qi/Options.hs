@@ -1,20 +1,16 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Qi.Options (
-    optionsSpec
-  , Options (..)
-  , Command (..)
-  , showHelpOnErrorExecParser
-  ) where
+module Qi.Options where
 
 import           Options.Applicative
 import           Protolude           hiding (runState)
 import           Qi.AWS.Types        (AwsMode (..))
 
 
+data Options = LbdDispatch | Management ManagementOptions
 
-data Options = Options {
+data ManagementOptions = ManagementOptions {
     cmd     :: Command
   , appName :: Text
   , awsMode :: AwsMode
@@ -29,15 +25,14 @@ data Command =
   | CfDestroy
   | CfCycle
   | LbdUpdate
-  | LbdSendEvent Text
   | LbdLogs Text
 
 
 optionsSpec :: ParserInfo Options
-optionsSpec = info (helper <*> optionsParser) fullDesc
+optionsSpec = info (helper <*> (managementOptionsParser <|> pure LbdDispatch)) fullDesc
 
-optionsParser :: Parser Options
-optionsParser = Options
+managementOptionsParser :: Parser Options
+managementOptionsParser = map Management $ ManagementOptions
   <$> hsubparser (cfCmd <> lbdCmd)
   <*> nameParser
   <*> awsModeOption
@@ -121,19 +116,13 @@ lbdCmd =
   $ info lbdUpdateParser
   $ fullDesc <> progDesc "Perform Lambda operations"
   where
-    lbdUpdateParser = hsubparser (lbdUpdate <> lbdSendEvent <> lbdLogs)
+    lbdUpdateParser = hsubparser (lbdUpdate <> lbdLogs)
 
     lbdUpdate :: Mod CommandFields Command
     lbdUpdate =
         command "update"
       $ info (pure LbdUpdate)
       $ fullDesc <> progDesc "Update Lambda"
-
-    lbdSendEvent :: Mod CommandFields Command
-    lbdSendEvent =
-        command "execute"
-      $ info (LbdSendEvent <$> lambdaNameOption)
-      $ fullDesc <> progDesc "Send Event to Lambda"
 
     lbdLogs :: Mod CommandFields Command
     lbdLogs =

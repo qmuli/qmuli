@@ -74,8 +74,8 @@ data GenEff r where
     :: Text
     -> GenEff LBS.ByteString
 
-  GetLine
-    :: GenEff BS.ByteString
+  {- GetReq -}
+    {- :: GenEff BS.ByteString -}
 
   PutStr
     :: LBS.ByteString
@@ -157,10 +157,10 @@ readFileLazy
     -> Eff effs LBS.ByteString
 readFileLazy = send . ReadFileLazy
 
-getLine
-  :: Member GenEff effs
-  => Eff effs BS.ByteString
-getLine = send GetLine
+{- getReq -}
+  {- :: Member GenEff effs -}
+  {- => Eff effs BS.ByteString -}
+{- getReq = send GetReq -}
 
 putStr
   :: Member GenEff effs
