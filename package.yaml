@@ -10,11 +10,31 @@ license-file: LICENSE.md
 
 github: qmuli/qmuli
 
+ghc-options:
+  - -O0                                 # Turn on aggressive optimizations
+  - -fwarn-tabs                         # Warn on tabs (spaces are better)
+  - -Wall                               # Turn on most warnings
+  - -Wcpp-undef                         # Warn on undefined CPP expressions
+  - -Widentities                        # Warn when converting between integers
+                                        # without changing the type (i.e. noops)
+  - -Wincomplete-record-updates         # Warn for partial record updates
+  - -Wincomplete-uni-patterns           # Warn for incomplete pattern matching
+  - -Wno-unused-do-bind                 # Allow single-line do blocks
+  - -Wno-deprecations                   # Allow some deprecated functions
+                                        # TODO(matthew-piziak): make this file specific
+  - -Wno-monomorphism-restriction       # Disables this "dreaded" restriction
+  - -Wno-unticked-promoted-constructors # Allow unticked promoted constructors
+  - -Wpartial-fields                    # Warn for records that could trigger
+                                        # -Wincomplete-record-updates
+  - -Wredundant-constraints             # Warn on redundant typeclass constraints
+  - -optP=-Wno-nonportable-include-path # macOS compatibility
+    
 extra-source-files:
   - CHANGELOG.md
   - README.md
   - stack.yaml
   - tests/json/**/*
+  - js/*
 
 default-extensions:
   - NoImplicitPrelude
@@ -38,6 +58,7 @@ dependencies:
   - conduit-extra
   - containers
   - data-default
+  - data-default-class
   - directory
   - either
   - exceptions
@@ -49,13 +70,13 @@ dependencies:
   - heredoc
   - http-client
   - http-client-tls
-  - jwt
   - lens
   - lens-aeson
   - mtl
   - optparse-applicative
   - process
   - protolude
+  - req
   - resourcet
   - safe
   - servant-client
@@ -112,12 +133,13 @@ library:
     - Qi.Util.ApiGw
     - Qi.Util.DDB
     - Qi.Program.Gen.Ipret.IO
+    - Qi.Config.AWS.S3.Accessors
       
   dependencies:
     #- amazonka-s3-streaming
     - amazonka
     - amazonka-cloudformation
-    # - amazonka-cloudwatch-logs
+    - amazonka-cloudwatch-logs
     - amazonka-cognito-identity
     - amazonka-cognito-idp
     - amazonka-core
@@ -235,8 +257,11 @@ tests:
       - tests
     dependencies:
       - amazonka-cloudformation
+      - amazonka-core
       - file-embed
+      - hspec
       - qmuli
+      - random-string
       - tasty
       - tasty-hspec
       - text

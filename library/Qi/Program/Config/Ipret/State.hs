@@ -55,20 +55,21 @@ run = interpret (\case
       insertLambda id name lbd
 
 -- S3
-  RegS3Bucket name -> do
+  RegS3Bucket name profile -> do
     withNextId (Proxy :: Proxy S3BucketId) $ \id -> do
       let newBucket = def & s3bName .~ name
-          insertIdToS3Bucket = s3IdToBucket %~ SHM.insert id newBucket
-          insertNameToId = s3NameToBucketId %~ SHM.insert name id
+                          & s3bProfile .~ profile
+          insertIdToBucket = s3IdToBucket %~ SHM.insert id newBucket
+          insertNameToId = s3NameToId %~ SHM.insert name id
 
-      modify (s3Config . s3Buckets %~ insertNameToId . insertIdToS3Bucket)
+      modify (s3Config %~ insertNameToId . insertIdToBucket)
 
 
   RegS3BucketLambda name bucketId f profile ->
     withNextId (Proxy :: Proxy LambdaId) $ \id -> do
       let lbd = S3BucketLambda name profile f
           modifyBucket = s3bEventConfigs %~ ((S3EventConfig S3ObjectCreatedAll id):)
-      modify (s3Config . s3Buckets . s3IdToBucket %~ SHM.adjust modifyBucket bucketId)
+      modify (s3Config . s3IdToBucket %~ SHM.adjust modifyBucket bucketId)
 
       insertLambda id name lbd
 

@@ -17,7 +17,7 @@ RUN yum install -y curl\
     && yum clean all --releasever=6 \
     && ln -s /lib64/libtinfo.so.5 /lib64/libtinfo.so
 
-ENV GHC_VERSION=8.4.3
+ENV GHC_VERSION=8.6.2
 
 RUN yum install -y make
 

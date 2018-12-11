@@ -10,6 +10,7 @@
 module Qi.Program.Gen.Lang where
 
 import           Control.Monad.Freer
+import qualified Control.Monad.Trans.AWS              as AWS (send)
 import           Data.Aeson                           (FromJSON, ToJSON, Value)
 import qualified Data.ByteString                      as BS
 import qualified Data.ByteString.Lazy                 as LBS
@@ -44,12 +45,14 @@ data GenEff r where
 
   Amazonka
     :: (AWSRequest a)
-    => a
+    => Service
+    -> a
     -> GenEff (Rs a)
 
   AmazonkaPostBodyExtract
     :: (AWSRequest a)
-    => a
+    => Service
+    -> a
     -> (Rs a -> RsBody)
     -> GenEff (Either Text LBS.ByteString)
 
@@ -71,8 +74,8 @@ data GenEff r where
     :: Text
     -> GenEff LBS.ByteString
 
-  GetLine
-    :: GenEff BS.ByteString
+  {- GetReq -}
+    {- :: GenEff BS.ByteString -}
 
   PutStr
     :: LBS.ByteString
@@ -106,19 +109,21 @@ runServant =
 
 amazonka
   :: (AWSRequest a, Member GenEff effs)
-  => a
+  => Service
+  -> a
   -> Eff effs (Rs a)
 amazonka =
-  send . Amazonka
+  send .: Amazonka
 
 
 amazonkaPostBodyExtract
   :: (AWSRequest a, Member GenEff effs)
-  => a
+  => Service
+  -> a
   -> (Rs a -> RsBody)
   -> Eff effs (Either Text LBS.ByteString)
 amazonkaPostBodyExtract =
-  send .: AmazonkaPostBodyExtract
+  send .:: AmazonkaPostBodyExtract
 
 
 getCurrentTime
@@ -152,10 +157,10 @@ readFileLazy
     -> Eff effs LBS.ByteString
 readFileLazy = send . ReadFileLazy
 
-getLine
-  :: Member GenEff effs
-  => Eff effs BS.ByteString
-getLine = send GetLine
+{- getReq -}
+  {- :: Member GenEff effs -}
+  {- => Eff effs BS.ByteString -}
+{- getReq = send GetReq -}
 
 putStr
   :: Member GenEff effs

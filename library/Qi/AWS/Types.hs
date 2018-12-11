@@ -7,6 +7,7 @@ module Qi.AWS.Types where
 
 import           Data.Aeson
 import qualified Data.Text      as T
+import           Network.AWS    (Logger)
 import           Protolude
 import           Qi.AWS.Cognito
 
@@ -16,5 +17,8 @@ newtype Arn = Arn Text
   deriving newtype (ToJSON, FromJSON)
 
 
+data AwsMode = RealDeal | LocalStack
+  deriving Eq
 
+type MkAwsLogger = IO Logger
 

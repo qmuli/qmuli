@@ -34,13 +34,6 @@ run
   => (Eff (S3Eff ': effs) a -> Eff effs a)
 run = interpret (\case
 
-  CreateBucket name -> do
-    id      <- s3Bucket name
-    config  <- getConfig
-    let bucketName = BucketName . getPhysicalName config $ getById config id
-    amazonka $ createBucket bucketName
-    pure id
-
   GetContent S3Object{ _s3oBucketId, _s3oKey = S3Key (ObjectKey -> objKey) } ->
     action =<< getConfig
     -- TODO: handle errors
@@ -49,11 +42,12 @@ run = interpret (\case
     where
       action config =
         amazonkaPostBodyExtract
+          s3
           (getObject bucketName objKey)
           (^. gorsBody)
 
         where
-          bucketName = BucketName . getPhysicalName config $ getById config _s3oBucketId
+          bucketName = BucketName . unPhysicalName . getPhysicalName config $ getById config _s3oBucketId
 
 
 
@@ -68,14 +62,14 @@ run = interpret (\case
 
   PutContent s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key (ObjectKey -> objKey)} payload -> do
     config <- getConfig
-    let bucketName = BucketName . getPhysicalName config $ getById config _s3oBucketId
-    void $ amazonka $ putObject bucketName objKey (toBody payload) & poACL ?~ OPublicReadWrite
+    let bucketName = BucketName . unPhysicalName . getPhysicalName config $ getById config _s3oBucketId
+    void $ amazonka s3 $ putObject bucketName objKey (toBody payload) & poACL ?~ OPublicReadWrite
 
 
   ListObjects id maybeToken -> do
     config <- getConfig
-    let bucketName = getPhysicalName config $ getById config id
-    r <- amazonka $ case maybeToken of
+    let bucketName = unPhysicalName . getPhysicalName config $ getById config id
+    r <- amazonka s3 $ case maybeToken of
       Nothing -> -- first pagination call
         listObjectsV2 (BucketName bucketName)
       Just (ListToken token) ->
@@ -88,8 +82,8 @@ run = interpret (\case
 
   DeleteObject s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key (ObjectKey -> objKey)} -> do
     config <- getConfig
-    let bucketName = BucketName . getPhysicalName config $ getById config _s3oBucketId
-    void $ amazonka $ deleteObject bucketName objKey
+    let bucketName = BucketName . unPhysicalName . getPhysicalName config $ getById config _s3oBucketId
+    void $ amazonka s3 $ deleteObject bucketName objKey
 
 
   DeleteObjects s3objs -> do
@@ -98,12 +92,12 @@ run = interpret (\case
 
         toPair :: S3Object -> (BucketName, [ObjectIdentifier])
         toPair s3Obj@S3Object{_s3oBucketId, _s3oKey = S3Key (ObjectKey -> objKey)} =
-          ( BucketName . getPhysicalName config $ getById config _s3oBucketId
+          ( BucketName . unPhysicalName . getPhysicalName config $ getById config _s3oBucketId
           , [objectIdentifier objKey]
           )
 
     for_ dict $ \(bucketName, objIds) ->
-      amazonka $ deleteObjects bucketName $ delete' & dObjects .~ objIds
+      amazonka s3 $ deleteObjects bucketName $ delete' & dObjects .~ objIds
 
   )
 

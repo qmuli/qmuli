@@ -11,7 +11,6 @@ module Qi.Program.S3.Lang (
     S3Eff (..)
   , ListToken
   , S3LambdaProgram
-  , createBucket
   , getContent
   , putContent
   , listObjects
@@ -34,9 +33,6 @@ type S3LambdaProgram effs = S3Event -> Eff effs LBS.ByteString
 
 data S3Eff r where
 
-  CreateBucket
-    :: Text
-    -> S3Eff S3BucketId
 
   GetContent
     :: S3Object
@@ -72,13 +68,6 @@ data S3Eff r where
   DeleteObjects
     :: [S3Object]
     -> S3Eff ()
-
-
-createBucket
-  :: (Member S3Eff effs)
-  => Text
-  -> Eff effs S3BucketId
-createBucket = send . CreateBucket
 
 
 getContent

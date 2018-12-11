@@ -15,8 +15,8 @@ import           Control.Lens           (Getting, (.~), (?~), (^.))
 import           Control.Monad.Freer
 import           Data.Aeson             (encode)
 import           Network.AWS.Lambda     (InvocationType (Event),
-                                         iInvocationType, invoke)
-import           Network.AWS.Lambda     (uS3Bucket, uS3Key, updateFunctionCode)
+                                         iInvocationType, invoke, lambda,
+                                         uS3Bucket, uS3Key, updateFunctionCode)
 import           Network.AWS.S3         (ObjectKey (ObjectKey))
 import           Protolude              hiding ((<&>))
 import           Qi.Config.AWS
@@ -36,7 +36,7 @@ run = interpret (\case
   Invoke id payload -> do
     config  <- getConfig
     let pname = getPhysicalName config $ getById config id
-    void . amazonka $ invoke pname (toS $ encode payload)
+    void . amazonka lambda $ invoke (unPhysicalName pname) (toS $ encode payload)
                         & iInvocationType ?~ Event
 
 
@@ -44,8 +44,8 @@ run = interpret (\case
     config  <- getConfig
     let pname = getPhysicalName config $ getById config id
         bucketName = getPhysicalName config $ getById config _s3oBucketId
-    void . amazonka $ updateFunctionCode pname
-                        & uS3Bucket ?~ bucketName
+    void . amazonka lambda $ updateFunctionCode (unPhysicalName pname)
+                        & uS3Bucket ?~ unPhysicalName bucketName
                         & uS3Key    ?~ s3Key
 
 

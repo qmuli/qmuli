@@ -1,5 +1,7 @@
+{-# LANGUAGE DataKinds                 #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts          #-}
+{-# LANGUAGE KindSignatures            #-}
 {-# LANGUAGE NamedFieldPuns            #-}
 {-# LANGUAGE RankNTypes                #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
@@ -16,7 +18,7 @@ import           Data.HashMap.Strict                  (HashMap)
 import qualified Data.HashMap.Strict                  as SHM
 import           Data.Proxy                           (Proxy)
 import           Data.Text                            (Text)
-import           GHC.Show                             as Show
+import           GHC.Show                             (Show (..))
 import           Protolude                            as P
 import           Qi.Config.AWS.ApiGw                  (ApiMethodEvent)
 import           Qi.Config.AWS.CfCustomResource       (CfCustomResourceLambdaProgram)
@@ -56,12 +58,12 @@ data Lambda =
   , _lbdProfile              :: LambdaProfile
   , _lbdInputProxy           :: Proxy a
   , _lbdOutputProxy          :: Proxy b
-  , _lbdGenericLambdaProgram :: forall effs . (Member GenEff effs, Member S3Eff effs) => a -> Eff effs b
+  , _lbdGenericLambdaProgram :: forall effs . Members '[ GenEff, S3Eff ] effs => a -> Eff effs b
   }
   | S3BucketLambda {
     _lbdName                  :: Text
   , _lbdProfile               :: LambdaProfile
-  , _lbdS3BucketLambdaProgram :: forall effs . (Member GenEff effs, Member S3Eff effs) => S3LambdaProgram effs
+  , _lbdS3BucketLambdaProgram :: forall effs . Members '[ GenEff, S3Eff ] effs => S3LambdaProgram effs
   }
 
 {-  | ApiLambda {
@@ -97,6 +99,7 @@ instance Show Lambda where
   show CfCustomLambda{} = "CfCustomLambda"
   show CwEventLambda{}  = "CwEventLambda"
 
+data LambdaPermission
 
 data LambdaMemorySize =
     M128

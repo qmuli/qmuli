@@ -6,8 +6,7 @@ module Qi.Config.Render.SQS (toResources) where
 
 import           Control.Lens
 import           Protolude         hiding (getAll)
-import           Qi.Config.AWS     (Config, getAll, getById, getLogicalName,
-                                    getLogicalNameFromId, getPhysicalName)
+import           Qi.Config.AWS
 import           Qi.Config.AWS.SQS
 import           Stratosphere      (ResourceProperties (SQSQueueProperties),
                                     Resources (Resources),
@@ -24,10 +23,8 @@ toResources config = foldMap toAllSqsResources $ getAll config
     toAllSqsResources sqsQueue = Resources $ [queueResource]
 
       where
-        qln = getLogicalName config sqsQueue
-
         queueResource = (
-          S.resource qln $
+          S.resource (unLogicalName $ getLogicalName config sqsQueue) $
             SQSQueueProperties $
               S.sqsQueue
               & S.sqsqQueueName ?~ Literal (sqsQueue ^. sqsQueueName)

@@ -7,24 +7,25 @@ import           Control.Lens
 import qualified Data.HashMap.Strict  as SHM
 import           Protolude
 import           Qi.Config.AWS
-import           Qi.Config.AWS.Lambda (Lambda, lbdNameToId)
+import           Qi.Config.AWS.Lambda
 import           Qi.Config.Identifier
 
 
 getPermissionLogicalName
   :: Config
   -> Lambda
-  -> Text
+  -> LogicalName LambdaPermission
 getPermissionLogicalName config r =
-  getName config r <> "LambdaPermission"
+  LogicalName $ getName config r <> "LambdaPermission"
 
 getIdByName
   :: Config
   -> Text
   -> LambdaId
 getIdByName config name =
-  case SHM.lookup name bucketNameToIdMap of
+  case SHM.lookup name nameToIdMap of
     Just bid -> bid
-    Nothing  -> panic $ "Could not find LambdaId with name: " <> show name
+    Nothing  -> panic $ "Could not find LambdaId with name: " <> show name <>
+      " following lambdas were found in the registry: " <> show (SHM.keys nameToIdMap)
   where
-    bucketNameToIdMap = config ^. lbdConfig . lbdNameToId
+    nameToIdMap = config ^. lbdConfig . lbdNameToId

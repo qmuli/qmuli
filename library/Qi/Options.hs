@@ -1,24 +1,19 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Qi.Options (
-    optionsSpec
-  , Options (..)
-  , Command (..)
-  , showHelpOnErrorExecParser
-  ) where
+module Qi.Options where
 
-import           Data.Default        (def)
-import           Data.Text           (Text)
-import qualified Data.Text           as T
 import           Options.Applicative
 import           Protolude           hiding (runState)
+import           Qi.AWS.Types        (AwsMode (..))
 
 
+data Options = LbdDispatch | Management ManagementOptions
 
-data Options = Options {
+data ManagementOptions = ManagementOptions {
     cmd     :: Command
   , appName :: Text
+  , awsMode :: AwsMode
   }
 
 data Command =
@@ -30,17 +25,17 @@ data Command =
   | CfDestroy
   | CfCycle
   | LbdUpdate
-  | LbdSendEvent Text
   | LbdLogs Text
 
 
 optionsSpec :: ParserInfo Options
-optionsSpec = info (helper <*> optionsParser) fullDesc
+optionsSpec = info (helper <*> (managementOptionsParser <|> pure LbdDispatch)) fullDesc
 
-optionsParser :: Parser Options
-optionsParser = Options
+managementOptionsParser :: Parser Options
+managementOptionsParser = map Management $ ManagementOptions
   <$> hsubparser (cfCmd <> lbdCmd)
   <*> nameParser
+  <*> awsModeOption
 
 
 nameParser :: Parser Text
@@ -83,7 +78,7 @@ cfCmd =
     cfDescribe :: Mod CommandFields Command
     cfDescribe =
         command "describe"
-      $ info (pure CfDeploy)
+      $ info (pure CfDescribe)
       $ fullDesc <> progDesc "Describe a CloudFormation stack"
 
     cfUpdate :: Mod CommandFields Command
@@ -121,7 +116,7 @@ lbdCmd =
   $ info lbdUpdateParser
   $ fullDesc <> progDesc "Perform Lambda operations"
   where
-    lbdUpdateParser = hsubparser (lbdUpdate <> lbdSendEvent)
+    lbdUpdateParser = hsubparser (lbdUpdate <> lbdLogs)
 
     lbdUpdate :: Mod CommandFields Command
     lbdUpdate =
@@ -129,17 +124,11 @@ lbdCmd =
       $ info (pure LbdUpdate)
       $ fullDesc <> progDesc "Update Lambda"
 
-    lbdSendEvent :: Mod CommandFields Command
-    lbdSendEvent =
-        command "execute"
-      $ info (LbdSendEvent <$> lambdaNameOption)
-      $ fullDesc <> progDesc "Send Event to Lambda"
-
-    {- lbdLogs :: Mod CommandFields Command -}
-    {- lbdLogs = -}
-        {- command "logs" -}
-      {- $ info (LbdLogs <$> lambdaNameOption) -}
-      {- $ fullDesc <> progDesc "Get Lambda logs" -}
+    lbdLogs :: Mod CommandFields Command
+    lbdLogs =
+        command "logs"
+      $ info (LbdLogs <$> lambdaNameOption)
+      $ fullDesc <> progDesc "Get Lambda logs"
 
 
 lambdaNameOption :: Parser Text
@@ -147,6 +136,11 @@ lambdaNameOption = strOption $
   long "lambda-name"
     <> metavar "LAMBDA_NAME"
     <> help "Name of the Lambda function to call"
+
+awsModeOption :: Parser AwsMode
+awsModeOption = flag RealDeal LocalStack $
+  long "local-stack"
+    <> help "Specify whether to use localstack mock or the real AWS"
 
 -- | A version of 'execParser' which shows full help on error.
 --

@@ -63,7 +63,7 @@ data CfEff r where
 
   CreateStack
     :: StackName
-    -> S3Object
+    -> LBS.ByteString
     -> CfEff ()
 
   DescribeStacks
@@ -71,7 +71,7 @@ data CfEff r where
 
   UpdateStack
     :: StackName
-    -> S3Object
+    -> LBS.ByteString
     -> CfEff ()
 
   DeleteStack
@@ -87,7 +87,7 @@ data CfEff r where
 createStack
   :: (Member CfEff effs)
   => StackName
-  -> S3Object
+  -> LBS.ByteString -- S3Object
   -> Eff effs ()
 createStack = send .: CreateStack
 
@@ -99,7 +99,7 @@ describeStacks = send DescribeStacks
 updateStack
   :: (Member CfEff effs)
   => StackName
-  -> S3Object
+  -> LBS.ByteString
   -> Eff effs ()
 updateStack = send .: UpdateStack
 

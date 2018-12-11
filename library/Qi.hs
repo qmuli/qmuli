@@ -4,37 +4,35 @@
 
 module Qi where
 
-import           Control.Lens                         hiding (argument)
+import           Control.Lens                   hiding (argument)
 import           Control.Monad.Freer
 import           Control.Monad.Freer.State
-import           Data.Aeson                           (Value, eitherDecode,
-                                                       encode)
-import           Data.Aeson.Types                     (parseEither)
-import qualified Data.ByteString.Lazy.Char8           as LBS
-import           Data.Char                            (isDigit, isLower)
-import           Data.Default                         (def)
-import qualified Data.HashMap.Strict                  as SHM
-import           Protolude                            hiding (State, getAll,
-                                                       runState)
+import           Data.Aeson                     (eitherDecode, encode)
+import           Data.Aeson.Types               (parseEither)
+import           Data.Default                   (def)
+import           Data.Text                      (splitOn)
+import           Protolude                      hiding (State, getAll, runState)
+import           Qi.AWS.Logger
+import           Qi.AWS.Runtime
+import           Qi.AWS.Types
 import           Qi.CLI.Dispatcher
 import           Qi.Config.AWS
-import           Qi.Config.AWS
-import qualified Qi.Config.AWS.ApiGw.ApiMethod.Event  as ApiMethodEvent (parse)
-import           Qi.Config.AWS.CF
-import           Qi.Config.AWS.CfCustomResource.Types (CfCustomResourceEvent)
-import           Qi.Config.AWS.CW
-import           Qi.Config.AWS.DDB
-import           Qi.Config.AWS.Lambda
-import qualified Qi.Config.AWS.Lambda.Accessors       as Lbd
+{- import           Qi.Config.AWS.CW -}
+{- import           Qi.Config.AWS.DDB -}
+import           Qi.Config.AWS.Lambda           hiding (lbdName)
+import qualified Qi.Config.AWS.Lambda.Accessors as Lbd
 import           Qi.Config.AWS.S3
-import qualified Qi.Config.AWS.S3.Event               as S3Event
-import qualified Qi.Config.CfTemplate                 as CF
+import qualified Qi.Config.AWS.S3.Event         as S3Event
+import qualified Qi.Config.CfTemplate           as CF
+import           Qi.Config.Types                (ResourceExistence (AlreadyExists))
 import           Qi.Options
-import qualified Qi.Program.Config.Ipret.State        as Config
-import           Qi.Program.Config.Lang               (ConfigEff, s3Bucket)
-import qualified Qi.Program.Gen.Lang                  as Gen
-import qualified Qi.Program.Lambda.Lang               as Lbd
-import qualified Qi.Program.Wiring.IO                 as IO
+import qualified Qi.Program.Config.Ipret.State  as Config
+import           Qi.Program.Config.Lang         (ConfigEff, s3Bucket)
+import qualified Qi.Program.Gen.Lang            as Gen
+import qualified Qi.Program.Wiring.IO           as IO
+import           System.Environment             (lookupEnv)
+import           System.IO                      (BufferMode (..), hSetBuffering,
+                                                 stderr, stdout)
 
 
 withConfig
@@ -43,90 +41,122 @@ withConfig
 withConfig configProgram = do
   -- `showHelpOnErrorExecParser` parses out commands, arguments and options using the rules in `opts`
   -- and gives the `Options` structure to `dispatch` that acts in accord to the options
-  Options{ appName, cmd } <- showHelpOnErrorExecParser optionsSpec
+  opts <- showHelpOnErrorExecParser optionsSpec
 
-  let template =
-          CF.render
-        . snd
-        . run
-        . runState def{_namePrefix = appName}
-        . Config.run
-        $ configProgram
+  hSetBuffering stdout LineBuffering
+  hSetBuffering stderr LineBuffering
 
-      config =
+  let mkConfig appName =
           snd
         . run
         . runState def{_namePrefix = appName}
         . Config.run
         $ do
-          s3Bucket "app" -- always assume existance of the app bucket
+          s3Bucket "app" $ def & s3bpExistence .~ AlreadyExists -- always assume existence of the app bucket
           configProgram
 
-  (`runReaderT` config) $ liftIO . IO.run "dispatcher" config $
+  case opts of
+    LbdDispatch -> do
+      let splitNames compositeName = case splitOn "_" compositeName of
+                        (h:t) -> (h, mconcat t)
+                        _ -> panic "could not split the app and lbd names from the composite name"
 
-    case cmd of
-      CfRenderTemplate     -> Gen.say $ toS template
-      CfDeploy             ->
-        liftIO . IO.run "dispatcher" config $
-              Gen.build
-          >>= Gen.readFileLazy
-          >>= deployApp template
+      (appName, lbdName) <- maybe
+                (panic "AWS_LAMBDA_FUNCTION_NAME not found in ENV")
+                (splitNames . toS)
+              <$> lookupEnv "AWS_LAMBDA_FUNCTION_NAME"
 
-      CfCreate             -> createCfStack
-      CfUpdate             -> updateCfStack
-      CfDescribe           -> describeCfStack
-      CfDestroy            -> destroyCfStack $ pure ()
-
-      CfCycle              ->
-        liftIO . IO.run "dispatcher" config $
-              Gen.build
-          >>= Gen.readFileLazy
-          >>= cycleStack template
-
-      LbdUpdate -> updateLambdas
-      LbdSendEvent name -> do
-        arg <- Gen.getLine
-
-        -- get lambda id from name
-        let id = Lbd.getIdByName config name
-
-        Gen.putStr =<< case getById config id of
-
-          GenericLambda{ _lbdGenericLambdaProgram } ->
-            case eitherDecode $ toS arg of
-              Right evt ->
-                encode <$> _lbdGenericLambdaProgram evt
-              Left err ->
-                reportBadArgument "Generic" arg err
+      let config = mkConfig appName
+          runLambda = IO.run config RealDeal mkLambdaLogger
+      either panic (loop config lbdName runLambda) =<< getEndpoint
 
 
-          S3BucketLambda{ _lbdS3BucketLambdaProgram } ->
-            case parseEither (S3Event.parse config) =<< eitherDecode (toS arg) of
-              Right evt ->
-                _lbdS3BucketLambdaProgram evt
-              Left err ->
-                reportBadArgument "S3" arg err
+    Management ManagementOptions{ appName, cmd, awsMode } -> do
+      let config = mkConfig appName
+          runCli = IO.run config awsMode mkCliLogger
+          template = CF.render config
 
+      runCli $ case cmd of
+        CfRenderTemplate     -> Gen.say $ toS template
+        CfDeploy             ->
+                Gen.build
+            >>= Gen.readFileLazy
+            >>= deployApp template
 
-          CfCustomLambda{ _lbdCfCustomLambdaProgram } ->
-            case eitherDecode (toS arg) :: Either [Char] CfCustomResourceEvent of
-              Right evt ->
-                _lbdCfCustomLambdaProgram evt
-              Left err ->
-                reportBadArgument "CfCustom" arg err
+        CfCreate             -> createCfStack template
+        CfUpdate             -> updateCfStack template
+        CfDescribe           -> describeCfStack
+        CfDestroy            -> destroyCfStack $ pure ()
 
+        CfCycle              ->
+                Gen.build
+            >>= Gen.readFileLazy
+            >>= cycleStack template
 
-          CwEventLambda{ _lbdCwEventLambdaProgram } ->
-            case eitherDecode (toS arg) :: Either [Char] CwEvent of
-              Right evt ->
-                _lbdCwEventLambdaProgram evt
-              Left err ->
-                reportBadArgument "Cw" arg err
+        LbdUpdate -> updateLambdas
 
-      LbdLogs _ -> pass -- lambdaLogs name
+        LbdLogs name -> printLogs name
 
   where
-    reportBadArgument lbdType arg err = panic $ "Could not parse event: '" <> toS arg <> "', for lambda type: '" <> lbdType <> "' error was: '" <> toS err <> "'"
+
+    {- loop -}
+      {- :: Config -}
+      {- -> Text -}
+      {- -> (Text, Int) -}
+      {- -> Text -}
+      {- -> IO () -}
+    loop config lbdName runLambda endpoint = loop'
+      where
+        loop' = do
+          req' <- getWithRetries 3 endpoint
+          case req' of
+            SuccessResponse req -> do
+              resp <- runLambda $ lbdHandler config lbdName $ payload req
+              respond endpoint (requestId req) $ SuccessHandlerResponse (toS resp) (Just "application/json")
+              loop'
+
+            ErrorResponse code ->
+              case code of
+                ErrorCode (-1) ->
+                  panic ("Failed to send HTTP request to retrieve next task." :: Text)
+                _ -> do
+                  print ("HTTP request was not successful. HTTP response code: " <>
+                     show code <>
+                     ". Retrying.." :: Text)
+                  loop'
+
+
+    lbdHandler config name req =
+          let id = Lbd.getIdByName config name
+              reportBadArgument lbdType err =
+                panic $ "Could not parse event: '" <> toS req <>
+                  "', for lambda type: '" <> lbdType <> "' error was: '" <> toS err <> "'"
+          in
+          case getById config id of
+
+            GenericLambda{ _lbdGenericLambdaProgram } ->
+              either  (reportBadArgument "Generic")
+                      (map encode . _lbdGenericLambdaProgram)
+                      $ eitherDecode (toS req)
+
+            S3BucketLambda{ _lbdS3BucketLambdaProgram } ->
+              either  (reportBadArgument "S3")
+                      _lbdS3BucketLambdaProgram
+                      $ parseEither (S3Event.parse config) =<< eitherDecode (toS req)
+
+            CfCustomLambda{ _lbdCfCustomLambdaProgram } ->
+              either  (reportBadArgument "CfCustom")
+                      _lbdCfCustomLambdaProgram
+                      $ eitherDecode (toS req)
+
+            CwEventLambda{ _lbdCwEventLambdaProgram } ->
+              either  (reportBadArgument "CW")
+                      _lbdCwEventLambdaProgram
+                      $ eitherDecode (toS req)
+
+
+
+
 
 
 {-

@@ -24,6 +24,7 @@ import           Qi.Config.AWS.CW
 {- import           Qi.Config.AWS.DDB -}
 import           Qi.Config.AWS.CfCustomResource (CfCustomResourceLambdaProgram)
 import           Qi.Config.AWS.Lambda           (LambdaProfile)
+import           Qi.Config.AWS.S3               (S3BucketProfile)
 import           Qi.Config.Identifier
 import           Qi.Core.Curry
 {- import           Qi.Program.Lambda.Cf.Lang  (CfCustomResourceLambdaProgram) -}
@@ -53,6 +54,7 @@ data ConfigEff r where
 -- S3
   RegS3Bucket
     :: Text
+    -> S3BucketProfile
     -> ConfigEff S3BucketId
 
   RegS3BucketLambda
@@ -154,9 +156,10 @@ genericLambda name f =
 s3Bucket
   :: (Member ConfigEff effs)
   => Text
+  -> S3BucketProfile
   -> Eff effs S3BucketId
 s3Bucket =
-  send . RegS3Bucket
+  send .: RegS3Bucket
 
 s3BucketLambda
   :: forall resEffs

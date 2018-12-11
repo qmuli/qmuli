@@ -1,4 +1,4 @@
-resolver: lts-12.11
+resolver: nightly-2018-12-08
 
 packages:
 - '.'
@@ -14,35 +14,20 @@ packages:
 
 - location:
     git: https://github.com/brendanhay/amazonka.git
-    commit: 248f7b2a7248222cc21cef6194cd1872ba99ac5d
+    commit: e7077512c08f58a8e0a5e6448b6d73c16de46e8d
     subdirs:
     - amazonka
     - amazonka-lex-models
     - core
   extra-dep: true
 
-extra-deps: []
+extra-deps: 
+  - random-string-0.1.0.1
+  - base58-bytestring-0.1.0
   
 flags: {}
 
 extra-package-dbs: []
-
-ghc-options:
-  "$everything": -O0
-
-  "qmuli": 
-    -Wall
-    -Wno-unused-imports 
-    -Wno-unused-matches 
-    -Wno-unused-do-bind
-    -Wno-deprecations
-    -threaded
-    -Werror
-    #-static 
-
-    # "qmuli-stream-s3-objects": -static -threaded
-    # "qmuli-fold-s3-content": -static -threaded
-    # "qmuli-apigw-lambda-dynamodb": -static -threaded
 
 build:
   library-profiling: false

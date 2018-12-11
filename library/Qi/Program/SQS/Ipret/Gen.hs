@@ -30,13 +30,13 @@ run
 run config = interpret (\case
 
   SendSqsMessage id msg ->
-    void . amazonka . sendMessage queueUrl . toS $ encode msg
+    void . amazonka sqs . sendMessage (unPhysicalName queueUrl) . toS $ encode msg
     where
       queueUrl = getPhysicalName config $ getById config id
 
 
   ReceiveSqsMessage id -> do
-      r <- amazonka $ receiveMessage queueUrl
+      r <- amazonka sqs $ receiveMessage (unPhysicalName queueUrl)
       pure . catMaybes $ (\m -> do
                             msg <- decode . toS =<< m ^. mBody
                             rh <- m ^. mReceiptHandle

@@ -10,7 +10,7 @@ import           Data.Default                  (def)
 import qualified Data.HashMap.Strict           as SHM
 import           Protolude                     hiding (runState)
 import           Qi.Config.AWS                 (Config (..), s3Config)
-import           Qi.Config.AWS.S3              (s3Buckets, s3IdToBucket)
+import           Qi.Config.AWS.S3              (s3IdToBucket)
 import qualified Qi.Program.Config.Ipret.State as Config
 import           Qi.Program.Config.Lang        (ConfigEff, s3Bucket)
 import           Test.Tasty.Hspec
@@ -23,9 +23,10 @@ configProgram
   :: Member ConfigEff effs
   => Eff effs ()
 configProgram = do
-  void $ s3Bucket "bucket1"
-  void $ s3Bucket "bucket2"
-  void $ s3Bucket "bucket3"
+  s3Bucket "bucket1" def
+  s3Bucket "bucket2" def
+  s3Bucket "bucket3" def
+  pass
 
 
 spec :: Spec
@@ -36,7 +37,7 @@ spec = parallel $
       idCount `shouldBe` 3
 
   where
-    idCount = length . SHM.elems $ config ^. s3Config . s3Buckets . s3IdToBucket
+    idCount = length . SHM.elems $ config ^. s3Config . s3IdToBucket
 
     config =
         snd

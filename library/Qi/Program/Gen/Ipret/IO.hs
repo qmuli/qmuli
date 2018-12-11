@@ -7,10 +7,9 @@
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE TypeOperators              #-}
 
-
 module Qi.Program.Gen.Ipret.IO  where
 
-import           Control.Lens                  hiding (view, (.=))
+import           Control.Lens                  hiding ((.=))
 import           Control.Monad.Freer           hiding (run)
 import           Control.Monad.Trans.AWS       (AWST, runAWST)
 import qualified Control.Monad.Trans.AWS       as AWS (send)
@@ -18,36 +17,42 @@ import           Data.Aeson                    (FromJSON, ToJSON, Value (..),
                                                 decode, encode, object, (.=))
 import qualified Data.ByteString               as BS
 import qualified Data.ByteString.Lazy          as LBS
+import qualified Data.ByteString.Lazy.Builder  as Build
 import           Data.Conduit.Binary           (sinkLbs)
 import qualified Data.Time.Clock               as C
 import           Network.AWS                   hiding (Request, Response, send)
+import           Network.AWS.S3                (s3)
+import           Network.AWS.Types             (Service (..))
 import           Network.HTTP.Client           (ManagerSettings, Request,
                                                 Response, httpLbs, newManager)
 import           Protolude                     hiding ((<&>))
-import           Protolude
 import           Qi.Amazonka                   (currentRegion)
-import           Qi.Config.AWS
+import           Qi.AWS.Types                  (AwsMode (..))
+import           Qi.Config.AWS                 (namePrefix)
 import           Qi.Program.Config.Lang        (ConfigEff, getConfig)
 import           Qi.Program.Gen.Lang           (GenEff (..))
-import           Qi.Util
+import           Qi.Util                       (callProcess, printPending)
 import           Servant.Client                (BaseUrl, ClientM, ServantError,
                                                 mkClientEnv, runClientM)
 import           System.Build                  (BuildArgs (SimpleTarget),
                                                 stackInDocker)
-import           System.Directory
-import           System.Docker
+import           System.Directory              (createDirectoryIfMissing,
+                                                renameFile)
+import           System.Docker                 (ImageName (ImageName))
 import           System.Environment.Executable (splitExecutablePath)
-import           System.IO                     (hFlush, stdout)
+import           System.IO                     (BufferMode (LineBuffering),
+                                                hSetBuffering, stderr, stdout)
 import           System.Posix.Files
-import           System.Posix.Types
-import           Text.Heredoc                  (there)
+import           System.Posix.Types            (FileMode)
 
 
 run
   :: forall effs a
-  .  (Member IO effs, Member ConfigEff effs)
-  => (Eff (GenEff ': effs) a -> Eff effs a)
-run = interpret (\case
+  .  (Members '[ IO, ConfigEff ] effs)
+  => AwsMode
+  -> IO Logger
+  -> (Eff (GenEff ': effs) a -> Eff effs a)
+run mode mkLogger = interpret (\case
 
   GetAppName ->
     (^. namePrefix) <$> getConfig
@@ -60,25 +65,16 @@ run = interpret (\case
     runClientM req $ mkClientEnv mgr baseUrl
 
 
-  Amazonka req -> send $ do
-    (pass :: IO ()) -- to force the concrete IO monad
-    logger  <- newLogger Debug stdout
-    env     <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion
+  Amazonka svc req ->
+    send . runAmazonka svc $ AWS.send req
 
-    runResourceT . runAWST env $ AWS.send req
-
-
-  AmazonkaPostBodyExtract req post -> send $ do
-    (pass :: IO ()) -- to force the concrete IO monad
-    logger  <- newLogger Debug stdout
-    env     <- newEnv Discover <&> set envLogger logger . set envRegion currentRegion
-
-    runResourceT . runAWST env $
+  AmazonkaPostBodyExtract svc req post ->
+    send $ runAmazonka svc $
       map Right . (`sinkBody` sinkLbs) . post =<< AWS.send req
 
   Say msg -> send $ do
-    putStrLn . encode $ object ["message" .= String msg]
-    hFlush stdout
+    hPutStrLn stderr . encode $ object ["message" .= String msg]
+    putStrLn msg :: IO ()
 
   GetCurrentTime -> send C.getCurrentTime
 
@@ -91,11 +87,20 @@ run = interpret (\case
   ReadFileLazy path ->
     send . LBS.readFile $ toS path
 
-  GetLine -> send $ BS.getLine
+  {- GetReq -> send $ do -}
 
   PutStr content -> send $ LBS.putStr content
 
   )
+
+  where
+    runAmazonka :: Service -> AWS b -> IO b
+    runAmazonka svc action = do
+      logger  <- mkLogger
+      env     <- newEnv Discover <&>  set envLogger logger
+                                    . set envRegion currentRegion
+
+      runResourceT . runAWST env $ reconf mode svc action
 
 
 build
@@ -115,15 +120,13 @@ build srcDir exeTarget = do
   createDirectoryIfMissing True buildDir
 
   -- move and rename the exe to the .build dir
-  let lambdaPath = buildDir <> "/lambda"
-  renameFile exe lambdaPath
-  setFileMode lambdaPath executableByAll
+  let lbdHandlerPath = buildDir <> "/bootstrap"
+  renameFile exe lbdHandlerPath
+  setFileMode lbdHandlerPath executableByAll
 
   -- pack executable with js shim in .zip file
   let archivePath = buildDir <> "/lambda.zip"
-      jsShimPath  = buildDir <> "/index.js"
-  writeFile jsShimPath [there|./js/index.js|]
-  callProcess "zip" $ [ "-j", archivePath, jsShimPath, lambdaPath ]
+  callProcess "zip" $ [ "-j", archivePath, lbdHandlerPath ]
 
   pure archivePath
 
@@ -139,3 +142,31 @@ build srcDir exeTarget = do
 
 
 
+
+reconf
+  :: forall x
+  .  AwsMode
+  -> Service
+  -> (AWS x -> AWS x)
+reconf RealDeal _     = identity
+reconf LocalStack svc = case _svcAbbrev svc of
+  "API Gateway"      -> setport 4567
+  "CloudFormation"   -> setport 4581
+  "CloudWatch"       -> setport 4582
+  "DynamoDB"         -> setport 4569
+  "DynamoDB Streams" -> setport 4570
+  "Elasticsearch"    -> setport 4571
+  "Firehose"         -> setport 4573
+  "Kinesis"          -> setport 4568
+  "Lambda"           -> setport 4574
+  "Redshift"         -> setport 4577
+  "Route53"          -> setport 4580
+  "S3"               -> setport 4572
+  "SES"              -> setport 4579
+  "Secrets Manager"  -> setport 4584
+  "SNS"              -> setport 4575
+  "SQS"              -> setport 4576
+  "SSM"              -> setport 4583
+  unknown            -> panic $ show unknown
+  where
+    setport port = reconfigure (setEndpoint False "localhost" port svc)

@@ -57,11 +57,9 @@ spec = parallel $ do
           lambdaBinary = "lambda binary"
           action = deployApp renderedTemplate lambdaBinary
           expectedJournal = def{
-              s3Actions = [ CreateBucketAction "app"
-                          , PutContentAction (S3Object {_s3oBucketId = S3BucketId 1, _s3oKey = S3Key "cf.json"}) renderedTemplate
-                          , PutContentAction (S3Object {_s3oBucketId = S3BucketId 1, _s3oKey = S3Key "lambda.zip"}) lambdaBinary
-                          ]
-            , logs = ["deploying the app..."]
+              {- s3Actions = [ PutContentAction (S3Object {_s3oBucketId = S3BucketId 1, _s3oKey = S3Key "lambda.zip"}) lambdaBinary ] -}
+              genActions = [ AmazonkaAction, AmazonkaAction ]
+            , logs = [ "deploying the app...","creating bucket 'BucketName \"qmuli.app\"'","writing lambda executable into bucket 'BucketName \"qmuli.app\"'" ]
             }
           (config', journal) = testRun params action
 
@@ -74,12 +72,13 @@ spec = parallel $ do
             config
           }
         config = snd . run . runState def . Config.run $ do
-          s3Bucket "app"
+          pass
 
     it "works" $ do
-      let action = createCfStack
+      let template = "some template"
+          action = createCfStack template
           expectedJournal = def{
-              cfActions = [ CreateStackAction (StackName execName) (S3Object {_s3oBucketId = S3BucketId 0, _s3oKey = S3Key "cf.json"})]
+              cfActions = [ CreateStackAction (StackName execName) template ]
             , logs =  [ "creating the stack..."
                       , "waiting on the stack to be created..."
                       , "stack was successfully created"

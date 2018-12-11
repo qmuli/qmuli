@@ -20,6 +20,7 @@ import           Control.Monad.Freer.Writer
 import qualified Data.ByteString.Lazy.Char8    as LBS
 import           Data.Default                  (Default, def)
 import qualified Data.HashMap.Strict           as SHM
+import           Network.AWS.Types
 import           Protolude                     hiding (Reader, State, asks, get,
                                                 log, put, runReader, runState)
 import           Qi.CLI.Dispatcher
@@ -39,33 +40,37 @@ import           Test.Tasty.Hspec
 
 
 data Journal = Journal {
-    cfActions :: [ CfAction ]
-  , s3Actions :: [ S3Action ]
-  , logs      :: [ Text ]
+    cfActions  :: [ CfAction ]
+  , s3Actions  :: [ S3Action ]
+  , genActions :: [ GenAction ]
+  , logs       :: [ Text ]
   }
   deriving (Eq, Show)
 
 instance Semigroup Journal where
-  Journal cf1 s31 ls1 <> Journal cf2 s32 ls2 =
-    Journal (cf1 <> cf2) (s31 <> s32) (ls1 <> ls2)
+  Journal cf1 s31 gen1 ls1 <> Journal cf2 s32 gen2 ls2 =
+    Journal (cf1 <> cf2) (s31 <> s32) (gen1 <> gen2) (ls1 <> ls2)
 
 instance Monoid Journal where
-  mempty = Journal mempty mempty mempty
+  mempty = Journal mempty mempty mempty mempty
 
 instance Default Journal where
   def = mempty
 
+data GenAction =
+    AmazonkaAction
+  deriving (Eq, Show)
+
 data CfAction =
-    CreateStackAction StackName S3Object
-  | UpdateStackAction StackName S3Object
+    CreateStackAction StackName LBS.ByteString
+  | UpdateStackAction StackName LBS.ByteString
   | DeleteStackAction StackName
   | DescribeStacksAction
   deriving (Eq, Show)
 
 
 data S3Action =
-    CreateBucketAction Text
-  | PutContentAction S3Object LBS.ByteString
+    PutContentAction S3Object LBS.ByteString
   | DeleteBucketAction Text
   deriving (Eq, Show)
 
@@ -97,10 +102,11 @@ testGenRun = interpret (\case
   RunServant _mgrSettings _baseUrl _req ->
     panic "RunServant"
 
-  Amazonka _req ->
-    panic "Amazonka"
+  Amazonka _svc (_req :: b)  -> do
+    genAction AmazonkaAction
+    pure (panic "response cannot be evaluated" :: (Rs b))
 
-  AmazonkaPostBodyExtract _req _post ->
+  AmazonkaPostBodyExtract _svc _req _post ->
     panic "AmazonkaPostBodyExtract"
 
   Say msg ->
@@ -119,8 +125,8 @@ testGenRun = interpret (\case
   ReadFileLazy _path ->
     panic "ReadFileLazy"
 
-  GetLine ->
-    panic "GetLine"
+  {- GetLine -> -}
+    {- panic "GetLine" -}
 
   PutStr _content ->
     panic "PutStr"
@@ -134,11 +140,11 @@ testCfRun
   => (Eff (CfEff ': effs) a -> Eff effs a)
 testCfRun = interpret (\case
 
-  CreateStack name s3Obj -> do
-    cfAction $ CreateStackAction name s3Obj
+  CreateStack name template -> do
+    cfAction $ CreateStackAction name template
 
-  UpdateStack name s3Obj -> do
-    cfAction $ UpdateStackAction name s3Obj
+  UpdateStack name template -> do
+    cfAction $ UpdateStackAction name template
 
   DeleteStack name ->
     panic "DeleteStack"
@@ -159,10 +165,6 @@ testS3Run
   .  (Members '[ ConfigEff, Reader Params, Writer Journal ] effs)
   => (Eff (S3Eff ': effs) a -> Eff effs a)
 testS3Run = interpret (\case
-
-  CreateBucket name -> do
-    s3Action $ CreateBucketAction name
-    pure $ S3BucketId 1
 
   GetContent S3Object{ _s3oBucketId, _s3oKey } ->
     panic "GetContent"
@@ -201,6 +203,11 @@ testRun params@Params{ config } = run
   . testS3Run
   . testCfRun
 
+genAction
+  :: Member (Writer Journal) effs
+  => GenAction
+  -> Eff effs ()
+genAction action = tell $ def{ genActions = [action]}
 
 cfAction
   :: Member (Writer Journal) effs
